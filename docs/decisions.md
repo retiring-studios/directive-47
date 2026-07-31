@@ -18,9 +18,26 @@ This file is descriptive. Nothing here enforces itself — see
 ## Architecture
 
 - **Capabilities declare, surfaces render.** A capability contributes a
-  descriptor — LLM tool schema, voice phrasings, display model, help text — and
-  the desktop panel, VR overlay, and voice layer all consume it. No capability
-  references a UI assembly.
+  descriptor: a data object saying what it is and what to show. It carries an
+  LLM tool schema, a display model, help text, and example utterances. The
+  desktop panel, VR overlay, and voice layer all consume it, so no capability
+  references a UI assembly and none of them contains feature-specific rendering
+  code.
+- **The descriptor has an escape hatch, and it is not optional to fill.** The
+  display model covers text, lists, and key-value readouts, which is most of
+  what anyone alt-tabs for. A capability needing something the model cannot
+  express — a map, a chart, a plotted route — may supply its own view instead.
+  The cost of using it is that the parity test then demands a view for *every*
+  surface, not just the one that motivated it. Without the hatch, the display
+  model grows a `Chart` concept, then a `Map` concept, and becomes a UI
+  framework nobody chose to write.
+- **Example utterances are examples, not a matcher.** They are few-shot
+  examples inside the tool schema, helping the LLM map a sloppy transcription to
+  the right capability, and "try saying…" text so the panel and headset are
+  discoverable. Nothing matches phrases against speech-to-text output.
+  Transcription of system, ship, and commodity names is exactly where STT fails,
+  and a phrase matcher fails silently when it misses. This bullet previously
+  read "voice phrasings", which implied the matcher.
 - **VR parity by projection.** The desktop panel is built at VR-legible density
   (large type, high contrast, low density), and the overlay is that same render
   target blitted to a texture.
