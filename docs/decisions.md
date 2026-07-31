@@ -43,7 +43,10 @@ This file is descriptive. Nothing here enforces itself — see
   target blitted to a texture.
 - **Parity is an enumerated test, not a checklist.** Enumerate all capabilities
   against all surfaces and assert a descriptor exists for each pairing. A
-  missing VR descriptor is a red build, not a missed checkbox.
+  missing VR descriptor is a red build, not a missed checkbox. The test must
+  also assert that the enumeration is not empty. A discovery-based test that
+  finds nothing passes, and a test that passes because it checked nothing is
+  worse than no test — it reports confidence it never earned.
 - **`TimeProvider` and `FakeTimeProvider`**, not a hand-rolled `IClock`.
 - **Interfaces at every process boundary.** NSubstitute for stubs; hand-written
   fakes for stateful things such as the journal source and the audio device.
@@ -115,6 +118,25 @@ trigger moved.
   off as tests land — not in a custom field, which would flatten them to a blob.
 - One story, one branch, one PR (`Closes #N`). Review starts at the tests, then
   the diff.
+- **Red, green, refactor — all three.** It is test *driven*, not merely test
+  first. Red and green only prove the code works; the third step is where the
+  design gets made, with a passing suite as the safety net. Skip it and TDD
+  decays into writing the tests slightly earlier, which buys coverage and
+  nothing else. Two signals only pay off if acted on while green: a test that is
+  awkward to write means the design is wrong, and duplication appearing across
+  the second and third test is telling you what the abstraction is. Test code
+  gets refactored too.
+- **The refactor line: one instance is mine, a general conclusion is yours.**
+  Eliminating a specific redundancy is not an architectural decision. Deciding
+  to *eliminate redundancies* is. A smell that resolves into a conclusion about
+  the shape of the system — "this verbose, repetitive code is starting to look
+  like NuGet package X, should we take the dependency?" — is architecture no
+  matter how small the resulting diff. Extracting a method, renaming, collapsing
+  duplication at a call site: done without asking, the tests prove it. Naming an
+  abstraction that later code must conform to, taking a dependency, or adopting
+  a pattern as policy: proposed first.
+- The dependency half of that line is already enforced: `Directory.Packages.props`
+  is in `permissions.ask`, so adding a package stops for the maintainer.
 - **Manual test steps are per-PR only**, never an accumulating file. Regression
   is the automated hardware tier's job; the human pass is for new behavior and
   judgment calls. A manual test that keeps recurring is a hole in automation —
