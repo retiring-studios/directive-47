@@ -95,24 +95,39 @@ to exercise what a user would actually have.
 
 ### B[N] — Beep
 
-Both mechanisms are audible on the dev PC; `[console]::Beep` is used because
-pitch and duration are controllable.
+`[console]::Beep` is used because pitch and duration are controllable.
+
+**Always send the priming tone first.** The dev PC's speakers are Bluetooth
+(Logitech Z407). A2DP drops the link when idle and takes over a second to
+re-establish, so tones sent to a sleeping link are simply lost — the first two
+beeps of a plain sequence never arrive, and the maintainer counts the wrong
+number. The prime is a sacrificial tone whose only job is to wake the link, and
+the gap after it is what makes the counted tones survive. Verified at 1200 ms;
+raise it if beeps start disappearing again.
 
 Success, N beeps:
 
 ```powershell
-1..N | ForEach-Object { [console]::Beep(880, 180); Start-Sleep -Milliseconds 120 }
+[console]::Beep(110, 200)
+Start-Sleep -Milliseconds 1200
+1..N | ForEach-Object { [console]::Beep(880, 220); Start-Sleep -Milliseconds 140 }
 ```
 
-Failure — a distinct low double tone, so a failure is not mistaken for success
-from across the room:
+Failure — a low double tone, so a failure is not mistaken for success from
+across the room:
 
 ```powershell
-1..2 | ForEach-Object { [console]::Beep(220, 400); Start-Sleep -Milliseconds 150 }
+[console]::Beep(110, 200)
+Start-Sleep -Milliseconds 1200
+1..2 | ForEach-Object { [console]::Beep(240, 450); Start-Sleep -Milliseconds 150 }
 ```
 
 Beep last, after everything else has finished or failed. It means "done", so it
 must not sound while work is still running.
+
+If beeps are ever lost inconsistently rather than always at the start, stop
+relying on a count: a rising two-tone for success and a low double for failure
+survives losing a fragment in a way that counting cannot.
 
 ## Partial completion
 
