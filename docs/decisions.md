@@ -82,6 +82,15 @@ If a rule matters, it must not live only in a Markdown file.
 `CLAUDE.md` is descriptive by design: a map of what lives where, how to build,
 and which decisions not to re-litigate.
 
+**Cloud provisioning is not a SessionStart hook.** It was one briefly. A hook
+command runs through a shell, and the shell on the dev PC is PowerShell, which
+cannot invoke a bash script — so a hook whose only job is provisioning Linux
+containers would have errored at the start of every local session. Noise that
+recurs is noise that gets suppressed, and a suppressed hook is worse than none.
+Provisioning lives in `scripts/setup-cloud.sh`, which the cloud environment's
+setup step runs. The script stays in version control either way; only the
+trigger moved.
+
 ## Process
 
 - Acceptance criteria are written before code and phrased so they become test

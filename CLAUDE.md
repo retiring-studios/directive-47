@@ -23,9 +23,12 @@ does not match what is on disk.
 
 ## Building
 
-Cloud containers ship no .NET SDK; `.claude/hooks/session-start.sh` installs it
-at session start. Then `dotnet build` / `dotnet test` as usual. `cloud.slnf`
-runs without hardware, `hardware.slnf` needs the dev PC.
+Cloud containers ship no .NET SDK. `scripts/setup-cloud.sh` installs it, and the
+cloud environment's setup step is configured to run it. On the dev PC the SDK is
+already installed and that script is not used.
+
+Then `dotnet build` / `dotnet test` as usual. `cloud.slnf` runs without hardware,
+`hardware.slnf` needs the dev PC.
 
 ## Working agreement
 
