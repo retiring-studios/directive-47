@@ -427,3 +427,36 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ── Directive 47 ──────────────────────────────────────────────────────────────
+
+# Secrets and machine-local configuration.
+# (The stock VS section above already ignores *.env; these are explicit so the
+# intent survives someone editing that section.)
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.secret.json
+
+# Per-machine Claude Code overrides, including rules accumulated by choosing
+# "always approve" at a permission prompt.
+.claude/settings.local.json
+
+# Speech and LLM model weights. Large, separately redistributable, never in git.
+/models/
+*.onnx
+*.gguf
+*.ggml
+ggml-*.bin
+
+# Raw capture data, pre-scrub. Real Elite Dangerous journals carry the
+# Commander name and play history; they get sanitized into tests/ before
+# anything lands in this public repo.
+/captures/
+**/Fixtures/**/raw/
+
+# Local build output collected for a manual test pass.
+/artifacts/
