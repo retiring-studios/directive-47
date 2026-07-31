@@ -10,7 +10,17 @@
       "Edit(**/Directory.Build.props)",
       "Write(**/Directory.Build.props)",
       "Edit(**/Directory.Packages.props)",
-      "Write(**/Directory.Packages.props)"
+      "Write(**/Directory.Packages.props)",
+      "Edit(**/.editorconfig)",
+      "Write(**/.editorconfig)",
+      "Edit(**/global.json)",
+      "Write(**/global.json)",
+      "Edit(**/.gitattributes)",
+      "Write(**/.gitattributes)",
+      "Edit(**/.github/workflows/*.yml)",
+      "Write(**/.github/workflows/*.yml)",
+      "Edit(**/.github/workflows/*.yaml)",
+      "Write(**/.github/workflows/*.yaml)"
     ]
   }
 }

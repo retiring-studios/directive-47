@@ -2,20 +2,29 @@
 #
 # Provisions a cloud container for Directive 47.
 #
-# Kept under version control and invoked by .claude/hooks/session-start.sh so
-# provisioning is reviewable and diffable, rather than pasted into a web form.
+# Kept under version control so provisioning is reviewable and diffable. The
+# cloud environment's setup step is a web form, so this file is the original and
+# the form holds a copy; see docs/decisions.md.
 # Safe to run by hand, and safe to run more than once.
 
 set -euo pipefail
 
 log() { printf '\n==> %s\n' "$1"; }
 
+# Setup scripts run as root, where sudo is not necessarily installed. A manual
+# run is usually not root, where it is required.
+if [ "$(id -u)" -eq 0 ]; then
+  SUDO=""
+else
+  SUDO="sudo"
+fi
+
 log "Refreshing apt package lists"
 # The base image ships third-party PPAs (deadsnakes, ondrej/php) that fail to
 # refresh, so apt-get update exits non-zero even when the Ubuntu archive
 # updated cleanly. That is not our failure and must not abort provisioning --
 # the SDK check below is what actually decides whether this worked.
-if ! sudo apt-get update -qq; then
+if ! $SUDO apt-get update -qq; then
   echo "    apt-get update reported errors (expected: unrelated third-party" \
        "PPAs). Continuing; the SDK install is verified below."
 fi
@@ -23,7 +32,7 @@ fi
 log "Installing .NET SDK 10"
 # apt, not dotnet-install.sh: the network policy blocks
 # builds.dotnet.microsoft.com, and apt is faster regardless.
-sudo apt-get install -y -qq dotnet-sdk-10.0
+$SUDO apt-get install -y -qq dotnet-sdk-10.0
 
 log "Verifying"
 if ! command -v dotnet >/dev/null; then

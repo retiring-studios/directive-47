@@ -1,0 +1,7 @@
+{
+  // VS Code does not read .editorconfig on its own; this extension is what
+  // makes the repo's formatting rules apply while typing.
+  "recommendations": [
+    "EditorConfig.EditorConfig"
+  ]
+}

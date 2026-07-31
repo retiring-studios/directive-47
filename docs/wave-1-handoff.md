@@ -167,16 +167,16 @@ charset = utf-8
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
-indent_size = 2
+indent_size = 4
 
 [*.{yml,yaml,json,md}]
-indent_size = 2
+indent_size = 4
 
 [*.md]
 trim_trailing_whitespace = false
 
 [*.{csproj,props,targets,slnf}]
-indent_size = 2
+indent_size = 4
 
 [*.cs]
 indent_size = 4

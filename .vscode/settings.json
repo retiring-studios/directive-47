@@ -1,0 +1,6 @@
+{
+  // Autosave so edits are on disk without a Ctrl+S — in particular so Claude
+  // Code reads what is actually in the editor rather than the last saved copy.
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000
+}
