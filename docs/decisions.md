@@ -135,6 +135,15 @@ trigger moved.
   duplication at a call site: done without asking, the tests prove it. Naming an
   abstraction that later code must conform to, taking a dependency, or adopting
   a pattern as policy: proposed first.
+- **Stop at the moment of recognition, not after building it.** When hand-rolled
+  code starts looking like an argument for a package or a shared abstraction,
+  raise it then, with the work unfinished. Finishing first buys a better-evidenced
+  proposal and poisons it: a working implementation makes "keep it" the path of
+  least resistance, and the decision is half-made by the existence of the thing
+  before the maintainer sees it. Bring what the code has to do, the candidate
+  package and what it drags in, and an estimate of the hand-rolled size labelled
+  as an estimate. If it cannot be estimated without building it, ask for a
+  timeboxed spike rather than quietly taking one.
 - The dependency half of that line is already enforced: `Directory.Packages.props`
   is in `permissions.ask`, so adding a package stops for the maintainer.
 - **Manual test steps are per-PR only**, never an accumulating file. Regression
