@@ -100,6 +100,59 @@ is still open — see below.
   `scripts/setup-cloud.sh` runs. `builds.dotnet.microsoft.com` is blocked by
   network policy, so `dotnet-install.sh` does not work; apt is the path.
 
+## Cloud verification — measured 2026-07-31
+
+Run in a Claude cloud container against a throwaway copy of the Wave 1 skeleton
+(scratch directory, nothing committed). This redoes the xUnit verification the
+table above flagged as non-transferable, and closes the `.editorconfig` question
+in the appendix.
+
+**Provisioning works unattended.** The setup step ran `scripts/setup-cloud.sh`
+before the session started; `dotnet --version` reported 10.0.110 with no manual
+step. Carried-forward item 1 from Wave 0 is done. Container: Ubuntu 24.04.4,
+4 cores, 15 GB RAM, ~30 GB free.
+
+**`global.json` as specified resolves correctly.** `10.0.100` +
+`rollForward: latestFeature` selects 10.0.110 here, as the band-floor reasoning
+predicted.
+
+**xUnit v3 is green in the cloud on `net10.0`.** `xunit.v3` 3.2.2,
+`xunit.runner.visualstudio` 3.1.5, `Microsoft.NET.Test.Sdk` 18.8.1, `Shouldly`
+4.3.0. `dotnet test` passes, and a deliberately failing test fails the run with
+exit 1 — the failure path was checked, not assumed. Central package management
+works: `dotnet add package` writes the `PackageVersion` into
+`Directory.Packages.props` on its own.
+
+**`.slnf` filters build against either format** — verified pointing the same
+filter at a `.sln` and a `.slnx`.
+
+### Two things that will bite Wave 1
+
+1. **`GenerateDocumentationFile=true` + `TreatWarningsAsErrors` makes every test
+   file a build error.** CS1591 (missing XML comment) fires on every public test
+   class and method, and the test carve-out does not cover it. The agreed
+   `Directory.Build.props` and the proposed `.editorconfig`, exactly as written,
+   cannot compile a test project. Adding
+   `dotnet_diagnostic.CS1591.severity = none` to the `[tests/**/*.cs]` section
+   fixes it — verified — but so would scoping `GenerateDocumentationFile` to
+   `src/` only. **Needs a verdict; not decided here.**
+
+2. **`dotnet new sln` defaults to `.slnx` on SDK 10**, so it produces `D47.slnx`
+   unless invoked with `--format sln`. `CLAUDE.md` says `D47.sln`. Either pass
+   the flag or update the map.
+
+### Cloud limitation worth knowing
+
+`dotnet new install <template-package>` does not work in a cloud container.
+`azuresearch-ussc.nuget.org` is unreachable under the network policy, and the
+template engine calls the search endpoint even when given an explicit version.
+It reports `no NuGet feeds are configured or they are invalid`, which is
+misleading — the feed is fine. Package restore is unaffected
+(`api.nuget.org` responds; `dotnet restore` and `dotnet add package` both work).
+This is why the verification above hand-wrote the test `.csproj` rather than
+scaffolding it: four `PackageReference` lines and `OutputType=Exe`. Templates
+still install normally on the dev PC.
+
 ## New capability on the desktop
 
 The desktop has VR. It is therefore the **Tier 2 and Tier 3 machine** — mic,
@@ -109,9 +162,9 @@ laptop could never have run those tiers. Nothing in Wave 1 needs them, but
 
 ## Carried forward from Wave 0
 
-1. **Configure the cloud environment's setup step** to run
-   `scripts/setup-cloud.sh`. Until then, cloud sessions have no .NET SDK. Not
-   blocking for local work. The maintainer asked to be walked through this.
+1. ~~**Configure the cloud environment's setup step** to run
+   `scripts/setup-cloud.sh`.~~ **Done and verified** — see the cloud
+   verification section above.
 2. **The `Surfaces` issue field is invisible through the GitHub MCP layer** — it
    models only text, number, date, and single-select, so multi-select fields are
    dropped from listings and cannot be set. `Tier` and `Verified` work fine. Set
@@ -271,6 +324,11 @@ dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1861.severity = none
 ```
 
-Unverified in the above: per-section `dotnet_naming_rule.*.severity` overrides
-are fiddly in Roslyn. Confirm the test carve-out actually takes effect when the
-first test file lands, rather than assuming it.
+**The test carve-out is verified** (cloud, 2026-07-31). It was checked by
+removing the `CA1707` line rather than by reading the build output: with the line
+gone, `Descriptor_WithVoicePhrasings_ExposesThem` is a hard build error; with it
+present, the build is clean. The `[tests/**/*.cs]` section matches and applies.
+
+Still needs adding to that section: `dotnet_diagnostic.CS1591.severity = none`,
+or the alternative in the cloud verification section above. Without one of them
+no test project compiles at all.
