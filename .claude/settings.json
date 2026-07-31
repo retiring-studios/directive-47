@@ -1,10 +1,33 @@
 {
   "permissions": {
+    "allow": [
+      "PowerShell(dotnet build*)",
+      "PowerShell(dotnet test*)",
+      "PowerShell(dotnet restore*)",
+      "PowerShell(dotnet clean*)",
+      "PowerShell(dotnet run*)",
+      "PowerShell(dotnet new*)",
+      "PowerShell(dotnet sln*)",
+      "PowerShell(dotnet list*)",
+      "PowerShell(dotnet format*)",
+      "PowerShell(dotnet --*)",
+      "PowerShell(git status*)",
+      "PowerShell(git log*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git show*)",
+      "PowerShell(git branch*)",
+      "PowerShell(git remote*)",
+      "PowerShell(git config --get*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Test-Path*)"
+    ],
     "ask": [
       "Edit(**/*.csproj)",
       "Write(**/*.csproj)",
       "Edit(**/*.sln)",
       "Write(**/*.sln)",
+      "Edit(**/*.slnx)",
+      "Write(**/*.slnx)",
       "Edit(**/*.slnf)",
       "Write(**/*.slnf)",
       "Edit(**/Directory.Build.props)",

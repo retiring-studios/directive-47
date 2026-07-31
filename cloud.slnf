@@ -1,0 +1,9 @@
+{
+  "solution": {
+    "path": "D47.slnx",
+    "projects": [
+      "src\\D47.Capabilities\\D47.Capabilities.csproj",
+      "tests\\D47.Capabilities.Tests\\D47.Capabilities.Tests.csproj"
+    ]
+  }
+}

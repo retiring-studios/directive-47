@@ -11,15 +11,15 @@ afterthought.
 
 | Path | Contents |
 |---|---|
-| `D47.sln` | Solution, at the repo root |
+| `D47.slnx` | Solution, at the repo root |
 | `src/` | Production projects, `D47.*` |
 | `tests/` | One `.Tests.csproj` per production project |
 | `assets/` | Icons, images, audio, other media |
 | `docs/` | `decisions.md` and anything else written down |
 | `scripts/` | Provisioning and local automation |
 
-Nothing is built yet. This table is a map of the repo, and it is wrong if it
-does not match what is on disk.
+This table is a map of the repo, and it is wrong if it does not match what is on
+disk. `assets/` does not exist yet.
 
 ## Building
 
@@ -27,8 +27,12 @@ Cloud containers ship no .NET SDK. `scripts/setup-cloud.sh` installs it, and the
 cloud environment's setup step is configured to run it. On the dev PC the SDK is
 already installed and that script is not used.
 
-Then `dotnet build` / `dotnet test` as usual. `cloud.slnf` runs without hardware,
-`hardware.slnf` needs the dev PC.
+Then `dotnet build` / `dotnet test` as usual. `cloud.slnf` runs without hardware.
+`hardware.slnf` will select the dev-PC-only projects; it arrives with the first
+Tier 2 project, because a filter naming no projects warns on every build.
+
+The solution is the XML `.slnx` format, not the classic `.sln`. Solution filters
+work against it unchanged. `dotnet new sln` defaults to `.slnx` on .NET 10.
 
 ## Working agreement
 

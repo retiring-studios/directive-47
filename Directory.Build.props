@@ -1,0 +1,27 @@
+<Project>
+
+    <!--
+        Deliberately no TargetFramework. A global net10.0-windows would break
+        cloud CI, and UseWPF needs the Windows-only Desktop SDK. Tier 0/1
+        projects set net10.0; WPF, overlay, and hardware projects set
+        net10.0-windows. See docs/decisions.md.
+
+        Deliberately no size or complexity thresholds. Deferred by agreement
+        until there is a Tier 2 adapter to calibrate against.
+    -->
+    <PropertyGroup>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <AnalysisLevel>latest-all</AnalysisLevel>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+
+        <!--
+            Not cosmetic. IDE0005, the unnecessary-using rule, does not fire
+            during build unless documentation generation is on. Long-standing
+            Roslyn quirk.
+        -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+</Project>

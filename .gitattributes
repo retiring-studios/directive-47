@@ -1,0 +1,39 @@
+# Normalize every text file to LF in the repository, and let checkout decide
+# what lands in the working tree. This makes core.autocrlf irrelevant, so the
+# two dev machines cannot disagree about line endings.
+* text=auto
+
+# Source and project files
+*.cs        text diff=csharp
+*.csproj    text
+*.props     text
+*.targets   text
+*.slnf      text
+*.json      text
+*.md        text
+*.yml       text
+*.yaml      text
+.editorconfig text
+.gitattributes text
+
+# Visual Studio refuses to load a solution file with LF endings.
+*.sln       text eol=crlf
+
+# Scripts: the interpreter decides, not the platform that checked them out.
+# A bash script with CRLF fails in a Linux container with an unhelpful error,
+# which is exactly how scripts/setup-cloud.sh would break.
+*.ps1       text eol=crlf
+*.sh        text eol=lf
+
+# Never touch these
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.dll       binary
+*.exe       binary
+*.onnx      binary
+*.gguf      binary
+*.ggml      binary

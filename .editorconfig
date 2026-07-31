@@ -102,6 +102,10 @@ dotnet_naming_rule.locals_are_camel.severity = warning
 
 # Test projects
 [tests/**/*.cs]
+# GenerateDocumentationFile is on for IDE0005's sake, which makes CS1591 demand
+# an XML comment on every public member. Test methods are named to describe
+# themselves; a doc comment on each would restate the name and nothing more.
+dotnet_diagnostic.CS1591.severity = none
 dotnet_diagnostic.CA1707.severity = none
 dotnet_naming_rule.members_are_pascal.severity = none
 dotnet_diagnostic.CA1034.severity = none

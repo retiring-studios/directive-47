@@ -1,0 +1,39 @@
+name: CI
+
+# Ubuntu on purpose. Tier 0 and Tier 1 claim to be platform-neutral, and
+# building them on Linux enforces that claim instead of trusting it. Windows CI
+# arrives with hardware.slnf on a self-hosted runner, Wave 2 or later.
+#
+# This does not call scripts/setup-cloud.sh. That script provisions Claude cloud
+# containers; actions/setup-dotnet is the runner equivalent.
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build and test
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v7
+
+            # Reads global.json, so the pinned SDK band is stated in exactly one
+            # place and CI cannot drift from the dev machines.
+            - uses: actions/setup-dotnet@v6
+              with:
+                  global-json-file: global.json
+
+            - name: Restore
+              run: dotnet restore cloud.slnf
+
+            - name: Build
+              run: dotnet build cloud.slnf --no-restore --configuration Release
+
+            - name: Test
+              run: dotnet test cloud.slnf --no-build --configuration Release
