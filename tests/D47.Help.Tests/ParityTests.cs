@@ -64,24 +64,6 @@ public class ParityTests
         ids.Distinct(StringComparer.Ordinal).Count().ShouldBe(ids.Count);
     }
 
-    [Fact]
-    public void EveryCapability_CanBeReached_ByModelAndByCommander()
-    {
-        // Unreachable in two different ways. Without a tool schema the model
-        // cannot call it; without example utterances neither the model nor the
-        // Commander has any idea it is there.
-        List<string> unreachable =
-        [
-            .. from descriptor in Registry.Descriptors
-               where string.IsNullOrWhiteSpace(descriptor.Tool.Name)
-                     || string.IsNullOrWhiteSpace(descriptor.Tool.Description)
-                     || descriptor.Examples.Count == 0
-               select descriptor.Id,
-        ];
-
-        unreachable.ShouldBeEmpty();
-    }
-
     private static bool CanBeShown(CapabilityDescriptor descriptor) =>
         !string.IsNullOrWhiteSpace(descriptor.Id)
         && !string.IsNullOrWhiteSpace(descriptor.Group)

@@ -31,20 +31,6 @@ public sealed class HelpCapability
         Group = "Getting around",
         HelpText = "Lists what I can do, and narrows down from there.",
         Display = new ListDisplay(),
-        Tool = new ToolSchema
-        {
-            Name = "list_capabilities",
-            Description =
-                "Lists every capability this companion has. Call this when the "
-                + "Commander asks what you can do, or when an utterance names "
-                + "nothing you recognise.",
-        },
-        Examples =
-        [
-            "what can you do",
-            "help",
-            "what else do you know",
-        ],
     };
 
     private readonly CapabilityRegistry _registry;

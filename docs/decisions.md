@@ -34,10 +34,12 @@ This file is descriptive. Nothing here enforces itself — see
 ## Architecture
 
 - **Capabilities declare, surfaces render.** A capability contributes a
-  descriptor: a data object saying what it is and what to show. It carries an
-  LLM tool schema, a display model, help text, and example utterances. Every
-  surface consumes it, so no capability references a UI assembly and none of
-  them contains feature-specific rendering code.
+  descriptor: a data object saying what it is and what to show. When complete it
+  carries an LLM tool schema, a display model, help text, and example
+  utterances — each part arriving with the thing that consumes it, so the tool
+  schema and the examples land with the LLM integration rather than ahead of it.
+  Every surface consumes the descriptor, so no capability references a UI
+  assembly and none of them contains feature-specific rendering code.
 - **A descriptor is the declaration of a function, as data — never a variable.**
   It is registered once at startup and never mutates. What a capability
   *returns* is a separate per-invocation result conforming to the shape the
@@ -235,6 +237,13 @@ trigger moved.
   awkward to write means the design is wrong, and duplication appearing across
   the second and third test is telling you what the abstraction is. Test code
   gets refactored too.
+- **Build it when you need it, not before.** A field with no consumer is a guess
+  about a consumer. The counter-argument was made and rejected: a required field
+  on a widely-implemented contract looks cheap to add now and expensive to add
+  at the twelfth implementation, but the twelve-site edit is mechanical and
+  certain, while the guessed shape is neither. The descriptor's tool schema and
+  example utterances were added on that reasoning and stripped again on this
+  one — they arrive with the LLM integration that consumes them.
 - **The refactor line: one instance is mine, a general conclusion is yours.**
   Eliminating a specific redundancy is not an architectural decision. Deciding
   to *eliminate redundancies* is. A smell that resolves into a conclusion about

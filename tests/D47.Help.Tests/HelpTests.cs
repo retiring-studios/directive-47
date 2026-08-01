@@ -89,7 +89,5 @@ public class HelpTests
         Group = "Where you are",
         HelpText = helpText,
         Display = new ListDisplay(),
-        Tool = new ToolSchema { Name = id, Description = helpText },
-        Examples = [$"do the {id} thing"],
     };
 }

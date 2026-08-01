@@ -48,7 +48,5 @@ public class CapabilityRegistryTests
         Group = "Test",
         HelpText = $"Does the {id} thing.",
         Display = new ListDisplay(),
-        Tool = new ToolSchema { Name = id, Description = $"Does the {id} thing." },
-        Examples = [$"do the {id} thing"],
     };
 }
