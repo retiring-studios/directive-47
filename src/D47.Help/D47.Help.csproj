@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 0. Help is a capability like any other: it projects the registry
+        by template and asserts nothing about the game. Kept out of
+        D47.Capabilities so the contract assembly never references a consumer.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
+    </ItemGroup>
+
+</Project>
