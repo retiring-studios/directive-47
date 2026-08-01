@@ -309,13 +309,18 @@ The tiers drive the project layout, not just test selection.
   a game — and synthesized input needs only a desktop, which the runner has.
   The line is "can a hosted runner do this at all", not "does it touch an input
   API".
-- **Integration and end-to-end tests run on CI, not on the dev PC.** They take
-  the whole desktop for as long as they run, and the maintainer needs that
-  machine for other things. Once such a test is written it should not execute
-  again locally: CI sets `CI`, has nobody at the keyboard, and gates every pull
-  request. On a development machine they skip with the reason in the test
-  output, unless `D47_DESKTOP_TESTS=1` says otherwise — which is for developing
-  them, and for a debugging session agreed with the maintainer first.
+- **Integration and end-to-end tests settle on CI once they work.** They take the
+  whole desktop for as long as they run, and the maintainer needs that machine
+  for other things — so a finished one does not execute locally again. CI sets
+  `CI`, has nobody at the keyboard, and gates every pull request. On a
+  development machine they skip with the reason in the test output, unless
+  `D47_DESKTOP_TESTS=1` opts in.
+
+  **Writing one is the exception, and deliberately so.** A test still being
+  shaped is developed locally; pushing to CI for each iteration is slower than
+  the problem it avoids. What the gate buys is not a ban but a negotiation — the
+  desktop is a shared resource between the maintainer and whoever is running
+  tests, and opting in is the moment to say so and to say when it is free again.
 
   **The line is what a test touches, not how slow it is.** Starting the
   application as a process, or reading what the shell is drawing, puts it behind
