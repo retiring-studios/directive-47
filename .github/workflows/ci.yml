@@ -40,3 +40,57 @@ jobs:
 
             - name: Test
               run: dotnet test ci.slnf --no-build --configuration Release
+
+            # The version lives in exactly one place, and this is how everything
+            # downstream learns it rather than being told it twice.
+            - name: Read the version
+              id: version
+              run: |
+                  $version = (dotnet msbuild src/D47.Panel/D47.Panel.csproj -getProperty:Version).Trim()
+                  if (-not $version) { throw "Directory.Build.props did not yield a Version." }
+                  "version=$version" >> $env:GITHUB_OUTPUT
+                  Write-Host "Publishing version $version"
+
+            # Self-contained on purpose: the artifact is what a manual pass
+            # installs and runs, and it has to work on a machine with no .NET
+            # on it. Single file for the same reason. Not trimmed — trimming
+            # and WPF's reflection over XAML do not get along.
+            - name: Publish the panel
+              run: >
+                  dotnet publish src/D47.Panel/D47.Panel.csproj
+                  --configuration Release
+                  --runtime win-x64
+                  --self-contained true
+                  -p:PublishSingleFile=true
+                  -p:IncludeNativeLibrariesForSelfExtract=true
+                  --output publish
+
+            # The done-when says the artifact's version matches the property.
+            # Asserting it here is what makes that a fact rather than a hope:
+            # publish silently producing a stale or default version is exactly
+            # the failure nobody notices until an installed build reports the
+            # wrong number.
+            - name: Check the exe carries that version
+              run: |
+                  $expected = "${{ steps.version.outputs.version }}"
+                  $exe = Get-Item publish/D47.Panel.exe
+                  $actual = $exe.VersionInfo.ProductVersion
+                  Write-Host "Expected $expected, exe reports $actual, $([math]::Round($exe.Length / 1MB)) MB"
+                  if (-not $actual.StartsWith($expected)) {
+                      throw "The published exe reports $actual, not $expected."
+                  }
+
+            # if-no-files-found: error is the third done-when. Without it a
+            # publish that produced nothing uploads nothing and passes, which
+            # reads as a green build with an artifact and is neither.
+            - name: Attach the exe to the pull request
+              uses: actions/upload-artifact@v4
+              with:
+                  name: D47.Panel-${{ steps.version.outputs.version }}
+                  path: publish/D47.Panel.exe
+                  if-no-files-found: error
+                  # A self-contained WPF exe is about 165MB. Ninety days of
+                  # those, one per pull request, is a lot of storage for
+                  # something whose whole purpose is to be downloaded once and
+                  # tried. The release channels are what keep a build for good.
+                  retention-days: 14
