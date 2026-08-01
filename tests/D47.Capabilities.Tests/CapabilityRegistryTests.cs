@@ -48,5 +48,6 @@ public class CapabilityRegistryTests
         Group = "Test",
         HelpText = $"Does the {id} thing.",
         Display = new ListDisplay(),
+        Examples = [$"do the {id} thing"],
     };
 }

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace D47.Capabilities;
 
 /// <summary>
@@ -43,4 +45,20 @@ public sealed record CapabilityDescriptor
     /// that is half built.
     /// </summary>
     public required DisplayModel Display { get; init; }
+
+    /// <summary>
+    /// Things a Commander might say to reach this capability. Help speaks them
+    /// as "try saying…" at the bottom of its hierarchy, which is where a
+    /// capability stops being a name on a list and becomes something you know
+    /// how to invoke.
+    ///
+    /// <para>
+    /// They are examples, not a matcher. Nothing compares these against
+    /// speech-to-text output: transcription of system, ship and commodity names
+    /// is exactly where that fails, and a phrase matcher fails silently when it
+    /// misses. The LLM integration will read the same list as few-shot examples
+    /// inside the tool schema; that is a second consumer, not a second field.
+    /// </para>
+    /// </summary>
+    public required IReadOnlyList<string> Examples { get; init; }
 }

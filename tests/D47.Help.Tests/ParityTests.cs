@@ -64,6 +64,23 @@ public class ParityTests
         ids.Distinct(StringComparer.Ordinal).Count().ShouldBe(ids.Count);
     }
 
+    [Fact]
+    public void EveryCapability_TellsTheCommander_HowToReachIt()
+    {
+        // Help's bottom level is "here is what to say". A capability with no
+        // example utterances is one the Commander can be shown and still have
+        // no idea how to invoke.
+        List<string> unreachable =
+        [
+            .. from descriptor in Registry.Descriptors
+               where descriptor.Examples.Count == 0
+                     || descriptor.Examples.Any(string.IsNullOrWhiteSpace)
+               select descriptor.Id,
+        ];
+
+        unreachable.ShouldBeEmpty();
+    }
+
     private static bool CanBeShown(CapabilityDescriptor descriptor) =>
         !string.IsNullOrWhiteSpace(descriptor.Id)
         && !string.IsNullOrWhiteSpace(descriptor.Group)
