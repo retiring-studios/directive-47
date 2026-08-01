@@ -207,6 +207,34 @@ This file is descriptive. Nothing here enforces itself — see
   ourselves hangs off the icon — as the exit menu at
   [#68](https://github.com/retiring-studios/directive-47/issues/68) does. The
   rule is about purpose, not about who paints the pixels.
+- **A left-click on the tray icon restores the panel, and takes the foreground
+  to do it.** The icon exists for two things — exit, and bring the window back —
+  so bringing it back has to actually bring it back. There is no case for being
+  shy about focus here: if the notification area is on screen at all, the
+  Commander has already looked away from the game, and that is their business.
+
+  Getting the foreground costs more than it should. `Activate` and a plain
+  `SetForegroundWindow` are both refused, because Windows gives the foreground
+  to whoever received the last input and the click went to the shell. Two things
+  are needed, and both were measured rather than reasoned: attaching to the
+  foreground thread's input queue for the length of the call, and **asking 300ms
+  late rather than immediately** — the shell is still closing its overflow
+  flyout when the click reaches us, and takes the foreground back afterwards.
+
+  The delay is the part that looks removable and is not. Without it the
+  foreground window after a tray click was `Shell_TrayWnd` every single time,
+  through five different combinations of `Activate`, `SetForegroundWindow`,
+  `AttachThreadInput`, `ShowWindow` and `BringWindowToTop`. Everything except
+  the attach and the delay was then removed, so what remains is what earned its
+  place.
+
+  Restoring is also deliberately not "show it if it is hidden". A minimized
+  window is still visible as far as WPF is concerned, so that version does
+  nothing for the case a Commander is most likely to hit. And it is always the
+  same window, never a new one — rebuilding it would look right and silently
+  discard whatever state it was hidden with, which is what
+  `TrayIcon_WhenItRestoresThePanel_BringsBackTheOneThatWasHidden` is there to
+  catch.
 - **Closing the panel hides it; exiting is a different gesture.** The panel is
   convenience and the voice loop is the product, so the close control cancels
   the close and hides the window, `ShutdownMode` is `OnExplicitShutdown`, and

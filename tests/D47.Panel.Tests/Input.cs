@@ -35,6 +35,8 @@ internal static class Input
     private const uint VirtualDesktop = 0x4000;
 
     private const uint Move = 0x0001;
+    private const uint LeftDown = 0x0002;
+    private const uint LeftUp = 0x0004;
     private const uint RightDown = 0x0008;
     private const uint RightUp = 0x0010;
 
@@ -53,7 +55,18 @@ internal static class Input
     /// <exception cref="InvalidOperationException">
     /// The pointer did not end up where it was sent.
     /// </exception>
-    internal static void RightClick(Rect box)
+    internal static void RightClick(Rect box) => Click(box, RightDown, RightUp);
+
+    /// <summary>
+    /// Left-clicks the middle of a rectangle — how a tray icon is activated.
+    /// </summary>
+    /// <param name="box">The rectangle to click the middle of.</param>
+    /// <exception cref="InvalidOperationException">
+    /// The pointer did not end up where it was sent.
+    /// </exception>
+    internal static void LeftClick(Rect box) => Click(box, LeftDown, LeftUp);
+
+    private static void Click(Rect box, uint down, uint up)
     {
         double x = box.X + (box.Width / 2);
         double y = box.Y + (box.Height / 2);
@@ -64,8 +77,8 @@ internal static class Input
         Thread.Sleep(200);
 
         // Asked of Windows rather than assumed. A click that silently lands
-        // somewhere else shows up as "the menu never opened", which is the same
-        // symptom as a menu that opened and was dismissed.
+        // somewhere else shows up as "nothing happened", which is the same
+        // symptom as a click that landed and was ignored.
         if (!GetCursorPos(out NativePoint landed)
             || Math.Abs(landed.X - x) > 2
             || Math.Abs(landed.Y - y) > 2)
@@ -74,9 +87,9 @@ internal static class Input
                 $"Sent the pointer to {x:0},{y:0} but it arrived at {landed.X},{landed.Y}.");
         }
 
-        mouse_event(RightDown | Absolute | VirtualDesktop, absoluteX, absoluteY, 0, UIntPtr.Zero);
+        mouse_event(down | Absolute | VirtualDesktop, absoluteX, absoluteY, 0, UIntPtr.Zero);
         Thread.Sleep(80);
-        mouse_event(RightUp | Absolute | VirtualDesktop, absoluteX, absoluteY, 0, UIntPtr.Zero);
+        mouse_event(up | Absolute | VirtualDesktop, absoluteX, absoluteY, 0, UIntPtr.Zero);
     }
 
     /// <summary>

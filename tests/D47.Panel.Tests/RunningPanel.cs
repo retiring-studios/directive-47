@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -6,6 +6,10 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Automation;
+
+// Aliased rather than imported: System.Windows also has a Condition, and
+// importing the namespace makes every automation Condition here ambiguous.
+using Rect = System.Windows.Rect;
 
 namespace D47.Panel.Tests;
 
@@ -135,6 +139,86 @@ internal sealed class RunningPanel : IDisposable
     }
 
     /// <summary>
+    /// Minimizes the window — shown, but not on screen.
+    ///
+    /// <para>
+    /// The case that catches a restore written as "if it is not visible, show
+    /// it". A minimized window is still visible by that test, so a naive
+    /// implementation does nothing and the Commander clicks the tray icon over
+    /// and over with no effect.
+    /// </para>
+    /// </summary>
+    internal void MinimizeWindow()
+    {
+        if (Window.TryGetCurrentPattern(WindowPattern.Pattern, out object pattern))
+        {
+            ((WindowPattern)pattern).SetWindowVisualState(WindowVisualState.Minimized);
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"The window does not support minimizing.{Environment.NewLine}{Describe()}");
+    }
+
+    /// <summary>
+    /// Moves and resizes the window, so that a later assertion about the state
+    /// it came back with has something to be about.
+    /// </summary>
+    /// <param name="box">Where to put it, in screen pixels.</param>
+    internal void MoveAndResize(Rect box)
+    {
+        if (!Window.TryGetCurrentPattern(TransformPattern.Pattern, out object pattern))
+        {
+            throw new InvalidOperationException(
+                $"The window cannot be moved or resized.{Environment.NewLine}{Describe()}");
+        }
+
+        var transform = (TransformPattern)pattern;
+        transform.Move(box.X, box.Y);
+        transform.Resize(box.Width, box.Height);
+    }
+
+    /// <summary>
+    /// Where the window is now. Read fresh rather than cached, because the
+    /// question is always what it looks like at this moment.
+    /// </summary>
+    internal Rect Bounds => FindMyWindow()?.Current.BoundingRectangle
+        ?? throw new InvalidOperationException(
+            "The window is not on the desktop, so it has no bounds.");
+
+    /// <summary>
+    /// Whether the window is the one Windows currently considers foreground.
+    /// Asked of the operating system, because "on top" is its opinion and not
+    /// something the application can report about itself.
+    /// </summary>
+    internal bool IsForeground
+    {
+        get
+        {
+            AutomationElement? window = FindMyWindow();
+
+            return window is not null
+                && Desktop.ForegroundWindow() == new IntPtr(window.Current.NativeWindowHandle);
+        }
+    }
+
+    /// <summary>
+    /// Whether the window is minimized.
+    /// </summary>
+    internal bool IsMinimized =>
+        FindMyWindow() is { } window
+        && window.TryGetCurrentPattern(WindowPattern.Pattern, out object pattern)
+        && ((WindowPattern)pattern).Current.WindowVisualState == WindowVisualState.Minimized;
+
+    /// <summary>
+    /// Waits until automation can find the window again.
+    /// </summary>
+    /// <param name="within">How long to wait.</param>
+    /// <returns>Whether it came back in time.</returns>
+    internal bool WaitForWindowToReturn(TimeSpan within) =>
+        Eventually.True(() => FindMyWindow() is not null, within);
+
+    /// <summary>
     /// Waits until automation can no longer find the window.
     ///
     /// <para>
@@ -147,30 +231,8 @@ internal sealed class RunningPanel : IDisposable
     /// </summary>
     /// <param name="within">How long to wait.</param>
     /// <returns>Whether the window went in time.</returns>
-    internal bool WaitForWindowToGo(TimeSpan within)
-    {
-        AutomationElement root = AutomationElement.RootElement
-            ?? throw new InvalidOperationException(
-                "UI Automation has no root element. This machine has no interactive desktop.");
-
-        var mine = new AndCondition(
-            new PropertyCondition(AutomationElement.NameProperty, WindowName),
-            new PropertyCondition(AutomationElement.ProcessIdProperty, ProcessId));
-
-        DateTime deadline = DateTime.UtcNow + within;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (root.FindFirst(TreeScope.Children, mine) is null)
-            {
-                return true;
-            }
-
-            Thread.Sleep(250);
-        }
-
-        return false;
-    }
+    internal bool WaitForWindowToGo(TimeSpan within) =>
+        Eventually.True(() => FindMyWindow() is null, within);
 
     /// <summary>
     /// Waits for the application to exit, so a test can assert on what closing
@@ -208,6 +270,28 @@ internal sealed class RunningPanel : IDisposable
         _disposed = true;
         Kill(_process);
         _process.Dispose();
+    }
+
+    /// <summary>
+    /// This panel's window as it is right now, or <see langword="null"/> if it
+    /// is not on the desktop.
+    ///
+    /// <para>
+    /// Looked up afresh every time rather than reusing the element captured at
+    /// launch. Hiding a window and showing it again does not necessarily hand
+    /// back the same automation element, and a stale one answers questions
+    /// about a window that is no longer there.
+    /// </para>
+    /// </summary>
+    private AutomationElement? FindMyWindow()
+    {
+        AutomationElement? root = AutomationElement.RootElement;
+
+        return root?.FindFirst(
+            TreeScope.Children,
+            new AndCondition(
+                new PropertyCondition(AutomationElement.NameProperty, WindowName),
+                new PropertyCondition(AutomationElement.ProcessIdProperty, ProcessId)));
     }
 
     private static AutomationElement WaitForWindow(Process process)
@@ -287,3 +371,4 @@ internal sealed class RunningPanel : IDisposable
         process.WaitForExit(5000);
     }
 }
+
