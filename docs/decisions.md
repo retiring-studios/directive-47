@@ -194,6 +194,30 @@ This file is descriptive. Nothing here enforces itself — see
   the title bar are rendered by the operating system. There is no render of ours
   to project onto another surface, so they are outside parity entirely. This is
   not a carve-out from strict; it is the boundary of what strict can apply to.
+- **The notification-area icon is WinForms' in-box `NotifyIcon`.** WPF has none
+  of its own, so the field was that, `Hardcodet.NotifyIcon.Wpf` (MIT, zero
+  dependencies, the community standard), or roughly 100–150 lines of
+  `Shell_NotifyIcon` P/Invoke with a hidden message window. All three put the
+  same icon in the same place through the same shell API; what differs is what
+  the *menu* will be made of, and that question belongs to
+  [#70](https://github.com/retiring-studios/directive-47/issues/70). Of the
+  three only the in-box one adds nothing to a redistributed single-file exe and
+  nothing to the licence allowlist, and it costs one `UseWindowsForms` line
+  beside `UseWPF`. A WPF application referencing WinForms reads oddly until you
+  know why, which is what that line's comment is for. Revisit trigger: #70, if
+  WinForms menus turn out to fight the panel's look — swapping is contained,
+  because nothing above the icon depends on which of the three created it.
+- **The icon file is a generated placeholder, and deliberately looks like one.**
+  `assets/directive-47.ico`, an orange "47" on a dark rounded square, at the six
+  notification-area sizes. It exists so the story is not blocked on artwork, and
+  it is ugly enough that nobody will mistake it for a decision. Replaced under
+  [#80](https://github.com/retiring-studios/directive-47/issues/80). Two things
+  learned making it, both non-obvious: `System.Drawing.Icon` cannot decode
+  PNG-compressed icon frames, and `NotifyIcon` goes through
+  `System.Drawing.Icon` — so a modern PNG-payload `.ico` yields a blank tray
+  icon rather than an error. The frames are classic DIBs for that reason, which
+  is also why 128 and 256 are absent: uncompressed, they cost about 340KB
+  between them for sizes the notification area never asks for.
 - **The parity test must assert the enumeration is not empty.** A
   discovery-based test that finds nothing passes, and a test that passes because
   it checked nothing is worse than no test — it reports confidence it never
@@ -242,6 +266,20 @@ The tiers drive the project layout, not just test selection.
   The cost, accepted deliberately: nothing verifies that Tier 0 and Tier 1 still
   build on Linux, so a Claude cloud container is no longer a supported way to
   work on this repo.
+
+- **There is one desktop, so tests that drive it take turns.** xUnit runs test
+  classes in parallel, and the automation tests do not own what they are driving
+  — there is a single notification area, a single overflow flyout, and windows
+  that are found by name. Two such classes running at once produced three
+  failures with three unrelated-looking causes: a test closed another test's
+  window and then waited forever for its own process to exit, a test asked
+  whether the tray icon had gone and was answered by a still-running panel's
+  icon, and UI Automation returned a bare `COMException` under the contention.
+  Every class that touches the real desktop shares one collection name; the
+  in-process tests that build a visual tree and inspect it stay parallel,
+  because they touch nothing outside their own thread. The related fix is that
+  the harness now finds its window by name **and process id** — matching on name
+  alone was a latent bug that only one desktop-driving class had been hiding.
 
 ## Fixtures
 

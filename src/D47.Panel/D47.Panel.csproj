@@ -13,11 +13,28 @@
         Nullable and the analyzer settings come from Directory.Build.props.
         ImplicitUsings is deliberately off, matching the rest of the repo.
     -->
+    <!--
+        UseWindowsForms next to UseWPF looks wrong and is not. WPF has no
+        notification-area icon of its own, so the choice is WinForms'
+        in-box NotifyIcon, a package, or a few hundred lines of Shell_NotifyIcon
+        P/Invoke. All three put the same icon in the same place; only the first
+        adds nothing to what gets redistributed. See docs/decisions.md.
+    -->
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <OutputType>WinExe</OutputType>
         <UseWPF>true</UseWPF>
+        <UseWindowsForms>true</UseWindowsForms>
     </PropertyGroup>
+
+    <!--
+        Linked, because assets/ is shared repository content rather than this
+        project's own. The Link is what puts it at a stable resource path
+        instead of one built out of "..\..\".
+    -->
+    <ItemGroup>
+        <Resource Include="..\..\assets\directive-47.ico" Link="assets\directive-47.ico" />
+    </ItemGroup>
 
     <!--
         The panel is an application, so its types are internal — CA1515, and it
