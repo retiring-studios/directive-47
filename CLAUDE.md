@@ -76,4 +76,14 @@ Say when you are finished with it. If a working test later needs debugging here,
 ask first rather than assuming the earlier window still applies. Never loop runs
 locally to chase a flaky result — that is what CI is for.
 
+**`docs/decisions.md` records what the maintainer decided, in his words.** Do not
+write a decision into it that he did not make. Prompt him instead — say what
+needs deciding and why it came up — and let him write it himself.
+
+The file is not a scratchpad for proposals. Everything in it reads afterwards as
+settled, and a decision nobody made is indistinguishable from one that was,
+which is how invented obligations end up being treated as debt. Recording the
+*consequences* of his decision — what was built, what was measured, what failed
+— is fine and is most of what the file already is. Inventing the decision is not.
+
 Reasoning behind the decisions already made: `docs/decisions.md`.
