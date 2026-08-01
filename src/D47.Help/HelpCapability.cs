@@ -21,8 +21,8 @@ namespace D47.Help;
 /// <para>
 /// The answer is a hierarchy — groups, then the capabilities in one group, then
 /// one capability's detail — because forty lines spoken aloud is not an answer.
-/// Each level is asked with a name the level above it produced. Recovering from
-/// a name that resolves to nothing belongs in front of this, not here.
+/// Each level is asked with a name the level above it produced, and an utterance
+/// matching none of them is recovered rather than refused.
 /// </para>
 /// </summary>
 public sealed class HelpCapability
@@ -122,14 +122,18 @@ public sealed class HelpCapability
 
         string heard = utterance.Trim();
         string opening = $"I don't recognize \"{heard}\".";
-        string? nearest = NearestName.To(heard, CanonicalNames());
+        IReadOnlyList<string> groups = ListGroups();
+        IReadOnlyList<string> canonical =
+            [.. _registry.Descriptors.Select(descriptor => descriptor.Id), .. groups];
+
+        string? nearest = NearestName.To(heard, canonical);
 
         if (nearest is not null)
         {
             return [opening, $"Did you mean {nearest}?"];
         }
 
-        return [opening, OfferingGroups, .. ListGroups()];
+        return [opening, OfferingGroups, .. groups];
     }
 
     /// <summary>
@@ -161,13 +165,6 @@ public sealed class HelpCapability
     /// <returns>The listing, ready for any surface to render or speak.</returns>
     /// <exception cref="ArgumentException">Nothing was heard.</exception>
     public CapabilityResult AnswerForUtterance(string utterance) => Listing(Recover(utterance));
-
-    /// <summary>
-    /// Every name help speaks aloud, in the order it speaks them: capability
-    /// ids, then group names.
-    /// </summary>
-    private IReadOnlyList<string> CanonicalNames() =>
-        [.. _registry.Descriptors.Select(descriptor => descriptor.Id), .. ListGroups()];
 
     /// <summary>
     /// Every level of the hierarchy answers in the shape help's descriptor
