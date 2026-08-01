@@ -33,31 +33,34 @@ internal static class Desktop
     internal const string Collection = "The desktop";
 
     /// <summary>
-    /// Set this to <c>1</c> to run the pointer-driven tests on a machine you
-    /// are sitting at, having decided to leave it alone for a minute.
+    /// Set this to <c>1</c> to run the desktop tests on a machine you are
+    /// sitting at, having decided to leave it alone for a minute. Developing
+    /// these tests is what it is for; running them out of habit is not.
     /// </summary>
-    private const string RunAnyway = "D47_DESKTOP_INPUT_TESTS";
+    internal const string RunAnyway = "D47_DESKTOP_TESTS";
 
     /// <summary>
-    /// Why a pointer-driven test skipped, in the words a reader of the test
-    /// output needs.
+    /// Why a desktop test skipped, in the words a reader of the test output
+    /// needs.
     /// </summary>
-    internal const string NeedsAnIdleMachine =
-        "This test moves the real pointer, and the shell's overflow flyout is dismissed by any "
-        + "focus change at all — a click, a keystroke, a media key. It needs a machine nobody is "
-        + "using, which CI is and a desk is not. Set " + RunAnyway + "=1 to run it here anyway.";
+    internal const string NeedsAMachineNobodyIsUsing =
+        "This test drives the real desktop — it launches the application, reads the notification "
+        + "area, and sometimes moves the pointer. It needs a machine nobody is using, which CI is "
+        + "and a desk is not. Set " + RunAnyway + "=1 to run it here while developing it.";
 
     /// <summary>
-    /// Whether this machine can be relied on to leave the pointer alone.
+    /// Whether this machine can be relied on to leave the desktop alone.
     ///
     /// <para>
     /// True on CI, which sets <c>CI</c> and has nobody at the keyboard. False on
-    /// a development machine unless someone has deliberately said otherwise,
-    /// because a test that seizes the pointer for half a minute and fails if you
-    /// touch anything is not something to run by surprise.
+    /// a development machine unless someone has deliberately said otherwise.
+    /// These tests take the whole desktop for as long as they run, and half of
+    /// what breaks them is somebody using it — so on a desk they are something
+    /// to opt into while working on them, not something a plain
+    /// <c>dotnet test</c> springs on you.
     /// </para>
     /// </summary>
-    internal static bool IsUndisturbed =>
+    internal static bool IsAvailable =>
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
         || Environment.GetEnvironmentVariable(RunAnyway) == "1";
 

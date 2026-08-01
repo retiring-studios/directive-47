@@ -63,4 +63,14 @@ works. It is not a documentation update. Every pull request carries a `Refactor`
 section saying what the pass found, or saying nothing needed changing and why it
 looked — an empty one is a skipped step, not a clean bill.
 
+**Integration and E2E tests are CI's job, not this desktop's.** They seize the
+whole machine while they run, and the maintainer needs it for other things. They
+skip locally by default; `D47_DESKTOP_TESTS=1` runs them, and that is for
+developing them.
+
+If one of them needs debugging on this machine, **stop and ask first**. Say what
+you are about to run and roughly how long the machine will be unusable, wait for
+a go-ahead, and say when it is finished. Never run them in a loop locally to
+chase a flaky result — that is what CI is for.
+
 Reasoning behind the decisions already made: `docs/decisions.md`.

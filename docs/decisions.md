@@ -309,25 +309,30 @@ The tiers drive the project layout, not just test selection.
   a game — and synthesized input needs only a desktop, which the runner has.
   The line is "can a hosted runner do this at all", not "does it touch an input
   API".
-- **Pointer-driven tests need a machine nobody is using, so they run on CI and
-  skip on a desk.** The shell's overflow flyout is dismissed by any focus change
-  at all — a click, a keystroke, a media key — and an icon in a flyout that has
-  just closed still reports the rectangle it used to occupy, so the click lands
-  on whatever is behind it and opens *that* window's context menu. This was not
-  theoretical: the failure that found it was Microsoft Edge's tab menu.
+- **Integration and end-to-end tests run on CI, not on the dev PC.** They take
+  the whole desktop for as long as they run, and the maintainer needs that
+  machine for other things. Once such a test is written it should not execute
+  again locally: CI sets `CI`, has nobody at the keyboard, and gates every pull
+  request. On a development machine they skip with the reason in the test
+  output, unless `D47_DESKTOP_TESTS=1` says otherwise — which is for developing
+  them, and for a debugging session agreed with the maintainer first.
 
-  The wrong response is to engineer around it, because no amount of retrying
-  makes a pointer-driven test survive someone using the pointer. The right one
-  is to run it where nothing else is: CI sets `CI`, has nobody at the keyboard,
-  and gates every pull request. On a development machine these skip, with a
-  reason in the test output, unless `D47_DESKTOP_INPUT_TESTS=1` says the
-  maintainer has deliberately stood back from it.
+  **The line is what a test touches, not how slow it is.** Starting the
+  application as a process, or reading what the shell is drawing, puts it behind
+  the gate. Building a visual tree in-process and inspecting it does not: it
+  touches nothing outside its own thread, nobody using the machine can disturb
+  it, and gating it would cost local coverage for nothing. Inheriting
+  `DesktopTest` is what applies both the gate and the take-turns collection.
 
-  Only the tests that move the pointer are gated. Launching a window and reading
-  it back is unbothered by someone typing, and gating it would cost local
-  coverage for nothing. A bounded retry and an Escape after a miss are still
-  worth having for the transient case on CI, where the shell's own animations
-  are the only thing competing.
+  The immediate cause was a pointer-driven test, and it is worth recording why
+  retrying was the wrong answer. The shell's overflow flyout is dismissed by any
+  focus change at all — a click, a keystroke, a media key — and an icon in a
+  flyout that has just closed still reports the rectangle it used to occupy, so
+  the click lands on whatever is behind it and opens *that* window's context
+  menu. The failure that found this was Microsoft Edge's tab menu. No amount of
+  retrying makes a test that drives the pointer survive somebody using the
+  pointer. A bounded retry and an Escape after a miss are still kept, for the
+  transient case on CI where the shell's own animations are the only competition.
 
 ## Fixtures
 

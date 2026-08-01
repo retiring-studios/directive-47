@@ -21,8 +21,7 @@ namespace D47.Panel.Tests;
 /// opening the shell's overflow flyout and putting it away again.
 /// </para>
 /// </summary>
-[Collection(Desktop.Collection)]
-public class TrayIconTests
+public class TrayIconTests : DesktopTest
 {
     private const string Tooltip = "Directive 47";
 
@@ -55,8 +54,6 @@ public class TrayIconTests
     [Fact]
     public void TrayIcon_WhenTheAppExits_LeavesNoGhostBehind()
     {
-        Assert.SkipUnless(Desktop.IsUndisturbed, Desktop.NeedsAnIdleMachine);
-
         using var panel = RunningPanel.Launch();
 
         WaitForIcon(present: true, "the icon has to arrive before its leaving means anything");
@@ -77,8 +74,6 @@ public class TrayIconTests
     [Fact]
     public void TrayMenu_WhenExitIsChosen_EndsTheApplicationDeliberately()
     {
-        Assert.SkipUnless(Desktop.IsUndisturbed, Desktop.NeedsAnIdleMachine);
-
         // The third of #68's criteria: there is a way to actually exit, and it
         // is not the gesture that hides. Closing the window is one thing and
         // right-clicking the tray icon is another, which is what makes exiting

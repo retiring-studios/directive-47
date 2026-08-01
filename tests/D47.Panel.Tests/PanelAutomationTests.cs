@@ -19,8 +19,7 @@ namespace D47.Panel.Tests;
 /// in-process tests happily confirmed the right text was on screen.
 /// </para>
 /// </summary>
-[Collection(Desktop.Collection)]
-public class PanelAutomationTests
+public class PanelAutomationTests : DesktopTest
 {
     private readonly ITestOutputHelper _output;
 
