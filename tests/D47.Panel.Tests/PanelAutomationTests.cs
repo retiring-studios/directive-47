@@ -1,10 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.ExceptionServices;
-using System.Threading;
-using System.Windows.Automation;
 
 using Shouldly;
 
@@ -13,28 +8,15 @@ using Xunit;
 namespace D47.Panel.Tests;
 
 /// <summary>
-/// The panel, launched for real and read the way a screen reader or an
-/// automation client would read it. Everything else in this project inspects a
-/// visual tree it built itself, which is blind to how the running application
-/// presents itself to the outside.
+/// The panel driven from outside the process, through UI Automation. Every
+/// other test in this project builds a visual tree in-process and inspects what
+/// it built, which says nothing about how the running application presents
+/// itself to a screen reader, to automation, or to anything else on the machine.
 ///
 /// <para>
-/// That blindness is not hypothetical. This test began as a spike and
-/// immediately found that the window announced the <c>ToString()</c> of an
-/// <c>Answer</c> record as its accessible name while four visual-tree tests
-/// happily confirmed the right text was on screen.
-/// </para>
-///
-/// <para>
-/// Raw <c>System.Windows.Automation</c> rather than FlaUI. It ships with WPF and
-/// has been enough so far; FlaUI wraps these same APIs and is a package, so it
-/// waits until the ergonomics actually hurt — see the notes on the automation
-/// task.
-/// </para>
-///
-/// <para>
-/// Reports what it could see rather than only passing or failing, because "no
-/// window" and "no desktop" are different failures with different fixes.
+/// That gap is not hypothetical. The first of these found a window announcing
+/// the <c>ToString()</c> of a model object as its accessible name, while four
+/// in-process tests happily confirmed the right text was on screen.
 /// </para>
 /// </summary>
 public class PanelAutomationTests
@@ -49,113 +31,75 @@ public class PanelAutomationTests
     [Fact]
     public void Panel_WhenRunning_IsReachableByAutomationUnderItsOwnName()
     {
-        string exe = Path.Combine(AppContext.BaseDirectory, "D47.Panel.exe");
-        File.Exists(exe).ShouldBeTrue($"the panel exe should sit beside the tests, at {exe}");
+        using var panel = RunningPanel.Launch();
 
-        using Process panel = Process.Start(new ProcessStartInfo(exe) { UseShellExecute = false })
-            ?? throw new InvalidOperationException("the panel did not start");
+        panel.Window.Current.Name.ShouldBe("Directive 47");
+    }
+
+    [Fact]
+    public void Panel_WhenRunning_PresentsTheAnswerItRendered()
+    {
+        using var panel = RunningPanel.Launch();
+
+        _output.WriteLine(panel.Describe());
+
+        // Help's top level, read back out of the running application rather
+        // than out of a visual tree the test built for itself. One group,
+        // because help is currently the only registered capability.
+        panel.VisibleText().ShouldBe(["Getting around"]);
+    }
+
+    [Fact]
+    public void Panel_WhenItsWindowIsClosed_ExitsRatherThanLingering()
+    {
+        // Today closing the window ends the application. #68 changes that to
+        // hiding, and this test is where the change becomes visible: it has to
+        // be rewritten, deliberately, rather than quietly continuing to pass.
+        using var panel = RunningPanel.Launch();
+
+        panel.CloseWindow();
+
+        panel.WaitForExit(TimeSpan.FromSeconds(10)).ShouldBeTrue(
+            "closing the window should end the application today");
+    }
+
+    [Fact]
+    public void Automation_WhenAnAssertionFails_StillLeavesNoProcessBehind()
+    {
+        // The harness owns teardown, because a test that fails partway through
+        // must not leave a window on the desktop or a process on the agent.
+        var panel = RunningPanel.Launch();
 
         try
         {
-            // Win32 first. If there is a real window handle, the window exists,
-            // and anything UI Automation cannot see afterwards is UIA's problem
-            // rather than the desktop's.
-            IntPtr handle = IntPtr.Zero;
-
-            for (int attempt = 0; attempt < 30 && handle == IntPtr.Zero; attempt++)
-            {
-                panel.Refresh();
-                handle = panel.MainWindowHandle;
-
-                if (handle == IntPtr.Zero)
-                {
-                    Thread.Sleep(500);
-                }
-            }
-
-            _output.WriteLine($"process alive       : {!panel.HasExited}");
-            _output.WriteLine($"win32 window handle : {handle}");
-            _output.WriteLine($"win32 window title  : \"{panel.MainWindowTitle}\"");
-
-            AutomationElement? onMta = Probe("MTA (default test thread)");
-            AutomationElement? onSta = null;
-            OnAStaThread(() => onSta = Probe("STA thread"));
-
-            _output.WriteLine($"found on MTA        : {onMta is not null}");
-            _output.WriteLine($"found on STA        : {onSta is not null}");
-
-            handle.ShouldNotBe(IntPtr.Zero, "the panel never produced a window handle");
-            (onMta ?? onSta).ShouldNotBeNull("UI Automation could not see a window that Win32 can");
+            throw new InvalidOperationException("stand-in for a failing assertion");
+        }
+        catch (InvalidOperationException)
+        {
+            // swallowed on purpose: what is under test is the disposal below
         }
         finally
         {
-            if (!panel.HasExited)
-            {
-                panel.Kill(entireProcessTree: true);
-                panel.WaitForExit(5000);
-            }
+            panel.Dispose();
         }
+
+        // Asked of the operating system, not of the harness. A teardown that
+        // reports its own success is not evidence that anything was torn down.
+        Should.Throw<ArgumentException>(() => Process.GetProcessById(panel.ProcessId));
     }
 
-    private AutomationElement? Probe(string label)
+    [Fact]
+    public void Automation_Describes_WhatTheTreeActuallyContained()
     {
-        _output.WriteLine($"--- {label} ---");
+        // "Element not found" without the tree tells you nothing about why, so
+        // every failure message in these tests carries one.
+        using var panel = RunningPanel.Launch();
 
-        AutomationElement? root = AutomationElement.RootElement;
+        string tree = panel.Describe();
+        _output.WriteLine(tree);
 
-        if (root is null)
-        {
-            _output.WriteLine("  root element      : <null>");
-            return null;
-        }
-
-        _output.WriteLine($"  root element      : \"{root.Current.Name}\" ({root.Current.ClassName})");
-
-        AutomationElementCollection children = root.FindAll(TreeScope.Children, Condition.TrueCondition);
-        _output.WriteLine($"  top-level windows : {children.Count}");
-
-        List<string> tops = [];
-
-        for (int child = 0; child < children.Count; child++)
-        {
-            tops.Add($"\"{children[child].Current.Name}\" ({children[child].Current.ClassName})");
-        }
-
-        foreach (string top in tops)
-        {
-            _output.WriteLine($"      {top}");
-        }
-
-        return root.FindFirst(
-            TreeScope.Children,
-            new PropertyCondition(AutomationElement.NameProperty, "Directive 47"));
-    }
-
-    private static void OnAStaThread(Action action)
-    {
-        Exception? failure = null;
-
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                action();
-            }
-#pragma warning disable CA1031
-            catch (Exception error)
-            {
-                failure = error;
-            }
-#pragma warning restore CA1031
-        });
-
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-
-        if (failure is not null)
-        {
-            ExceptionDispatchInfo.Capture(failure).Throw();
-        }
+        tree.ShouldContain("Directive 47");
+        tree.ShouldContain("Getting around");
+        tree.ShouldContain("ControlType.Text");
     }
 }
