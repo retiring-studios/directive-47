@@ -30,6 +30,13 @@ This file is descriptive. Nothing here enforces itself — see
 - **SteamVR only.** OpenXR is a someday nice-to-have and appears in no
   definition of done. One `IHeadsetOverlay` interface with a single SteamVR
   implementation keeps the door open without paying for it now.
+- **`global.json` pins the SDK *band floor*, not an installed version.**
+  `10.0.100` with `rollForward: latestFeature`. Machines carry different feature
+  bands — one dev machine was on 10.0.302 (band 3xx) while the cloud container
+  had 10.0.110 (band 1xx) — and `rollForward` only moves *up*, so pinning either
+  exact version breaks the other machine. Pinning the band floor satisfies both,
+  and still refuses every .NET 11 SDK, which is the deliberate-upgrade gate.
+  Expect further machines on further bands; that is fine and expected.
 
 ## Architecture
 
@@ -150,7 +157,16 @@ The tiers drive the project layout, not just test selection.
   and mappers), never per-directory.
 - **Coverage is not gated on a global percentage.** It produces tests written
   for the number. Per-tier at most.
-- Specific analyzer thresholds are deferred.
+- Specific analyzer thresholds are deferred until the first Tier 2 adapter,
+  because there is nothing to calibrate against until then.
+- **The built-in .NET analyzers cannot deliver the size rule above.** There is no
+  "method too long" rule in the box, so `AnalysisLevel=latest-all` alone will
+  never enforce the first bullet in this section — the gate is aspirational until
+  something else provides it. Two candidates, to be decided when the first Tier 2
+  adapter lands: SonarAnalyzer.CSharp (S138 method length, S1541 cyclomatic
+  complexity, S107 parameter count), or a hand-written architecture test. The
+  first is a dependency and therefore stops for the maintainer; the second is
+  not.
 
 ## Dependencies
 
@@ -260,8 +276,10 @@ trigger moved.
   least resistance, and the decision is half-made by the existence of the thing
   before the maintainer sees it. Bring what the code has to do, the candidate
   package and what it drags in, and an estimate of the hand-rolled size labelled
-  as an estimate. If it cannot be estimated without building it, ask for a
-  timeboxed spike rather than quietly taking one.
+  as an estimate. If it cannot be estimated without building it, ask for a spike
+  rather than quietly taking one. Spikes are not timeboxed — they run at the
+  maintainer's pleasure and stop when he says so. What matters is that
+  exploratory work is asked for, not that it is bounded in advance.
 - The dependency half of that line is already enforced: `Directory.Packages.props`
   is in `permissions.ask`, so adding a package stops for the maintainer.
 - **Manual test steps are per-PR only**, never an accumulating file. Regression
