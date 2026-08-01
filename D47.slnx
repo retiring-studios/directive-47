@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/D47.Capabilities/D47.Capabilities.csproj" />
+    <Project Path="src/D47.Help/D47.Help.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/D47.Capabilities.Tests/D47.Capabilities.Tests.csproj" />
+    <Project Path="tests/D47.Help.Tests/D47.Help.Tests.csproj" />
   </Folder>
 </Solution>

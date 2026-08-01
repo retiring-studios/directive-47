@@ -2,6 +2,13 @@
   // VS Code does not read .editorconfig on its own; this extension is what
   // makes the repo's formatting rules apply while typing.
   "recommendations": [
-    "EditorConfig.EditorConfig"
+    "EditorConfig.EditorConfig",
+    // Language server, build errors in-editor, and Run/Debug Test on each
+    // [Fact]. MIT.
+    "ms-dotnettools.csharp",
+    // Adds the Testing panel — the whole suite as a tree with green ticks,
+    // rather than reading dotnet test output. Proprietary, free for
+    // individuals; the repo builds and tests fine without it.
+    "ms-dotnettools.csdevkit"
   ]
 }
