@@ -34,6 +34,21 @@ Tier 2 project, because a filter naming no projects warns on every build.
 The solution is the XML `.slnx` format, not the classic `.sln`. Solution filters
 work against it unchanged. `dotnet new sln` defaults to `.slnx` on .NET 10.
 
+## Referring to issues
+
+The backlog lives in GitHub — `https://github.com/retiring-studios/directive-47`
+— so issue numbers come up constantly.
+
+**Always render them as markdown links with the full URL**, never a bare `#53`:
+
+```markdown
+[#53](https://github.com/retiring-studios/directive-47/issues/53)
+```
+
+A bare number costs a search every single time it is mentioned. This applies to
+prose, tables, and lists alike — anywhere the maintainer might want to click
+through.
+
 ## Working agreement
 
 Architectural decisions go to the maintainer first: propose options and

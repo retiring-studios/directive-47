@@ -35,10 +35,18 @@ This file is descriptive. Nothing here enforces itself — see
 
 - **Capabilities declare, surfaces render.** A capability contributes a
   descriptor: a data object saying what it is and what to show. It carries an
-  LLM tool schema, a display model, help text, and example utterances. The
-  desktop panel, VR overlay, and voice layer all consume it, so no capability
-  references a UI assembly and none of them contains feature-specific rendering
-  code.
+  LLM tool schema, a display model, help text, and example utterances. Every
+  surface consumes it, so no capability references a UI assembly and none of
+  them contains feature-specific rendering code.
+- **A descriptor is the declaration of a function, as data — never a variable.**
+  It is registered once at startup and never mutates. What a capability
+  *returns* is a separate per-invocation result conforming to the shape the
+  descriptor declared: the descriptor says "a key-value readout with the keys
+  System and Body", the result says "Shinrarta Dezhra, Jameson Memorial".
+  Collapsing the two would put the LLM tool schema — which must stay
+  byte-identical for prompt caching — on a mutating object, race two callers on
+  one instance, and stop the parity test from running without invoking
+  capabilities.
 - **The descriptor has an escape hatch, and it is not optional to fill.** The
   display model covers text, lists, and key-value readouts, which is most of
   what anyone alt-tabs for. A capability needing something the model cannot
@@ -54,15 +62,52 @@ This file is descriptive. Nothing here enforces itself — see
   Transcription of system, ship, and commodity names is exactly where STT fails,
   and a phrase matcher fails silently when it misses. This bullet previously
   read "voice phrasings", which implied the matcher.
-- **VR parity by projection.** The desktop panel is built at VR-legible density
-  (large type, high contrast, low density), and the overlay is that same render
-  target blitted to a texture.
-- **Parity is an enumerated test, not a checklist.** Enumerate all capabilities
-  against all surfaces and assert a descriptor exists for each pairing. A
-  missing VR descriptor is a red build, not a missed checkbox. The test must
-  also assert that the enumeration is not empty. A discovery-based test that
-  finds nothing passes, and a test that passes because it checked nothing is
-  worse than no test — it reports confidence it never earned.
+- **Four surfaces: three visual, one spoken.** The **game overlay** (transparent,
+  click-through, over a borderless-windowed Elite), the **VR overlay** (SteamVR,
+  in the headset), the **panel** (an ordinary window, outside the game), and
+  **voice**. Each of the three visual surfaces toggles independently; a system
+  tray icon is the way back when all of them are hidden.
+- **Render once, display wherever.** One render target at VR-legible density —
+  large type, high contrast, low density — presented three ways. Parity between
+  the visual surfaces is therefore guaranteed by construction rather than by
+  discipline: a capability cannot appear on one and not another, because there
+  is only one render.
+- **The panel is convenience, not requirement.** It exists because a window with
+  a pointer is familiar, and because setup and diagnostics want one. It is not
+  privileged: it shows the same layout as the other two and adds pointer
+  affordances over the same rows.
+- **No surface is read-only.** Anything editable is editable by voice on every
+  surface. Games hide and capture the cursor, so the overlays can never take
+  pointer input — which makes voice the only universal input and pointer support
+  a convenience layered on top. A capability that requires a pointer is broken.
+- **Parity is strict, and it is an enumerated test, not a checklist.** Enumerate
+  all capabilities against all surfaces and assert a descriptor exists for each
+  pairing. Strict, not declared-and-satisfied: letting a capability name the
+  subset of surfaces it supports makes VR opt-out, one defensible local reason at
+  a time, which is precisely the drift "VR is first-class" was written to
+  prevent. Strict costs little here because *Render once, display wherever* does
+  most of the work — what the test actually catches is a capability with no
+  visual representation at all, and an escape-hatch capability that implemented
+  its custom view for some surfaces and not others. A miss is a red build, not a
+  missed checkbox.
+- **Parity is truly strict: everything the application renders appears on every
+  visual surface.** UI chrome is not exempt — the status readout, the live log
+  and the cancel affordance appear in the headset and over the game, not only in
+  the panel. The objection to this was "a cancel button in VR, with no pointer to
+  press it", and it does not hold: *no surface is read-only*, so a button is a
+  labelled affordance whose activation path is voice, and showing it in the
+  headset is how the Commander learns the word to say. Same argument as help.
+  Revisit trigger, recorded deliberately: if an element turns out to be noise in
+  the headset rather than discovery, the fix is a per-element exemption argued
+  here — not a general retreat to declared parity.
+- **What Windows draws is not ours and cannot participate.** The tray icon and
+  the title bar are rendered by the operating system. There is no render of ours
+  to project onto another surface, so they are outside parity entirely. This is
+  not a carve-out from strict; it is the boundary of what strict can apply to.
+- **The parity test must assert the enumeration is not empty.** A
+  discovery-based test that finds nothing passes, and a test that passes because
+  it checked nothing is worse than no test — it reports confidence it never
+  earned.
 - **`TimeProvider` and `FakeTimeProvider`**, not a hand-rolled `IClock`.
 - **Interfaces at every process boundary.** NSubstitute for stubs; hand-written
   fakes for stateful things such as the journal source and the audio device.

@@ -23,7 +23,19 @@
       "PowerShell(gh issue view*)",
       "PowerShell(gh issue list*)",
       "PowerShell(Get-ChildItem*)",
-      "PowerShell(Test-Path*)"
+      "PowerShell(Test-Path*)",
+      "Edit(src/**)",
+      "Write(src/**)",
+      "Edit(tests/**)",
+      "Write(tests/**)",
+      "Edit(**/*.csproj)",
+      "Write(**/*.csproj)",
+      "Edit(**/*.slnx)",
+      "Write(**/*.slnx)",
+      "Edit(**/*.slnf)",
+      "Write(**/*.slnf)",
+      "Edit(docs/**)",
+      "Write(docs/**)"
     ],
     "deny": [
       "PowerShell(git push --force*)",
@@ -32,14 +44,6 @@
       "PowerShell(git clean -*)"
     ],
     "ask": [
-      "Edit(**/*.csproj)",
-      "Write(**/*.csproj)",
-      "Edit(**/*.sln)",
-      "Write(**/*.sln)",
-      "Edit(**/*.slnx)",
-      "Write(**/*.slnx)",
-      "Edit(**/*.slnf)",
-      "Write(**/*.slnf)",
       "Edit(**/Directory.Build.props)",
       "Write(**/Directory.Build.props)",
       "Edit(**/Directory.Packages.props)",
