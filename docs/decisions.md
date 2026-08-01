@@ -535,7 +535,6 @@ capability to save nothing.
 | Channel | Trigger | Audience |
 |---|---|---|
 | CI artifact | Every PR | Maintainer |
-| Pre-release | Feature complete, merged to `main` | Opt-in |
 | Stable | Epic complete | Default |
 
 - Versioning: an epic bumps **at least** the minor version, a bug fix bumps the
@@ -550,21 +549,17 @@ capability to save nothing.
   defined", or "1.0.0 when the MVP lands" is inferable from commit history.
   Started at 0.1.0 with the first feature-complete state, help from the
   capability registry.
-- **The per-PR artifact is real; the two release channels are still not.** Every
-  pull request now publishes a self-contained single-file exe and attaches it,
-  and a publish that produces nothing fails the run rather than passing with
-  nothing attached. What remains unbuilt is the table's other two rows —
-  pre-release on feature complete, stable on epic complete.
-- **The pre-release trigger has already fired with nothing behind it.** Help
-  from the capability registry is feature complete and merged, which the table
-  above says produces an opt-in pre-release. Agreed and not yet built.
+- **The per-PR artifact is real; the stable channel is not.** Every pull request
+  publishes a self-contained single-file exe and attaches it, and a publish that
+  produces nothing fails the run rather than passing with nothing attached.
+  Releasing on epic complete is not built.
 - **Self-contained, single file, not trimmed.** Self-contained because the
   artifact is what a manual pass installs and runs, and it has to work on a
   machine with no .NET on it. Not trimmed because trimming and WPF's reflection
   over XAML do not get along. The cost is an exe of about 165MB, which is why
   the per-PR artifact is kept for fourteen days rather than the default ninety —
-  it exists to be downloaded once and tried, and the release channels are what
-  keep a build for good.
+  it exists to be downloaded once and tried, and a release is what keeps a build
+  for good.
 - **The published exe's version is asserted in CI, not assumed.** The workflow
   reads `Version` from the project, publishes, and then fails if the exe does not
   report it. A publish quietly emitting a default or stale version is the kind
