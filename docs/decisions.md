@@ -137,6 +137,18 @@ The tiers drive the project layout, not just test selection.
 - **One `.Tests.csproj` per production `.csproj`.** The production project's
   tier determines the kind of tests in its pair. A project whose tests would
   span two tiers is two projects.
+- **Projects split by tier, never by capability.** Capabilities share a project;
+  a new one is created only when its tests would land in a different tier, or to
+  keep the capability contract free of anything that consumes it. One project per
+  capability would mean roughly forty of them, each with a paired test project —
+  eighty projects to express a distinction the solution does not have. The
+  existing split is exactly these two reasons: `D47.Capabilities` is the contract,
+  `D47.Help` is a Tier 0 consumer of it.
+- **`D47.Help` is named after its only occupant and that will stop being true.**
+  The next Tier 0 capability joins it rather than getting its own project, and
+  the project gets renamed at that point. Deliberately not renamed in advance:
+  guessing a bucket name before there is anything to generalise from is how
+  `D47.Core` gets recreated under a different spelling.
 - **Selection via solution filters** (`cloud.slnf`, `hardware.slnf`), not
   per-test traits.
 
