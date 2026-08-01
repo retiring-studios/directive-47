@@ -84,7 +84,7 @@ jobs:
             # publish that produced nothing uploads nothing and passes, which
             # reads as a green build with an artifact and is neither.
             - name: Attach the exe to the pull request
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: D47.Panel-${{ steps.version.outputs.version }}
                   path: publish/D47.Panel.exe
