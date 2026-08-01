@@ -9,6 +9,11 @@ name: CI
 # What this still cannot do is Tier 2. Microphones, WASAPI, hotkeys, SendInput
 # and the SteamVR overlay need real hardware, and no hosted runner has any.
 # Those live in hardware.slnf and run on the dev PC. ci.slnf is everything else.
+#
+# Every run also publishes the panel and attaches it, so a pull request carries
+# the thing a manual pass installs rather than something to be built by hand.
+# Being one Windows job is why that is four extra steps and not a second job
+# with its own checkout and restore.
 
 on:
     push:
@@ -20,7 +25,7 @@ permissions:
 
 jobs:
     build:
-        name: Build and test
+        name: Build, test and publish
         runs-on: windows-latest
 
         steps:
