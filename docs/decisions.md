@@ -25,8 +25,41 @@ This file is descriptive. Nothing here enforces itself — see
 ## Platform
 
 - **.NET 10, Windows.**
-- **WPF for the desktop panel** — not WinUI, not Avalonia. Mature UIA automation
-  (FlaUI) and a simple render-to-bitmap path for the VR overlay.
+- **WPF for the desktop panel and both overlays** — not WinUI 3, not Avalonia.
+  Three reasons, in the order they actually bind:
+  - **The game overlay is the constraint, not the panel.** It needs per-pixel
+    alpha *and* input passing through the transparent regions to the game
+    underneath. WPF does this in the box. WinUI 3 architecturally cannot: its
+    content renders through DirectComposition, so the window never has access to
+    the video memory backing its own content and cannot decide what to pass
+    through — an open limitation with no native fix, not a feature awaiting a
+    release. Avalonia can reach it through Win32 interop that we would write and
+    own, with far fewer worked examples to copy.
+  - **UI automation.** WPF's UIA support is the most mature of the three and
+    FlaUI drives it. This is intent, not history: nothing exercises it yet. It
+    is recorded as a reason for the choice because the tray, the window state
+    and the overlays cannot be tested from inside the process, and that testing
+    is coming — not because it is already paying off.
+  - **Render-to-bitmap for the headset is simple**, and the content is text that
+    changes occasionally rather than animation. A CPU-side bitmap handed to
+    SteamVR a few times a second costs nothing, so the usual performance
+    argument against retained-mode XAML does not apply here.
+
+  Known horizon, accepted deliberately: WPF is in maintenance mode — bug fixes
+  and Fluent theming, not new capability — and .NET 10 LTS support runs to
+  November 2028. It is also the option with the cheapest exit. Avalonia is a
+  XAML-to-XAML migration; WinUI 3 or an immediate-mode stack would be a one-way
+  door. Revisit trigger: needing something maintenance mode will not deliver, or
+  that 2028 date coming into view.
+
+  Rejected and why, so it is not re-argued: **WinForms** has no vector scaling
+  or styling worth having at VR-legible density. **A web stack** (WebView2,
+  Photino) styles beautifully but still needs a Win32 host doing the
+  click-through work, makes the headset path a capture problem, and adds a
+  non-.NET UI layer. **Immediate-mode** (ImGui.NET, Silk.NET) fits the two
+  overlays best of anything — you already hold a GPU texture — but has no
+  accessibility, primitive text layout, and would make the one surface that
+  should feel like an ordinary window feel like a game.
 - **SteamVR only.** OpenXR is a someday nice-to-have and appears in no
   definition of done. One `IHeadsetOverlay` interface with a single SteamVR
   implementation keeps the door open without paying for it now.
