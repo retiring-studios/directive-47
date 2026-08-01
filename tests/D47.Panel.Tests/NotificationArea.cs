@@ -61,6 +61,13 @@ internal static class NotificationArea
     private static readonly TimeSpan SettlePatience = TimeSpan.FromSeconds(3);
 
     /// <summary>
+    /// A second, not the usual quarter, because every look that does not find
+    /// the icon opens and closes the overflow flyout to be sure. Polling faster
+    /// would spend the whole wait animating the shell.
+    /// </summary>
+    private static readonly TimeSpan BetweenLooks = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// How many times to try the right-click before giving up. Three, because
     /// what defeats it is transient — something else taking focus and closing
     /// the flyout — and a gesture that never succeeds fails all three just as
@@ -138,6 +145,39 @@ internal static class NotificationArea
             + $"mean the machine was in use.{Environment.NewLine}{Desktop.Describe()}");
     }
 
+    /// <summary>
+    /// Left-clicks an icon — the gesture a Commander uses to ask for the panel
+    /// back.
+    /// </summary>
+    /// <param name="tooltip">The tooltip text of the icon to activate.</param>
+    /// <exception cref="InvalidOperationException">The icon was not there.</exception>
+    internal static void Activate(string tooltip)
+    {
+        AutomationElement taskbar = Taskbar();
+        AutomationElement? icon = Icon(taskbar, tooltip);
+
+        if (icon is not null)
+        {
+            Input.LeftClick(Settled(icon));
+            return;
+        }
+
+        AutomationElement chevron = Chevron(taskbar)
+            ?? throw new InvalidOperationException(
+                $"No icon called \"{tooltip}\" and no overflow to look in."
+                + $"{Environment.NewLine}{Describe()}");
+
+        WithOverflowOpen(chevron, overflow =>
+        {
+            AutomationElement hidden = Icon(overflow, tooltip)
+                ?? throw new InvalidOperationException(
+                    $"No icon called \"{tooltip}\" on show or in the overflow."
+                    + $"{Environment.NewLine}{Describe()}");
+
+            Input.LeftClick(Settled(hidden));
+        });
+    }
+
     private static bool TryChooseFromMenu(string tooltip, string item)
     {
         AutomationElement taskbar = Taskbar();
@@ -173,28 +213,8 @@ internal static class NotificationArea
     /// <param name="present">What to wait for.</param>
     /// <param name="within">How long to wait.</param>
     /// <returns>Whether it reached that state in time.</returns>
-    internal static bool WaitUntil(string tooltip, bool present, TimeSpan within)
-    {
-        DateTime deadline = DateTime.UtcNow + within;
-
-        while (true)
-        {
-            if (Holds(tooltip) == present)
-            {
-                return true;
-            }
-
-            if (DateTime.UtcNow >= deadline)
-            {
-                return false;
-            }
-
-            // A second, not the usual quarter, because every look that does not
-            // find the icon opens and closes the overflow flyout to be sure.
-            // Polling faster would spend the whole wait animating the shell.
-            Thread.Sleep(1000);
-        }
-    }
+    internal static bool WaitUntil(string tooltip, bool present, TimeSpan within) =>
+        Eventually.True(() => Holds(tooltip) == present, within, BetweenLooks);
 
     /// <summary>
     /// Every tooltip in the notification area, on show and hidden, as text.

@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Automation;
 
@@ -135,6 +136,50 @@ internal static class Desktop
 
         return description.ToString();
     }
+
+    /// <summary>
+    /// The window Windows currently considers foreground.
+    /// </summary>
+    internal static IntPtr ForegroundWindow() => GetForegroundWindow();
+
+    /// <summary>
+    /// What is in front right now, named. "It did not come forward" says
+    /// nothing about why; what took the foreground instead usually does.
+    /// </summary>
+    internal static string DescribeForeground()
+    {
+        IntPtr foreground = GetForegroundWindow();
+
+        if (foreground == IntPtr.Zero)
+        {
+            return "Nothing holds the foreground.";
+        }
+
+        foreach (AutomationElement top in TopLevelWindows())
+        {
+            try
+            {
+                if (new IntPtr(top.Current.NativeWindowHandle) == foreground)
+                {
+                    return $"Foreground is class=\"{top.Current.ClassName}\" "
+                        + $"name=\"{top.Current.Name}\" pid={top.Current.ProcessId}.";
+                }
+            }
+            catch (ElementNotAvailableException)
+            {
+                continue;
+            }
+        }
+
+        return $"Foreground is window {foreground}, which is not a top-level element.";
+    }
+
+    // System32 rather than the default probing order: user32 is an operating
+    // system library, and naming where it comes from is what stops a DLL of the
+    // same name beside the test binaries being loaded instead.
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr GetForegroundWindow();
 
     private static AutomationElement[] TopLevelWindows()
     {
