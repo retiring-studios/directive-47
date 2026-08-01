@@ -135,26 +135,41 @@ internal sealed class RunningPanel : IDisposable
     }
 
     /// <summary>
-    /// Takes the window off the screen, as far as the application can currently
-    /// be taken off the screen.
+    /// Waits until automation can no longer find the window.
     ///
     /// <para>
-    /// Minimized, not hidden, and the difference matters. Hiding to the tray is
-    /// <see href="https://github.com/retiring-studios/directive-47/issues/68">#68</see>,
-    /// and until it lands this is the strongest form of "no visual surface" the
-    /// panel has. When it lands, the caller changes and this stays.
+    /// A hidden window is gone from the automation tree in the same way a closed
+    /// one is, which is the point: this asks what anything else on the machine
+    /// would see, and neither a screen reader nor the taskbar can tell the
+    /// difference. Whether the <em>application</em> survived is a separate
+    /// question, asked of <see cref="WaitForExit"/>.
     /// </para>
     /// </summary>
-    internal void MinimizeWindow()
+    /// <param name="within">How long to wait.</param>
+    /// <returns>Whether the window went in time.</returns>
+    internal bool WaitForWindowToGo(TimeSpan within)
     {
-        if (Window.TryGetCurrentPattern(WindowPattern.Pattern, out object pattern))
+        AutomationElement root = AutomationElement.RootElement
+            ?? throw new InvalidOperationException(
+                "UI Automation has no root element. This machine has no interactive desktop.");
+
+        var mine = new AndCondition(
+            new PropertyCondition(AutomationElement.NameProperty, WindowName),
+            new PropertyCondition(AutomationElement.ProcessIdProperty, ProcessId));
+
+        DateTime deadline = DateTime.UtcNow + within;
+
+        while (DateTime.UtcNow < deadline)
         {
-            ((WindowPattern)pattern).SetWindowVisualState(WindowVisualState.Minimized);
-            return;
+            if (root.FindFirst(TreeScope.Children, mine) is null)
+            {
+                return true;
+            }
+
+            Thread.Sleep(250);
         }
 
-        throw new InvalidOperationException(
-            $"The window does not support minimizing.{Environment.NewLine}{Describe()}");
+        return false;
     }
 
     /// <summary>

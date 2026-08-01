@@ -11,11 +11,9 @@ namespace D47.Panel.Tests;
 /// rather than against our own bookkeeping.
 ///
 /// <para>
-/// This is the one thing the panel presents that is deliberately outside
-/// parity: Windows draws the tray icon, so there is no render of ours to
-/// project onto the game overlay or into the headset. That is the boundary of
-/// what parity can apply to, not a carve-out from it — see
-/// <c>docs/decisions.md</c>.
+/// The tray icon is not one of the three surfaces parity is about. It has a
+/// different job — being the way back when everything else is hidden — and it
+/// is allowed to work differently because of that. See <c>docs/decisions.md</c>.
 /// </para>
 ///
 /// <para>
@@ -27,6 +25,8 @@ namespace D47.Panel.Tests;
 public class TrayIconTests
 {
     private const string Tooltip = "Directive 47";
+
+    private const string ExitItem = "Exit";
 
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(15);
 
@@ -42,11 +42,12 @@ public class TrayIconTests
     {
         using var panel = RunningPanel.Launch();
 
-        // Every visual surface, today, is one window. The game overlay and the
-        // VR overlay do not exist yet, and hiding rather than minimizing
-        // arrives with #68 — at which point this line changes and the assertion
-        // below does not.
-        panel.MinimizeWindow();
+        // Every visual surface, today, is one window — the game overlay and the
+        // VR overlay do not exist yet. Since #68 this genuinely hides rather
+        // than minimizing, so "hidden" now means what it says.
+        panel.CloseWindow();
+        panel.WaitForWindowToGo(TimeSpan.FromSeconds(10)).ShouldBeTrue(
+            "the window has to be gone before its absence proves anything");
 
         WaitForIcon(present: true, "the tray icon is the only evidence the app is running");
     }
@@ -54,20 +55,42 @@ public class TrayIconTests
     [Fact]
     public void TrayIcon_WhenTheAppExits_LeavesNoGhostBehind()
     {
+        Assert.SkipUnless(Desktop.IsUndisturbed, Desktop.NeedsAnIdleMachine);
+
         using var panel = RunningPanel.Launch();
 
         WaitForIcon(present: true, "the icon has to arrive before its leaving means anything");
 
-        // Closed, not killed. A killed process leaves its icon on the taskbar
-        // until something hovers over it, which is the ghost this is about —
-        // so proving the icon goes needs the application to have been given the
-        // chance to take it away.
-        panel.CloseWindow();
+        // Exited, not killed. A killed process leaves its icon on the taskbar
+        // until something hovers over it, which is the ghost this is about — so
+        // proving the icon goes needs the application to have been given the
+        // chance to take it away. Since #68 the close control hides, so the
+        // deliberate exit is the tray menu.
+        NotificationArea.ChooseFromMenu(Tooltip, ExitItem);
 
         panel.WaitForExit(TimeSpan.FromSeconds(10)).ShouldBeTrue(
-            "closing the window should end the application today");
+            "choosing Exit should end the application");
 
         WaitForIcon(present: false, "a tray icon outliving its application is a ghost");
+    }
+
+    [Fact]
+    public void TrayMenu_WhenExitIsChosen_EndsTheApplicationDeliberately()
+    {
+        Assert.SkipUnless(Desktop.IsUndisturbed, Desktop.NeedsAnIdleMachine);
+
+        // The third of #68's criteria: there is a way to actually exit, and it
+        // is not the gesture that hides. Closing the window is one thing and
+        // right-clicking the tray icon is another, which is what makes exiting
+        // something you mean rather than something you do by reflex.
+        using var panel = RunningPanel.Launch();
+
+        WaitForIcon(present: true, "there is no menu to open without an icon to open it on");
+
+        NotificationArea.ChooseFromMenu(Tooltip, ExitItem);
+
+        panel.WaitForExit(TimeSpan.FromSeconds(10)).ShouldBeTrue(
+            "choosing Exit from the tray menu should end the application");
     }
 
     [Fact]

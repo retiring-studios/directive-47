@@ -190,10 +190,31 @@ This file is descriptive. Nothing here enforces itself — see
   Revisit trigger, recorded deliberately: if an element turns out to be noise in
   the headset rather than discovery, the fix is a per-element exemption argued
   here — not a general retreat to declared parity.
-- **What Windows draws is not ours and cannot participate.** The tray icon and
-  the title bar are rendered by the operating system. There is no render of ours
-  to project onto another surface, so they are outside parity entirely. This is
-  not a carve-out from strict; it is the boundary of what strict can apply to.
+- **The tray icon is not one of the surfaces parity is about.** Parity is a rule
+  about the three surfaces the application renders — panel, game overlay, VR
+  overlay. The tray icon is not a fourth one. Its job is different: it is the way
+  back when every visual surface is hidden, and it is the only sign the
+  application is running at all. Being different is the point, so it is allowed
+  to work differently, and so is anything hanging off it — its context menu, and
+  the Exit gesture in that menu, belong to the icon rather than needing an
+  exemption argued against parity. The window title bar is outside for the
+  plainer reason that Windows draws it and there is no render of ours to
+  project.
+
+  Recorded because the wording here used to test the wrong thing. It said the
+  tray icon was outside parity *because Windows draws it*, which is a rule about
+  mechanism, and mechanism gives the wrong answer the moment something we render
+  ourselves hangs off the icon — as the exit menu at
+  [#68](https://github.com/retiring-studios/directive-47/issues/68) does. The
+  rule is about purpose, not about who paints the pixels.
+- **Closing the panel hides it; exiting is a different gesture.** The panel is
+  convenience and the voice loop is the product, so the close control cancels
+  the close and hides the window, `ShutdownMode` is `OnExplicitShutdown`, and
+  the deliberate way out is Exit on the tray icon's context menu. Two gestures
+  rather than one is the point of the third criterion in
+  [#68](https://github.com/retiring-studios/directive-47/issues/68) — an exit
+  you can reach by reflex is one you will hit while meaning to put the window
+  away.
 - **The notification-area icon is WinForms' in-box `NotifyIcon`.** WPF has none
   of its own, so the field was that, `Hardcodet.NotifyIcon.Wpf` (MIT, zero
   dependencies, the community standard), or roughly 100–150 lines of
@@ -280,6 +301,33 @@ The tiers drive the project layout, not just test selection.
   because they touch nothing outside their own thread. The related fix is that
   the harness now finds its window by name **and process id** — matching on name
   alone was a latent bug that only one desktop-driving class had been hiding.
+
+- **Synthesized mouse and keyboard input is Tier 1, not Tier 2.** UI Automation
+  has no right-click, and a tray icon's context menu opens on one, so the test
+  moves the real pointer and presses the real button. That is not the hardware
+  tier: Tier 2 is about devices no hosted runner has — a microphone, a headset,
+  a game — and synthesized input needs only a desktop, which the runner has.
+  The line is "can a hosted runner do this at all", not "does it touch an input
+  API".
+- **Pointer-driven tests need a machine nobody is using, so they run on CI and
+  skip on a desk.** The shell's overflow flyout is dismissed by any focus change
+  at all — a click, a keystroke, a media key — and an icon in a flyout that has
+  just closed still reports the rectangle it used to occupy, so the click lands
+  on whatever is behind it and opens *that* window's context menu. This was not
+  theoretical: the failure that found it was Microsoft Edge's tab menu.
+
+  The wrong response is to engineer around it, because no amount of retrying
+  makes a pointer-driven test survive someone using the pointer. The right one
+  is to run it where nothing else is: CI sets `CI`, has nobody at the keyboard,
+  and gates every pull request. On a development machine these skip, with a
+  reason in the test output, unless `D47_DESKTOP_INPUT_TESTS=1` says the
+  maintainer has deliberately stood back from it.
+
+  Only the tests that move the pointer are gated. Launching a window and reading
+  it back is unbothered by someone typing, and gating it would cost local
+  coverage for nothing. A bounded retry and an Escape after a miss are still
+  worth having for the transient case on CI, where the shell's own animations
+  are the only thing competing.
 
 ## Fixtures
 

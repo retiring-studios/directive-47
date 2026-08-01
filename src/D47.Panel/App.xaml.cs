@@ -33,7 +33,14 @@ internal sealed partial class App : Application, IDisposable
     /// </summary>
     private const string Tooltip = "Directive 47";
 
+    /// <summary>
+    /// The one deliberate way out. Closing the panel hides it, so exiting has
+    /// to be a different gesture or the two become the same reflex.
+    /// </summary>
+    private const string ExitItem = "Exit";
+
     private Forms.NotifyIcon? _trayIcon;
+    private Forms.ContextMenuStrip? _trayMenu;
 
     /// <summary>
     /// Puts the icon in the notification area, before any window is shown.
@@ -43,18 +50,23 @@ internal sealed partial class App : Application, IDisposable
         "Globalization",
         "CA1303:Do not pass literals as localized parameters",
         Justification =
-            "NotifyIcon.Text is marked localizable and the product's name is not. "
-            + "\"Directive 47\" reads the same in every language, and a resource "
-            + "table holding one proper noun would be machinery standing in for a "
-            + "decision nobody has made about localizing this application at all.")]
+            "NotifyIcon.Text and the menu item's text are marked localizable. The "
+            + "product's name is not, and \"Exit\" is a single word behind a "
+            + "resource table nobody has decided to build — localizing this "
+            + "application at all is an open question, and a table holding two "
+            + "strings would be machinery standing in for that decision.")]
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _trayMenu = new Forms.ContextMenuStrip();
+        _trayMenu.Items.Add(ExitItem, null, (_, _) => Shutdown());
 
         _trayIcon = new Forms.NotifyIcon
         {
             Icon = TrayIcon(),
             Text = Tooltip,
+            ContextMenuStrip = _trayMenu,
             Visible = true,
         };
     }
@@ -76,17 +88,19 @@ internal sealed partial class App : Application, IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_trayIcon is null)
+        if (_trayIcon is not null)
         {
-            return;
+            // Visible first. Disposing alone does remove it, but only once the
+            // native handle is actually released, and the window between the
+            // two is exactly where a ghost lives.
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+            _trayIcon = null;
         }
 
-        // Visible first. Disposing alone does remove it, but only once the
-        // native handle is actually released, and the window between the two
-        // is exactly where a ghost lives.
-        _trayIcon.Visible = false;
-        _trayIcon.Dispose();
-        _trayIcon = null;
+        // Separately, because NotifyIcon does not own the menu it shows.
+        _trayMenu?.Dispose();
+        _trayMenu = null;
     }
 
     /// <summary>
