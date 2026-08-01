@@ -13,32 +13,41 @@ using Xunit;
 namespace D47.Panel.Tests;
 
 /// <summary>
-/// SPIKE — not a keeper. Answers one question: can a machine drive a real
-/// window through UI Automation, and specifically does a GitHub-hosted
-/// windows-latest runner have an interactive desktop or run as a service?
+/// The panel, launched for real and read the way a screen reader or an
+/// automation client would read it. Everything else in this project inspects a
+/// visual tree it built itself, which is blind to how the running application
+/// presents itself to the outside.
 ///
 /// <para>
-/// Raw <c>System.Windows.Automation</c> rather than FlaUI on purpose. FlaUI
-/// wraps these same APIs, so if this cannot see a window neither can FlaUI —
-/// and this way the experiment costs no package and no dependency decision.
+/// That blindness is not hypothetical. This test began as a spike and
+/// immediately found that the window announced the <c>ToString()</c> of an
+/// <c>Answer</c> record as its accessible name while four visual-tree tests
+/// happily confirmed the right text was on screen.
 /// </para>
 ///
 /// <para>
-/// Reports everything it can see rather than only passing or failing, because
-/// "no window" and "no desktop" are different answers with different fixes.
+/// Raw <c>System.Windows.Automation</c> rather than FlaUI. It ships with WPF and
+/// has been enough so far; FlaUI wraps these same APIs and is a package, so it
+/// waits until the ergonomics actually hurt — see the notes on the automation
+/// task.
+/// </para>
+///
+/// <para>
+/// Reports what it could see rather than only passing or failing, because "no
+/// window" and "no desktop" are different failures with different fixes.
 /// </para>
 /// </summary>
-public class CanTheRunnerSeeAWindow
+public class PanelAutomationTests
 {
     private readonly ITestOutputHelper _output;
 
-    public CanTheRunnerSeeAWindow(ITestOutputHelper output)
+    public PanelAutomationTests(ITestOutputHelper output)
     {
         _output = output;
     }
 
     [Fact]
-    public void TheRunner_CanFindThePanelWindow_ThroughUiAutomation()
+    public void Panel_WhenRunning_IsReachableByAutomationUnderItsOwnName()
     {
         string exe = Path.Combine(AppContext.BaseDirectory, "D47.Panel.exe");
         File.Exists(exe).ShouldBeTrue($"the panel exe should sit beside the tests, at {exe}");
