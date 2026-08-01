@@ -30,7 +30,14 @@
         </DataTemplate>
     </UserControl.Resources>
 
+    <!--
+        AutomationProperties.Name is not decoration. Without it a ContentControl
+        holding a non-visual object reports that object's ToString() as its
+        accessible name, which a screen reader then reads aloud and automation
+        then cannot match on.
+    -->
     <ContentControl Content="{Binding}"
-                    ContentTemplateSelector="{StaticResource ByDisplayModel}" />
+                    ContentTemplateSelector="{StaticResource ByDisplayModel}"
+                    AutomationProperties.Name="Capability answer" />
 
 </UserControl>
