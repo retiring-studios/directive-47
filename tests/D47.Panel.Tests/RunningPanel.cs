@@ -31,6 +31,13 @@ internal sealed class RunningPanel : IDisposable
     private const string WindowName = "Directive 47";
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(20);
 
+    /// <summary>
+    /// How far down to walk when describing the tree. Deep enough to reach the
+    /// text inside a templated list, shallow enough that a failure message stays
+    /// readable — the tree below this is rarely what went wrong.
+    /// </summary>
+    private const int DeepEnoughToDiagnose = 6;
+
     private readonly Process _process;
     private bool _disposed;
 
@@ -144,7 +151,7 @@ internal sealed class RunningPanel : IDisposable
     {
         var description = new StringBuilder();
         description.AppendLine(CultureInfo.InvariantCulture, $"Automation tree under \"{WindowName}\":");
-        Describe(Window, description, depth: 1);
+        Walk(Window, description, depth: 1);
         return description.ToString();
     }
 
@@ -199,9 +206,9 @@ internal sealed class RunningPanel : IDisposable
             + $"The process was {(process.HasExited ? "gone" : "still running")}.");
     }
 
-    private static void Describe(AutomationElement element, StringBuilder into, int depth)
+    private static void Walk(AutomationElement element, StringBuilder into, int depth)
     {
-        if (depth > 6)
+        if (depth > DeepEnoughToDiagnose)
         {
             return;
         }
@@ -218,7 +225,7 @@ internal sealed class RunningPanel : IDisposable
                 $"{new string(' ', depth * 2)}{child.Current.ControlType.ProgrammaticName} "
                 + $"\"{child.Current.Name}\"");
 
-            Describe(child, into, depth + 1);
+            Walk(child, into, depth + 1);
         }
     }
 

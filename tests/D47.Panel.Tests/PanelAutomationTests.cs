@@ -66,26 +66,52 @@ public class PanelAutomationTests
     [Fact]
     public void Automation_WhenAnAssertionFails_StillLeavesNoProcessBehind()
     {
-        // The harness owns teardown, because a test that fails partway through
-        // must not leave a window on the desktop or a process on the agent.
-        var panel = RunningPanel.Launch();
+        // Every other test here holds the panel in a using. So the thing worth
+        // proving is that the using unwinds the process when an assertion
+        // throws — not that calling Dispose by hand works, which is a different
+        // and less interesting claim.
+        // The stand-in has its own type on purpose. RunningPanel.Launch throws
+        // InvalidOperationException, and a catch wide enough to hold a stand-in
+        // failure is wide enough to hide a real one.
+        int abandoned = 0;
 
         try
         {
-            throw new InvalidOperationException("stand-in for a failing assertion");
+            using var panel = RunningPanel.Launch();
+            abandoned = panel.ProcessId;
+
+            throw new StandInFailure();
         }
-        catch (InvalidOperationException)
+        catch (StandInFailure)
         {
-            // swallowed on purpose: what is under test is the disposal below
-        }
-        finally
-        {
-            panel.Dispose();
+            // swallowed on purpose: the unwinding is what is under test
         }
 
         // Asked of the operating system, not of the harness. A teardown that
         // reports its own success is not evidence that anything was torn down.
-        Should.Throw<ArgumentException>(() => Process.GetProcessById(panel.ProcessId));
+        Should.Throw<ArgumentException>(() => Process.GetProcessById(abandoned));
+    }
+
+    /// <summary>
+    /// Stands in for an assertion failing mid-test. Its own type so the catch
+    /// that swallows it cannot also swallow a real failure to launch.
+    /// </summary>
+    private sealed class StandInFailure : Exception
+    {
+        internal StandInFailure()
+            : base("stand-in for an assertion failing mid-test")
+        {
+        }
+
+        internal StandInFailure(string message)
+            : base(message)
+        {
+        }
+
+        internal StandInFailure(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
     }
 
     [Fact]
