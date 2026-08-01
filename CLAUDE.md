@@ -57,4 +57,10 @@ through.
 Architectural decisions go to the maintainer first: propose options and
 tradeoffs, then stop. Also enforced in `.claude/settings.json`.
 
+**Red, green, refactor — all three, on every story.** The third step is a pass
+over the code with the tests green, looking for what only becomes visible once it
+works. It is not a documentation update. Every pull request carries a `Refactor`
+section saying what the pass found, or saying nothing needed changing and why it
+looked — an empty one is a skipped step, not a clean bill.
+
 Reasoning behind the decisions already made: `docs/decisions.md`.
