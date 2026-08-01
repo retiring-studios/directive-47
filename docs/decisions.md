@@ -27,11 +27,14 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
     through — an open limitation with no native fix, not a feature awaiting a
     release. Avalonia can reach it through Win32 interop that we would write and
     own, with far fewer worked examples to copy.
-  - **UI automation.** WPF's UIA support is the most mature of the three and
-    FlaUI drives it. This is intent, not history: nothing exercises it yet. It
-    is recorded as a reason for the choice because the tray, the window state
-    and the overlays cannot be tested from inside the process, and that testing
-    is coming — not because it is already paying off.
+  - **UI automation.** WPF's UIA support is the most mature of the three, and
+    the tests drive it through in-box `System.Windows.Automation`. This is
+    history rather than intent: the tray, the window state, and the shell's own
+    overflow flyout cannot be reached from inside the process, and the panel's
+    desktop tests reach all of them from outside. FlaUI was priced twice and not
+    taken — the in-box client was enough both times, including for driving
+    another process's context menu. Revisit trigger: the first thing the in-box
+    client cannot reach.
   - **Render-to-bitmap for the headset is simple**, and the content is text that
     changes occasionally rather than animation. A CPU-side bitmap handed to
     SteamVR a few times a second costs nothing, so the usual performance

@@ -8,7 +8,8 @@
         Named after its only occupant, and that will stop being true. The game
         overlay and the VR overlay present this same render; when the first of
         them arrives the render moves out and this project keeps the window.
-        Same bet as D47.Help, for the same reason — see docs/decisions.md.
+        Not moved in advance, because naming a rendering project before there
+        are two consumers is guessing at a shape.
 
         Nullable and the analyzer settings come from Directory.Build.props.
         ImplicitUsings is deliberately off, matching the rest of the repo.
