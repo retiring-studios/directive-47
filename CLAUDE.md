@@ -63,4 +63,17 @@ works. It is not a documentation update. Every pull request carries a `Refactor`
 section saying what the pass found, or saying nothing needed changing and why it
 looked — an empty one is a skipped step, not a clean bill.
 
+**Integration and E2E tests settle on CI once they work.** They seize the whole
+machine while they run, so a finished one has no business executing again
+locally. They skip by default; `D47_DESKTOP_TESTS=1` opts in.
+
+**While writing one, running it locally is the right thing to do.** Pushing to
+CI for every iteration of a test you are still shaping is slower for everyone.
+
+So the rule is not "don't", it is **negotiate the machine rather than stomping on
+it**. Before the first run, say you need the desktop and roughly for how long.
+Say when you are finished with it. If a working test later needs debugging here,
+ask first rather than assuming the earlier window still applies. Never loop runs
+locally to chase a flaky result — that is what CI is for.
+
 Reasoning behind the decisions already made: `docs/decisions.md`.

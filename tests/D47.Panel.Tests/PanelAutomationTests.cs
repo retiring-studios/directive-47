@@ -19,8 +19,7 @@ namespace D47.Panel.Tests;
 /// in-process tests happily confirmed the right text was on screen.
 /// </para>
 /// </summary>
-[Collection(Desktop.Collection)]
-public class PanelAutomationTests
+public class PanelAutomationTests : DesktopTest
 {
     private readonly ITestOutputHelper _output;
 
@@ -51,17 +50,28 @@ public class PanelAutomationTests
     }
 
     [Fact]
-    public void Panel_WhenItsWindowIsClosed_ExitsRatherThanLingering()
+    public void Panel_WhenToldToHide_ClosesToTheSystemTrayRatherThanExiting()
     {
-        // Today closing the window ends the application. #68 changes that to
-        // hiding, and this test is where the change becomes visible: it has to
-        // be rewritten, deliberately, rather than quietly continuing to pass.
+        // The rewrite its predecessor asked for. Until #68 this test asserted
+        // the opposite — that closing the window ended the application — and it
+        // said so, so that the change would land deliberately instead of a
+        // passing test quietly starting to mean something else.
+        //
+        // The panel is convenience. The voice loop is the product, and closing
+        // a convenience must not take the product down with it.
         using var panel = RunningPanel.Launch();
 
         panel.CloseWindow();
 
-        panel.WaitForExit(TimeSpan.FromSeconds(10)).ShouldBeTrue(
-            "closing the window should end the application today");
+        panel.WaitForWindowToGo(TimeSpan.FromSeconds(10)).ShouldBeTrue(
+            "the close control should put the window away");
+
+        // Waited out rather than sampled. Asking whether the process is alive
+        // the instant the window goes answers yes even when the application is
+        // in the middle of shutting down — which is how this test passed
+        // against the old exit-on-close behaviour it was written to replace.
+        panel.WaitForExit(TimeSpan.FromSeconds(5)).ShouldBeFalse(
+            "closing the panel should leave the application running");
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 
 using D47.Capabilities;
@@ -32,5 +33,25 @@ internal partial class MainWindow : Window
             Descriptor = HelpCapability.Descriptor,
             Result = new HelpCapability(registry).Answer(),
         };
+
+        Closing += HideInsteadOfClosing;
+    }
+
+    /// <summary>
+    /// Turns the close control into a hide.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The panel is convenience; the voice loop is the product. Closing the
+    /// convenience must not take the product down with it, so the window goes
+    /// away and the application does not. Exiting on purpose is the tray icon's
+    /// menu, which is a different gesture rather than the same one.
+    /// </remarks>
+    /// <param name="sender">The window being closed.</param>
+    /// <param name="e">The cancellable close.</param>
+    private void HideInsteadOfClosing(object? sender, CancelEventArgs e)
+    {
+        e.Cancel = true;
+        Hide();
     }
 }
