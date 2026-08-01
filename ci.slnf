@@ -4,8 +4,10 @@
     "projects": [
       "src\\D47.Capabilities\\D47.Capabilities.csproj",
       "src\\D47.Help\\D47.Help.csproj",
+      "src\\D47.Panel\\D47.Panel.csproj",
       "tests\\D47.Capabilities.Tests\\D47.Capabilities.Tests.csproj",
-      "tests\\D47.Help.Tests\\D47.Help.Tests.csproj"
+      "tests\\D47.Help.Tests\\D47.Help.Tests.csproj",
+      "tests\\D47.Panel.Tests\\D47.Panel.Tests.csproj"
     ]
   }
 }

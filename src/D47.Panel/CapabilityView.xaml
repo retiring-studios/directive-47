@@ -1,0 +1,36 @@
+<UserControl x:Class="D47.Panel.CapabilityView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:D47.Panel"
+             Background="#FF0B0D10"
+             Padding="32">
+
+    <!--
+        VR-legible density from the first commit: large type, high contrast, few
+        rows. The overlays present this same render, and a target tuned for a
+        flat monitor is unreadable in a headset.
+    -->
+    <UserControl.Resources>
+        <local:DisplayModelTemplateSelector x:Key="ByDisplayModel" />
+
+        <DataTemplate x:Key="ListDisplay">
+            <ItemsControl ItemsSource="{Binding Result.Items}"
+                          Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   FontSize="30"
+                                   Foreground="#FFEDF2F7"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,16" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ContentControl Content="{Binding}"
+                    ContentTemplateSelector="{StaticResource ByDisplayModel}" />
+
+</UserControl>

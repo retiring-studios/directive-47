@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 1. WPF, so net10.0-windows and Windows-only — but no hardware, so
+        its tests run in CI like everything else. hardware.slnf is still waiting
+        for the first project that needs a microphone or a headset.
+
+        Named after its only occupant, and that will stop being true. The game
+        overlay and the VR overlay present this same render; when the first of
+        them arrives the render moves out and this project keeps the window.
+        Same bet as D47.Help, for the same reason — see docs/decisions.md.
+
+        Nullable and the analyzer settings come from Directory.Build.props.
+        ImplicitUsings is deliberately off, matching the rest of the repo.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <OutputType>WinExe</OutputType>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <!--
+        The panel is an application, so its types are internal — CA1515, and it
+        is right. The tests build real visual trees out of them, which is what
+        this opens the door for and the only thing it opens it for.
+    -->
+    <ItemGroup>
+        <InternalsVisibleTo Include="D47.Panel.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
+        <ProjectReference Include="..\D47.Help\D47.Help.csproj" />
+    </ItemGroup>
+
+</Project>
