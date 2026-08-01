@@ -118,6 +118,17 @@ This file is descriptive. Nothing here enforces itself — see
   the visual surfaces is therefore guaranteed by construction rather than by
   discipline: a capability cannot appear on one and not another, because there
   is only one render.
+- **The render lives in `D47.Panel` until a second surface needs it.** The game
+  overlay and the VR overlay present this same render, so the shared home will
+  not be the panel forever — but naming a rendering project before there are two
+  consumers is guessing at a shape, and the panel is the only one that exists.
+  When the game overlay arrives the render moves out and `D47.Panel` keeps the
+  window. Same bet as `D47.Help`, made for the same reason and expected to be
+  called in the same way.
+- **The panel is an application, so its types are internal.** CA1515 is right
+  about that, and the tests reach them through `InternalsVisibleTo` rather than
+  widening the surface to suit a test. WPF classes need `x:ClassModifier` to
+  match, which is why the XAML carries it.
 - **The panel is convenience, not requirement.** It exists because a window with
   a pointer is familiar, and because setup and diagnostics want one. It is not
   privileged: it shows the same layout as the other two and adds pointer

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 1. WPF layout, no hardware — so this runs in CI, on the same
+        windows-latest runner as everything else. UseWPF is here because the
+        tests build real visual trees and walk them; a test that asserts on a
+        view model instead would prove the view model, not the rendering.
+
+        xUnit v3, not v2, for the same reason as the other test projects: the
+        SDK template still scaffolds v2, and v3 test projects are executables.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.Panel\D47.Panel.csproj" />
+    </ItemGroup>
+
+</Project>
