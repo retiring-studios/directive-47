@@ -339,8 +339,11 @@ trigger moved.
   is the automated hardware tier's job; the human pass is for new behavior and
   judgment calls. A manual test that keeps recurring is a hole in automation —
   promote it, do not list it.
-- CI publishes a single-file exe on every PR, so manual passes test an installed
-  build rather than `dotnet run`.
+- CI is to publish a single-file exe on every PR, so manual passes test an
+  installed build rather than `dotnet run`. Agreed and not yet built — today CI
+  restores, builds and tests only. Until it does, and until there is an app to
+  run, the manual pass and the `manual-verification` check below are dormant
+  rather than skipped.
 - **Definition of done includes a manual verification pass by the maintainer.**
   GitHub does not allow approving your own pull request, so the attestation is
   not a review approval: it is a required `manual-verification` status check
@@ -358,6 +361,18 @@ trigger moved.
   patch. Whether a given epic is major or minor is decided when the epic is
   defined, not inferred from its size afterwards. The MVP epic completing is
   1.0.0.
+- **The version is one literal in `Directory.Build.props`, not derived from
+  tags.** Deriving it means MinVer or Nerdbank.GitVersioning, and a package
+  stops for the maintainer; a number in a file does not. Hand-maintaining it
+  costs a deliberate edit per bump, which is the same deliberateness the bullet
+  above already asks for — none of "at least a minor", "decided when the epic is
+  defined", or "1.0.0 when the MVP lands" is inferable from commit history.
+  Started at 0.1.0 with the first feature-complete state, help from the
+  capability registry.
+- **The pre-release trigger has fired and there is nothing behind it.** Help
+  from the capability registry is feature complete and merged, which the table
+  above says produces an opt-in pre-release. CI restores, builds and tests; it
+  does not publish. Agreed and not yet built.
 - Updater candidate is Velopack, on one condition: update availability must
   surface in the panel and the overlay, with installation deferred to app exit.
   No installer window yanking you out of VR.
