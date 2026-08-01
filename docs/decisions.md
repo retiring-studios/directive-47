@@ -6,6 +6,22 @@ the reasoning is recorded so it does not get rediscovered.
 This file is descriptive. Nothing here enforces itself — see
 [Enforcement](#enforcement) for where the load-bearing rules actually live.
 
+## Positioning
+
+- **The value proposition is "never leave the cockpit," and 1.0.0 is its
+  realization.** It is stated in the present tense on purpose: it is the target
+  the work is measured against, kept in front of us rather than earned later.
+  The MVP epic is scoped to cover every common reason to alt-tab — search,
+  planning, outfitting, engineering, materials — which is what makes the claim
+  true at 1.0.0 rather than aspirational forever. Honesty about what exists
+  *today* lives in the README's Status section, not in a hedged tagline.
+- **Third-party Elite tools are not named in the code, the docs, or the UI.**
+  The exceptions are sources we actually draw information from — Spansh, EDSM,
+  EDCD/Coriolis — which are named because attribution is owed. Competing
+  companions are not mentioned at all, favourably or otherwise.
+- **Personas are Guardian AIs.** Every preset is a flavour of one. `Ward` is the
+  shipped default.
+
 ## Platform
 
 - **.NET 10, Windows.**
@@ -89,6 +105,30 @@ The tiers drive the project layout, not just test selection.
   for the number. Per-tier at most.
 - Specific analyzer thresholds are deferred.
 
+## Dependencies
+
+- **Licenses are an allowlist, not a blocklist.** Permitted: MIT, BSD-2-Clause,
+  BSD-3-Clause, Apache-2.0, MS-PL, Unlicense, CC0, ISC. Anything else — including
+  a package declaring no license at all — stops and needs an exception recorded
+  here. A blocklist fails on the license nobody thought to list, and that is
+  exactly how GPL codec binaries reached a shipped installer in the predecessor
+  project.
+- **The check covers what we depend on directly.** A transitive package's
+  license is the upstream author's obligation to declare, not ours to audit.
+  One exception: a package that ships **native binaries** gets a look at what
+  those binaries are, once, when it is added. That is where the predecessor's
+  GPL exposure came from — an MIT package three levels above an FFmpeg build
+  carrying GPL codecs — and it is a glance, not an audit.
+- **Redistribution is why this matters at all.** CI publishes a single-file exe,
+  so everything inside it is redistributed. Using a library and shipping it are
+  different acts with different obligations, and a single-file publish also
+  makes LGPL's relink obligation awkward to satisfy.
+- **Standing rejection: FluentAssertions v8**, which moved to a paid commercial
+  license under Xceed in early 2025. Shouldly is used instead.
+- Enforcement: `Directory.Packages.props` is already in `permissions.ask`, so a
+  new package stops for the maintainer. A CI license scan over direct packages
+  is agreed and not yet built.
+
 ## Enforcement
 
 If a rule matters, it must not live only in a Markdown file.
@@ -118,6 +158,30 @@ trigger moved.
   off as tests land — not in a custom field, which would flatten them to a blob.
 - One story, one branch, one PR (`Closes #N`). Review starts at the tests, then
   the diff.
+- **Work breaks down Epic → Feature → User Story → Task**, using GitHub's issue
+  types and sub-issues. Where the boundaries fall is decided by the acceptance
+  criteria, not by feel:
+  - **Each acceptance criterion is one User Story.** A "criterion" that states a
+    constraint rather than a behaviour is not a criterion at all — it is an
+    **invariant**, listed separately on the Feature and true of every story
+    under it. Invariants must not spawn stories, or the result is a PR with
+    nothing to demonstrate.
+  - **A Feature yields at least three stories.** Exactly two, and it was a story
+    all along: make it one story with two Tasks, one per criterion.
+  - **Trouble breaking a Feature into stories means the Feature is a story.**
+  - **The happy path is a criterion.** Criteria that name only edge cases and
+    constraints leave the feature's whole reason to exist with no story
+    attached — which is how the first pass at these issues went wrong.
+- **Implementation order is the implementer's call.** Which feature comes next,
+  how it splits into stories, and what order those land in is decided by
+  whoever is doing the work — from dependencies and from what makes each PR
+  verifiable. This is not a carve-out from the working agreement: sequencing is
+  not an architectural decision, and architectural decisions still go to the
+  maintainer first.
+- **Features are decomposed just in time**, one or two ahead of the work. The
+  criteria on a Feature carry the intent; writing every story up front produces
+  guesses about a codebase that does not exist yet, and they go stale before
+  anyone reaches them.
 - **Red, green, refactor — all three.** It is test *driven*, not merely test
   first. Red and green only prove the code works; the third step is where the
   design gets made, with a passing suite as the safety net. Skip it and TDD
@@ -165,7 +229,10 @@ trigger moved.
 | Pre-release | Feature complete, merged to `main` | Opt-in |
 | Stable | Epic complete | Default |
 
-- Versioning: an epic bumps the minor version, a bug fix bumps the patch.
+- Versioning: an epic bumps **at least** the minor version, a bug fix bumps the
+  patch. Whether a given epic is major or minor is decided when the epic is
+  defined, not inferred from its size afterwards. The MVP epic completing is
+  1.0.0.
 - Updater candidate is Velopack, on one condition: update availability must
   surface in the panel and the overlay, with installation deferred to app exit.
   No installer window yanking you out of VR.

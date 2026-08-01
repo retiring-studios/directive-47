@@ -3,9 +3,9 @@
 Voice-first companion layer for Elite Dangerous. .NET 10, C#, WPF panel,
 SteamVR overlay.
 
-**The value proposition:** anything you would normally alt-tab for is available
-by voice, in a panel or in the headset. VR is a first-class surface, not an
-afterthought.
+**The value proposition:** never leave the cockpit. Anything you would normally
+alt-tab for is available by voice, in a panel or in the headset. VR is a
+first-class surface, not an afterthought.
 
 ## Where things live
 
