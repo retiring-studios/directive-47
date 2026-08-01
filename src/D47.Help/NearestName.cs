@@ -58,26 +58,35 @@ internal static class NearestName
     /// Levenshtein distance, two rows at a time. Textbook, and deliberately so:
     /// the alternative is a dependency inside a single-file exe for a function
     /// that reads in one screen.
+    ///
+    /// <para>
+    /// The two indices are named for the string each one walks. The textbook
+    /// writes them <c>i</c> and <c>j</c>, and the textbook is where transposing
+    /// them is easy to do and hard to see — every cell reads from both strings,
+    /// and the wrong pairing still compiles and still returns a number.
+    /// </para>
     /// </summary>
     private static int Distance(string left, string right)
     {
         int[] previous = new int[right.Length + 1];
         int[] current = new int[right.Length + 1];
 
-        for (int j = 0; j <= right.Length; j++)
+        for (int rightIndex = 0; rightIndex <= right.Length; rightIndex++)
         {
-            previous[j] = j;
+            previous[rightIndex] = rightIndex;
         }
 
-        for (int i = 1; i <= left.Length; i++)
+        for (int leftIndex = 1; leftIndex <= left.Length; leftIndex++)
         {
-            current[0] = i;
+            current[0] = leftIndex;
 
-            for (int j = 1; j <= right.Length; j++)
+            for (int rightIndex = 1; rightIndex <= right.Length; rightIndex++)
             {
-                int substitution = previous[j - 1] + (left[i - 1] == right[j - 1] ? 0 : 1);
+                int substitution = previous[rightIndex - 1]
+                    + (left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1);
 
-                current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), substitution);
+                current[rightIndex] = Math.Min(
+                    Math.Min(current[rightIndex - 1] + 1, previous[rightIndex] + 1), substitution);
             }
 
             (previous, current) = (current, previous);

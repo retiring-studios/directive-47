@@ -64,7 +64,8 @@ public class HelpTests
         CapabilityDescriptor[] registered =
         [
             .. Enumerable.Range(0, count)
-                .Select(i => Descriptor($"cap{i}", $"Group {i % 3}", $"Does thing {i}.")),
+                .Select(index => Descriptor(
+                    $"cap{index}", $"Group {index % 3}", $"Does thing {index}.")),
         ];
         var registry = new CapabilityRegistry(registered);
 
