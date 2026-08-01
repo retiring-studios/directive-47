@@ -19,7 +19,7 @@ first-class surface, not an afterthought.
 | `scripts/` | Provisioning and local automation |
 
 This table is a map of the repo, and it is wrong if it does not match what is on
-disk. `assets/` does not exist yet.
+disk. Every path in it exists.
 
 ## Building
 

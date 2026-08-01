@@ -135,6 +135,29 @@ internal sealed class RunningPanel : IDisposable
     }
 
     /// <summary>
+    /// Takes the window off the screen, as far as the application can currently
+    /// be taken off the screen.
+    ///
+    /// <para>
+    /// Minimized, not hidden, and the difference matters. Hiding to the tray is
+    /// <see href="https://github.com/retiring-studios/directive-47/issues/68">#68</see>,
+    /// and until it lands this is the strongest form of "no visual surface" the
+    /// panel has. When it lands, the caller changes and this stays.
+    /// </para>
+    /// </summary>
+    internal void MinimizeWindow()
+    {
+        if (Window.TryGetCurrentPattern(WindowPattern.Pattern, out object pattern))
+        {
+            ((WindowPattern)pattern).SetWindowVisualState(WindowVisualState.Minimized);
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"The window does not support minimizing.{Environment.NewLine}{Describe()}");
+    }
+
+    /// <summary>
     /// Waits for the application to exit, so a test can assert on what closing
     /// the window actually did.
     /// </summary>
@@ -178,7 +201,14 @@ internal sealed class RunningPanel : IDisposable
             ?? throw new InvalidOperationException(
                 "UI Automation has no root element. This machine has no interactive desktop.");
 
-        var condition = new PropertyCondition(AutomationElement.NameProperty, WindowName);
+        // By name *and* by process. The name alone was enough while one test
+        // class launched panels one at a time; the moment a second class did it
+        // too, a test could be handed the other one's window, close it, and
+        // then wait for its own process to exit forever.
+        var condition = new AndCondition(
+            new PropertyCondition(AutomationElement.NameProperty, WindowName),
+            new PropertyCondition(AutomationElement.ProcessIdProperty, process.Id));
+
         DateTime deadline = DateTime.UtcNow + Patience;
 
         while (DateTime.UtcNow < deadline)
