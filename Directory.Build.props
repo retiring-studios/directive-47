@@ -24,4 +24,22 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
+    <!--
+        One literal version, hand-maintained, no dependency. Deriving it from
+        git tags means MinVer or Nerdbank.GitVersioning, and a package stops for
+        the maintainer; a number in a file does not.
+
+        The cost is that bumping it is a deliberate edit, which is also the
+        point. docs/decisions.md has an epic bump at least the minor and a bug
+        fix bump the patch, and whether a given epic is major or minor is
+        decided when the epic is defined — none of which a tool can infer from
+        commit history.
+
+        0.1.0 is the first feature-complete state: help from the capability
+        registry. The MVP epic completing is 1.0.0.
+    -->
+    <PropertyGroup>
+        <Version>0.1.0</Version>
+    </PropertyGroup>
+
 </Project>
