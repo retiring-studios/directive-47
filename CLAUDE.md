@@ -23,13 +23,16 @@ disk. `assets/` does not exist yet.
 
 ## Building
 
-Cloud containers ship no .NET SDK. `scripts/setup-cloud.sh` installs it, and the
-cloud environment's setup step is configured to run it. On the dev PC the SDK is
-already installed and that script is not used.
+`dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI runs — every
+project that does not need real hardware. `hardware.slnf` will select the
+dev-PC-only projects; it arrives with the first Tier 2 project, because a filter
+naming no projects warns on every build.
 
-Then `dotnet build` / `dotnet test` as usual. `cloud.slnf` runs without hardware.
-`hardware.slnf` will select the dev-PC-only projects; it arrives with the first
-Tier 2 project, because a filter naming no projects warns on every build.
+**CI is Windows only.** Directive 47 is a Windows product, so a Linux job was
+proving a portability claim nothing depends on, and Windows is what lets WPF
+layout snapshots gate a pull request. `scripts/setup-cloud.sh` still provisions
+a Linux container if one is ever used, but that path is unsupported and nothing
+verifies it.
 
 The solution is the XML `.slnx` format, not the classic `.sln`. Solution filters
 work against it unchanged. `dotnet new sln` defaults to `.slnx` on .NET 10.
