@@ -34,6 +34,12 @@ public sealed class HelpCapability
     private const string TrySaying = "Try saying:";
 
     /// <summary>
+    /// The line that turns a miss back into the top of the hierarchy, rather
+    /// than leaving the Commander with nothing to do next.
+    /// </summary>
+    private const string OfferingGroups = "Here's what I can help with:";
+
+    /// <summary>
     /// Help's own declaration. Help is a capability like any other and appears
     /// in its own listing — if it did not, the one thing that tells the
     /// Commander what exists would be the one thing not accounted for.
@@ -96,6 +102,37 @@ public sealed class HelpCapability
     }
 
     /// <summary>
+    /// Help's other job: what to say when an utterance resolved to nothing.
+    /// Names what was heard, then offers the nearest name help actually knows —
+    /// or, when nothing is close, says so and offers the groups. A refusal is
+    /// the one answer that leaves the Commander with nowhere to go.
+    ///
+    /// <para>
+    /// The pool is capability ids and group names, which is everything help
+    /// speaks aloud. Example utterances are deliberately not in it: they are
+    /// examples, not a matcher.
+    /// </para>
+    /// </summary>
+    /// <param name="utterance">What was heard, and did not resolve.</param>
+    /// <returns>The recovery, ready for any surface to render or speak.</returns>
+    /// <exception cref="ArgumentException">Nothing was heard.</exception>
+    public IReadOnlyList<string> Recover(string utterance)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(utterance);
+
+        string heard = utterance.Trim();
+        string opening = $"I don't recognize \"{heard}\".";
+        string? nearest = NearestName.To(heard, CanonicalNames());
+
+        if (nearest is not null)
+        {
+            return [opening, $"Did you mean {nearest}?"];
+        }
+
+        return [opening, OfferingGroups, .. ListGroups()];
+    }
+
+    /// <summary>
     /// Help's answer when asked generally: the groups.
     /// </summary>
     /// <returns>The listing, ready for any surface to render or speak.</returns>
@@ -116,6 +153,21 @@ public sealed class HelpCapability
     /// <returns>The listing, ready for any surface to render or speak.</returns>
     /// <exception cref="ArgumentException">No capability is registered by that id.</exception>
     public CapabilityResult AnswerForCapability(string capabilityId) => Listing(Describe(capabilityId));
+
+    /// <summary>
+    /// Help's answer when an utterance resolved to nothing: the recovery.
+    /// </summary>
+    /// <param name="utterance">What was heard, and did not resolve.</param>
+    /// <returns>The listing, ready for any surface to render or speak.</returns>
+    /// <exception cref="ArgumentException">Nothing was heard.</exception>
+    public CapabilityResult AnswerForUtterance(string utterance) => Listing(Recover(utterance));
+
+    /// <summary>
+    /// Every name help speaks aloud, in the order it speaks them: capability
+    /// ids, then group names.
+    /// </summary>
+    private IReadOnlyList<string> CanonicalNames() =>
+        [.. _registry.Descriptors.Select(descriptor => descriptor.Id), .. ListGroups()];
 
     /// <summary>
     /// Every level of the hierarchy answers in the shape help's descriptor
