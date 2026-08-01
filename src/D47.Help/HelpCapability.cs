@@ -20,6 +20,33 @@ namespace D47.Help;
 /// </summary>
 public sealed class HelpCapability
 {
+    /// <summary>
+    /// Help's own declaration. Help is a capability like any other and appears
+    /// in its own listing — if it did not, the one thing that tells the
+    /// Commander what exists would be the one thing not accounted for.
+    /// </summary>
+    public static CapabilityDescriptor Descriptor { get; } = new()
+    {
+        Id = "help",
+        Group = "Getting around",
+        HelpText = "Lists what I can do, and narrows down from there.",
+        Display = new ListDisplay(),
+        Tool = new ToolSchema
+        {
+            Name = "list_capabilities",
+            Description =
+                "Lists every capability this companion has. Call this when the "
+                + "Commander asks what you can do, or when an utterance names "
+                + "nothing you recognise.",
+        },
+        Examples =
+        [
+            "what can you do",
+            "help",
+            "what else do you know",
+        ],
+    };
+
     private readonly CapabilityRegistry _registry;
 
     /// <summary>
@@ -38,4 +65,15 @@ public sealed class HelpCapability
     /// <returns>The help text of every registered capability.</returns>
     public IReadOnlyList<string> ListCapabilities() =>
         [.. _registry.Descriptors.Select(descriptor => descriptor.HelpText)];
+
+    /// <summary>
+    /// Help's answer, as a result conforming to the <see cref="ListDisplay"/>
+    /// its descriptor declares.
+    /// </summary>
+    /// <returns>The listing, ready for any surface to render or speak.</returns>
+    public CapabilityResult Answer() => new ListResult
+    {
+        CapabilityId = Descriptor.Id,
+        Items = ListCapabilities(),
+    };
 }

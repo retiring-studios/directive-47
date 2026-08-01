@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace D47.Capabilities;
 
 /// <summary>
@@ -36,4 +38,31 @@ public sealed record CapabilityDescriptor
     /// speak.
     /// </summary>
     public required string HelpText { get; init; }
+
+    /// <summary>
+    /// The shape this capability's answers take. Required, because parity is
+    /// strict: a capability with nothing to show on a surface is a capability
+    /// that is half built.
+    /// </summary>
+    public required DisplayModel Display { get; init; }
+
+    /// <summary>
+    /// What the model is told so it can call this capability.
+    /// </summary>
+    public required ToolSchema Tool { get; init; }
+
+    /// <summary>
+    /// Things a Commander might say to reach this capability. They are
+    /// few-shot examples inside the tool schema, helping the model map a sloppy
+    /// transcription to the right capability, and "try saying…" text so the
+    /// surfaces are discoverable.
+    ///
+    /// <para>
+    /// They are examples, not a matcher. Nothing compares these against
+    /// speech-to-text output: transcription of system, ship and commodity names
+    /// is exactly where that fails, and a phrase matcher fails silently when it
+    /// misses.
+    /// </para>
+    /// </summary>
+    public required IReadOnlyList<string> Examples { get; init; }
 }
