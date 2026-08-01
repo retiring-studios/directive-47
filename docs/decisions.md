@@ -42,11 +42,12 @@ This file is descriptive. Nothing here enforces itself — see
 
 - **Capabilities declare, surfaces render.** A capability contributes a
   descriptor: a data object saying what it is and what to show. When complete it
-  carries an LLM tool schema, a display model, help text, and example
-  utterances — each part arriving with the thing that consumes it, so the tool
-  schema and the examples land with the LLM integration rather than ahead of it.
-  Every surface consumes the descriptor, so no capability references a UI
-  assembly and none of them contains feature-specific rendering code.
+  carries an LLM tool schema, a display model, a group, help text, and example
+  utterances — each part arriving with the thing that consumes it. The tool
+  schema still lands with the LLM integration; the examples arrived earlier,
+  with help's "try saying…" level. Every surface consumes the descriptor, so no
+  capability references a UI assembly and none of them contains feature-specific
+  rendering code.
 - **A descriptor is the declaration of a function, as data — never a variable.**
   It is registered once at startup and never mutates. What a capability
   *returns* is a separate per-invocation result conforming to the shape the
@@ -64,6 +65,22 @@ This file is descriptive. Nothing here enforces itself — see
   surface, not just the one that motivated it. Without the hatch, the display
   model grows a `Chart` concept, then a `Map` concept, and becomes a UI
   framework nobody chose to write.
+- **Help is a hierarchy, and a capability's detail is not a fourth string.**
+  Groups, then the capabilities in one group, then one capability's help text
+  followed by its example utterances. Forty lines spoken aloud is not an answer,
+  so the answer stays short at every level. Detail is deliberately *not* a
+  longer prose field alongside `HelpText`: a second required description on a
+  contract thirty-eight capabilities implement is two things to keep in sync per
+  capability, and the drill already earns its keep by adding "try saying…".
+  Revisit trigger: a capability whose one line genuinely cannot carry its own
+  explanation, at which point the argument is about that capability rather than
+  about the contract.
+- **Each level of help is asked with a name the level above it produced.** An
+  unknown group or capability id throws rather than returning an empty listing,
+  because an empty listing reads as "that group is empty" — a different answer,
+  and an untrue one. Turning an utterance that resolves to nothing into a name
+  help recognizes is a separate job that sits in front of this one
+  ([#55](https://github.com/retiring-studios/directive-47/issues/55)).
 - **Example utterances are examples, not a matcher.** They are few-shot
   examples inside the tool schema, helping the LLM map a sloppy transcription to
   the right capability, and "try saying…" text so the panel and headset are
@@ -271,7 +288,11 @@ trigger moved.
   at the twelfth implementation, but the twelve-site edit is mechanical and
   certain, while the guessed shape is neither. The descriptor's tool schema and
   example utterances were added on that reasoning and stripped again on this
-  one — they arrive with the LLM integration that consumes them.
+  one. Example utterances came back one story later, unchanged, when help's
+  "try saying…" level turned out to be the consumer — which is the rule working,
+  not the rule failing: the second edit was the mechanical one it promised, and
+  the shape was confirmed by a consumer rather than guessed at by an author. The
+  tool schema is still waiting for the LLM integration.
 - **The refactor line: one instance is mine, a general conclusion is yours.**
   Eliminating a specific redundancy is not an architectural decision. Deciding
   to *eliminate redundancies* is. A smell that resolves into a conclusion about
