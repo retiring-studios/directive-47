@@ -38,7 +38,7 @@ install → launch → beep.
 
 ### Preflight — always, before committing
 
-Run `dotnet build cloud.slnf` and `dotnet test cloud.slnf`. **If either fails,
+Run `dotnet build ci.slnf` and `dotnet test ci.slnf`. **If either fails,
 stop.** Do not commit. Report what broke, and sound the failure tone if a `B`
 code was given. Never commit a red build to get to the release step.
 

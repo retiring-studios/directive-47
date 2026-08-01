@@ -1,11 +1,14 @@
 name: CI
 
-# Ubuntu on purpose. Tier 0 and Tier 1 claim to be platform-neutral, and
-# building them on Linux enforces that claim instead of trusting it. Windows CI
-# arrives with hardware.slnf on a self-hosted runner, Wave 2 or later.
+# Windows, and only Windows. Directive 47 is a Windows product — WPF, SteamVR,
+# and a game that runs nowhere else — so a Linux job was proving a portability
+# claim nothing depends on. One Windows runner builds every project including
+# the net10.0-windows ones, which is what lets the panel's layout snapshots gate
+# a pull request instead of waiting for a manual pass.
 #
-# This does not call scripts/setup-cloud.sh. That script provisions Claude cloud
-# containers; actions/setup-dotnet is the runner equivalent.
+# What this still cannot do is Tier 2. Microphones, WASAPI, hotkeys, SendInput
+# and the SteamVR overlay need real hardware, and no hosted runner has any.
+# Those live in hardware.slnf and run on the dev PC. ci.slnf is everything else.
 
 on:
     push:
@@ -18,22 +21,22 @@ permissions:
 jobs:
     build:
         name: Build and test
-        runs-on: ubuntu-latest
+        runs-on: windows-latest
 
         steps:
             - uses: actions/checkout@v7
 
             # Reads global.json, so the pinned SDK band is stated in exactly one
-            # place and CI cannot drift from the dev machines.
+            # place and CI cannot drift from the dev machine.
             - uses: actions/setup-dotnet@v6
               with:
                   global-json-file: global.json
 
             - name: Restore
-              run: dotnet restore cloud.slnf
+              run: dotnet restore ci.slnf
 
             - name: Build
-              run: dotnet build cloud.slnf --no-restore --configuration Release
+              run: dotnet build ci.slnf --no-restore --configuration Release
 
             - name: Test
-              run: dotnet test cloud.slnf --no-build --configuration Release
+              run: dotnet test ci.slnf --no-build --configuration Release

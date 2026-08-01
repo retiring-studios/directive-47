@@ -164,8 +164,8 @@ The tiers drive the project layout, not just test selection.
 
 | Tier | Contents | Runs |
 |---|---|---|
-| 0 · Pure | Parsers, planners, routing, state machines, display models, capability descriptors | Cloud |
-| 1 · Integration, no hardware | Providers against recorded HTTP, journal parsing over fixture logs, layout snapshots | Cloud |
+| 0 · Pure | Parsers, planners, routing, state machines, display models, capability descriptors | CI |
+| 1 · Integration, no hardware | Providers against recorded HTTP, journal parsing over fixture logs, WPF layout snapshots | CI |
 | 2 · Hardware | Mic, WASAPI, hotkeys, SendInput, SteamVR overlay | Dev PC |
 | 3 · Game | Elite Dangerous running — real journal, keybinds actually landing | Dev PC + game |
 
@@ -186,8 +186,18 @@ The tiers drive the project layout, not just test selection.
   the project gets renamed at that point. Deliberately not renamed in advance:
   guessing a bucket name before there is anything to generalise from is how
   `D47.Core` gets recreated under a different spelling.
-- **Selection via solution filters** (`cloud.slnf`, `hardware.slnf`), not
+- **Selection via solution filters** (`ci.slnf`, `hardware.slnf`), not
   per-test traits.
+- **CI is Windows only, and the tier boundary is hardware rather than operating
+  system.** Directive 47 is a Windows product — WPF, SteamVR, and a game that
+  runs nowhere else — so a Linux job was enforcing a portability claim nothing
+  depends on. One `windows-latest` runner builds every project including the
+  `net10.0-windows` ones, which is what lets Tier 1's WPF layout snapshots gate
+  a pull request rather than wait for the manual pass. Tier 2 is unchanged and
+  still dev-PC-only: no hosted runner has a microphone, a headset, or a game.
+  The cost, accepted deliberately: nothing verifies that Tier 0 and Tier 1 still
+  build on Linux, so a Claude cloud container is no longer a supported way to
+  work on this repo.
 
 ## Fixtures
 
@@ -254,14 +264,17 @@ If a rule matters, it must not live only in a Markdown file.
 `CLAUDE.md` is descriptive by design: a map of what lives where, how to build,
 and which decisions not to re-litigate.
 
-**Cloud provisioning is not a SessionStart hook.** It was one briefly. A hook
-command runs through a shell, and the shell on the dev PC is PowerShell, which
-cannot invoke a bash script — so a hook whose only job is provisioning Linux
-containers would have errored at the start of every local session. Noise that
-recurs is noise that gets suppressed, and a suppressed hook is worse than none.
-Provisioning lives in `scripts/setup-cloud.sh`, which the cloud environment's
-setup step runs. The script stays in version control either way; only the
-trigger moved.
+**Cloud provisioning was never a SessionStart hook, and is now unsupported
+entirely.** It was a hook briefly. A hook command runs through a shell, and the
+shell on the dev PC is PowerShell, which cannot invoke a bash script — so a hook
+whose only job was provisioning Linux containers errored at the start of every
+local session. Noise that recurs is noise that gets suppressed, and a suppressed
+hook is worse than none, so provisioning moved to `scripts/setup-cloud.sh`.
+
+That script is still in version control and still works, but with CI on Windows
+nothing verifies that this repo builds on Linux at all. Development happens
+locally. The script is kept rather than deleted because deleting it removes a
+capability to save nothing.
 
 ## Process
 
