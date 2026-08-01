@@ -79,8 +79,28 @@ This file is descriptive. Nothing here enforces itself — see
   unknown group or capability id throws rather than returning an empty listing,
   because an empty listing reads as "that group is empty" — a different answer,
   and an untrue one. Turning an utterance that resolves to nothing into a name
-  help recognizes is a separate job that sits in front of this one
-  ([#55](https://github.com/retiring-studios/directive-47/issues/55)).
+  help recognizes is a separate job, in front of this one.
+- **Help recovers rather than refusing, over the names it already speaks.** An
+  unresolved utterance gets the nearest capability id or group name, or — when
+  nothing is close — plain acknowledgement followed by the groups. The pool is
+  deliberately ids and groups and *not* example utterances: matching those
+  against speech-to-text output is the silent-failure mode ruled out two bullets
+  down. There is no separate spoken-name field; ids are already short nouns, and
+  the argument against a second required string is the same one that kept detail
+  out of the descriptor.
+- **The name matcher is hand-rolled, internal, and named for its one job.**
+  Levenshtein with a tolerance, roughly thirty-five lines, living in `D47.Help`
+  as `NearestName`. Two packages were priced first and both were fine on the
+  licence allowlist — `Fastenshtein` (MIT, no dependencies, built for `net10.0`)
+  and `FuzzySharp` (MIT, no dependencies, newest target `netstandard2.1`) — but
+  neither earns a redistributed dependency inside a single-file exe for a
+  textbook function that reads in one screen. The real pull toward a package is
+  Search machinery
+  ([#22](https://github.com/retiring-studios/directive-47/issues/22)), which
+  needs the same thing over a far larger and more hostile vocabulary. Revisit
+  trigger: that story. Deciding it there means comparing two real call sites
+  instead of generalizing from one — which is also why this one is internal and
+  not a named abstraction anything else could start conforming to.
 - **Example utterances are examples, not a matcher.** They are few-shot
   examples inside the tool schema, helping the LLM map a sloppy transcription to
   the right capability, and "try saying…" text so the panel and headset are
