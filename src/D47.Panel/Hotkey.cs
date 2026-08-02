@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace D47.Panel;
 
@@ -38,6 +39,12 @@ internal sealed class Hotkey : IDisposable
     private const int AlreadySpokenFor = 1409;
 
     /// <summary>
+    /// The high bit of what <c>GetAsyncKeyState</c> returns: the key is down
+    /// right now.
+    /// </summary>
+    private const short Down = unchecked((short)0x8000);
+
+    /// <summary>
     /// Identifies the registration to the window that owns it. There is one per
     /// window here, so the number never has to be allocated.
     /// </summary>
@@ -56,16 +63,33 @@ internal sealed class Hotkey : IDisposable
     /// </summary>
     private const int Invisible = 0;
 
+    /// <summary>
+    /// How often to look at whether the key has come up yet.
+    ///
+    /// <para>
+    /// Short enough that a Commander tapping the combination twice has let go
+    /// well before the next look — a tap and its release take a person the best
+    /// part of a tenth of a second, and this is a fifth of that. Long enough
+    /// that holding the key down is not a busy loop.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan BetweenLooks = TimeSpan.FromMilliseconds(20);
+
     private readonly HwndSource _messages;
     private readonly Action _pressed;
-    private readonly RepeatGuard _held;
+    private readonly HeldKey _held = new();
+    private readonly int _virtualKey;
+    private readonly DispatcherTimer _watchingForRelease;
     private bool _disposed;
 
-    private Hotkey(HwndSource messages, Action pressed, RepeatGuard held)
+    private Hotkey(HwndSource messages, Action pressed, int virtualKey)
     {
         _messages = messages;
         _pressed = pressed;
-        _held = held;
+        _virtualKey = virtualKey;
+
+        _watchingForRelease = new DispatcherTimer { Interval = BetweenLooks };
+        _watchingForRelease.Tick += (_, _) => LookForRelease();
     }
 
     /// <summary>
@@ -79,10 +103,6 @@ internal sealed class Hotkey : IDisposable
     /// <param name="modifiers">The modifiers to hold.</param>
     /// <param name="key">The key to press.</param>
     /// <param name="pressed">What to do when it arrives.</param>
-    /// <param name="time">
-    /// Where now comes from, for telling a press apart from the same one still
-    /// being held. Defaults to the system clock.
-    /// </param>
     /// <returns>
     /// The registration, which the caller owns and must dispose, or
     /// <see langword="null"/> when another application already owns the
@@ -100,16 +120,12 @@ internal sealed class Hotkey : IDisposable
     /// <exception cref="InvalidOperationException">
     /// The combination could not be claimed for any other reason.
     /// </exception>
-    internal static Hotkey? TryRegister(
-        ModifierKeys modifiers,
-        Key key,
-        Action pressed,
-        TimeProvider? time = null)
+    internal static Hotkey? TryRegister(ModifierKeys modifiers, Key key, Action pressed)
     {
         var messages = new HwndSource(
             new HwndSourceParameters("Directive 47 hotkeys") { WindowStyle = Invisible });
 
-        var hotkey = new Hotkey(messages, pressed, new RepeatGuard(time ?? TimeProvider.System));
+        var hotkey = new Hotkey(messages, pressed, KeyInterop.VirtualKeyFromKey(key));
         messages.AddHook(hotkey.OnMessage);
 
         // Deliberately without MOD_NOREPEAT, which Windows offers for exactly
@@ -160,6 +176,7 @@ internal sealed class Hotkey : IDisposable
 
         _disposed = true;
 
+        _watchingForRelease.Stop();
         UnregisterHotKey(_messages.Handle, TheOnlyOne);
         _messages.RemoveHook(OnMessage);
         _messages.Dispose();
@@ -177,12 +194,40 @@ internal sealed class Hotkey : IDisposable
         // nobody else asked for.
         handled = true;
 
-        if (_held.Allows())
+        if (!_held.Allows())
         {
-            _pressed();
+            return IntPtr.Zero;
         }
 
+        _pressed();
+
+        // Nothing tells us the key came up — RegisterHotKey reports presses and
+        // nothing else — so the only way to know is to look. The watching stops
+        // the moment it sees the key up, so this runs for as long as a finger
+        // rests on a key and no longer.
+        _watchingForRelease.Start();
+
         return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Ends the wait once the key is up, so the next press counts as one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Only the key is watched, not the modifiers. Holding <c>Ctrl</c> and
+    /// <c>Alt</c> down while tapping the key is two presses and should be,
+    /// which is exactly how somebody toggles something twice in a hurry.
+    /// </remarks>
+    private void LookForRelease()
+    {
+        if ((GetAsyncKeyState(_virtualKey) & Down) != 0)
+        {
+            return;
+        }
+
+        _watchingForRelease.Stop();
+        _held.LetGo();
     }
 
     private static uint ToNative(ModifierKeys modifiers)
@@ -264,4 +309,8 @@ internal sealed class Hotkey : IDisposable
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnregisterHotKey(IntPtr window, int id);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern short GetAsyncKeyState(int key);
 }

@@ -77,6 +77,36 @@ public class HotkeyTests : DesktopTest
     }
 
     [Fact]
+    public void Hotkey_WhenTappedTwice_FiresTwice()
+    {
+        // The case the maintainer found by using it: quick repeats did nothing,
+        // because the first implementation told a repeat from a press by
+        // elapsed time. Pressing and releasing is now what separates them, and
+        // this is the test that would have caught it.
+        using var pump = new MessagePump();
+        int fired = 0;
+
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => Interlocked.Increment(ref fired)))
+            ?? throw new InvalidOperationException(
+                $"{Combination} is already owned on this machine, so this test cannot run.");
+
+        try
+        {
+            Input.Press(Held, Tapped);
+            Input.Press(Held, Tapped);
+
+            Eventually.True(
+                () => Volatile.Read(ref fired) == 2,
+                LongEnoughToArrive).ShouldBeTrue(
+                    $"two taps should be two presses, and this saw {Volatile.Read(ref fired)}");
+        }
+        finally
+        {
+            pump.Invoke(hotkey.Dispose);
+        }
+    }
+
+    [Fact]
     public void Hotkey_WhenTheCombinationIsAlreadyOwned_IsAbsentNotFailed()
     {
         // The second registration stands in for another application, which is
