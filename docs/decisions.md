@@ -451,6 +451,13 @@ capability to save nothing.
   criteria on a Feature carry the intent; writing every story up front produces
   guesses about a codebase that does not exist yet, and they go stale before
   anyone reaches them.
+- **Work discovered later goes into the backlog unparented, in triage.** New
+  capabilities will keep turning up that, had they been known when scoping first
+  began, would have belonged to a Feature or an Epic that is now finished.
+  Reopening old Features and Epics to receive them is not a workable way to run
+  a backlog. So a discovered item is filed on its own, labelled `triage`, and
+  given a parent — or not — when it is scoped. The hierarchy above describes how
+  work is broken *down*; it does not require that everything arrived that way.
 - **Red, green, refactor — all three.** It is test *driven*, not merely test
   first. Red and green only prove the code works; the third step is where the
   design gets made, with a passing suite as the safety net. Skip it and TDD
