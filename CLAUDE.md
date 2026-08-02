@@ -86,4 +86,16 @@ which is how invented obligations end up being treated as debt. Recording the
 *consequences* of his decision — what was built, what was measured, what failed
 — is fine and is most of what the file already is. Inventing the decision is not.
 
+**Every pull request needs the `verified` label before it can merge.** `main`
+requires two checks: `Build, test and publish`, and `manual-verification`. The
+second is red until the maintainer applies `verified` — his attestation that he
+checked the things automated tests cannot, which for some changes is a two-second
+decision that nothing needed eyes.
+
+**Never apply that label yourself.** Tell him the pull request is ready. And
+label *last*: pushing a commit strips the label and turns the check red again, so
+push everything first, then ask.
+
+A pull request showing `BLOCKED` with green CI is this, not a broken build.
+
 Reasoning behind the decisions already made: `docs/decisions.md`.
