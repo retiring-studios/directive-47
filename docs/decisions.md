@@ -512,22 +512,14 @@ capability to save nothing.
   not a review approval: it is a required `manual-verification` status check,
   satisfied by applying the `verified` label, which new commits strip.
 
-  **What the gate is for is that nothing merges without the maintainer
-  deciding** — not that every pull request contains something automation could
-  not have checked. This bullet used to give the second reason, and the game
-  overlay's first story is a counterexample to it: everything that story
-  claimed is a fact Windows answers directly — the render is the panel's, the
-  overlay's rectangle is inside the game's, the overlay is in front of it — and
-  all of it is asserted. The check was still red, correctly. An empty pass is
-  therefore a real outcome rather than a rubber stamp: on those changes the
-  attestation says "I looked, nothing here needed eyes", and saying it takes two
-  seconds.
+  **If something requires manual testing, it gets tested manually before
+  merging, and the `verified` label is that attestation.**
 
-  Where the value shows up is upstream of the label. A pull request has to say
-  what it wants looked at and how to look at it — the action, what a pass looks
-  like, what would be a defect. A step that keeps reappearing is a hole in
-  automation and gets promoted, per the bullet above. A step that cannot be
-  written down that concretely is usually not a check at all.
+  So a pull request has to say what needs testing and how to test it: the
+  action, what a pass looks like, and what would be a defect. A step that keeps
+  reappearing is a hole in automation and gets promoted, per the bullet above.
+  A step that cannot be written down that concretely is usually not a check at
+  all.
 
   **Built** at
   [#88](https://github.com/retiring-studios/directive-47/pull/88): the label
