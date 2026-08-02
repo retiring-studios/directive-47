@@ -2,13 +2,13 @@
         x:ClassModifier="internal"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:D47.Panel"
+        xmlns:render="clr-namespace:D47.Render;assembly=D47.Render"
         Title="Directive 47"
         AutomationProperties.Name="Directive 47"
         Height="720"
         Width="960"
         Background="#FF0B0D10">
 
-    <local:CapabilityView x:Name="View" />
+    <render:CapabilityView x:Name="View" />
 
 </Window>

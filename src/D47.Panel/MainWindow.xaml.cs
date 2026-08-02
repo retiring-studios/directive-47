@@ -3,6 +3,7 @@ using System.Windows;
 
 using D47.Capabilities;
 using D47.Help;
+using D47.Render;
 
 namespace D47.Panel;
 

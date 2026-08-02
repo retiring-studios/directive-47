@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace D47.Panel.Tests;
+namespace D47.Render.Tests;
 
 /// <summary>
 /// Builds a real visual tree and reads back what it says. Asserting on a view

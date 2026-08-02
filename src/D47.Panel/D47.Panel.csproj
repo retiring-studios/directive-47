@@ -2,14 +2,12 @@
 
     <!--
         Tier 1. WPF, so net10.0-windows and Windows-only — but no hardware, so
-        its tests run in CI like everything else. hardware.slnf is still waiting
-        for the first project that needs a microphone or a headset.
+        its tests run in CI like everything else.
 
-        Named after its only occupant, and that will stop being true. The game
-        overlay and the VR overlay present this same render; when the first of
-        them arrives the render moves out and this project keeps the window.
-        Not moved in advance, because naming a rendering project before there
-        are two consumers is guessing at a shape.
+        This is the window, and only the window: showing it, hiding it to the
+        tray, and composing what it shows. The render left for D47.Render when
+        the game overlay became the second surface to present it, which is the
+        move this comment used to say was coming.
 
         Nullable and the analyzer settings come from Directory.Build.props.
         ImplicitUsings is deliberately off, matching the rest of the repo.
@@ -39,8 +37,9 @@
 
     <!--
         The panel is an application, so its types are internal — CA1515, and it
-        is right. The tests build real visual trees out of them, which is what
-        this opens the door for and the only thing it opens it for.
+        is right. The tests reach the window and the application object through
+        this, which is what it opens the door for and the only thing it opens it
+        for. The render is public and needs none of it.
     -->
     <ItemGroup>
         <InternalsVisibleTo Include="D47.Panel.Tests" />
@@ -49,6 +48,7 @@
     <ItemGroup>
         <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
         <ProjectReference Include="..\D47.Help\D47.Help.csproj" />
+        <ProjectReference Include="..\D47.Render\D47.Render.csproj" />
     </ItemGroup>
 
 </Project>
