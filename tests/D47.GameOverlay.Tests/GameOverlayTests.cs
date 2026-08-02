@@ -51,6 +51,19 @@ public class GameOverlayTests : GameTest
             $"The overlay should be in front of the game.{stack}");
     }
 
+    // There is deliberately no test here for the overlay leaving the foreground
+    // alone. One was written and deleted: it passed with ShowActivated="False"
+    // and passed just as happily with it set to "True", which makes it a test
+    // that reports confidence it never earned.
+    //
+    // The cause is the harness rather than the assertion. Windows will not let
+    // a process that does not already hold the foreground take it, and the test
+    // runner holds nothing — so the overlay could not have stolen focus here
+    // even if it were built to. Proving this needs the composed application
+    // launched as a process, which does hold the foreground when it shows the
+    // panel, and that is a bigger change to how this project's tests are put
+    // together than a story should take on its own. See the pull request.
+
     /// <summary>
     /// Help's top-level answer, composed the way the panel composes it. Help is
     /// the only capability that exists, and it needs no microphone, no network

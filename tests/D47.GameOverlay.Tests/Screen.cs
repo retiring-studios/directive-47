@@ -84,6 +84,20 @@ internal static class Screen
     }
 
     /// <summary>
+    /// A window's title, for saying which window is meant. Empty when it has
+    /// none, which plenty of real windows do.
+    /// </summary>
+    /// <param name="window">The window to name.</param>
+    /// <returns>Its title.</returns>
+    internal static string TitleOf(IntPtr window)
+    {
+        char[] title = new char[LongestTitleWorthReading];
+        int length = GetWindowText(window, title, title.Length);
+
+        return new string(title, 0, length);
+    }
+
+    /// <summary>
     /// The front of the window stack, named. "It was not in front" says nothing
     /// about why; what is in front usually does.
     /// </summary>
@@ -103,12 +117,9 @@ internal static class Screen
                 continue;
             }
 
-            char[] title = new char[LongestTitleWorthReading];
-            int length = GetWindowText(next, title, title.Length);
-
             description.AppendLine(
                 CultureInfo.InvariantCulture,
-                $"  {shown}: {next} \"{new string(title, 0, length)}\"");
+                $"  {shown}: {next} \"{TitleOf(next)}\"");
 
             shown++;
         }
