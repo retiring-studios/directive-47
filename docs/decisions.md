@@ -507,17 +507,35 @@ capability to save nothing.
   build rather than `dotnet run`. Built at
   [#63](https://github.com/retiring-studios/directive-47/issues/63): the
   artifact is attached to every pull request and kept for fourteen days.
-- **Definition of done includes a manual verification pass by the maintainer.**
-  It verifies the things that cannot be verified via automated testing. GitHub
-  does not allow approving your own pull request, so the attestation is not a
-  review approval: it is a required `manual-verification` status check
-  satisfied by applying the `verified` label, which new commits strip.
+- **If something requires manual testing, it gets tested manually before
+  merging, and the `verified` label is that attestation.**
 
-  **Not built.** There is no `verified` label, no workflow producing that check,
-  and no branch protection or ruleset requiring it — so nothing stops a pull
-  request merging without a pass, and several have. Recorded as missing rather
-  than described as though it exists, which is the whole point of the
-  Enforcement section below.
+  So a pull request has to say what needs testing and how to test it: the
+  action, what a pass looks like, and what would be a defect. A step that keeps
+  reappearing is a hole in automation and gets promoted, per the bullet above.
+  A step that cannot be written down that concretely is usually not a check at
+  all.
+
+  **The verification step is neither required nor part of a pull request unless
+  manual testing is required for newly introduced functionality.** A pull request
+  that introduces something needing a human pass carries `needs-manual-test`,
+  applied by whoever wrote the code, because that is the party who knows what
+  was built and what no test can check. The maintainer applies `verified` when
+  he has done the pass. Neither label is read by CI.
+
+  It was a gate, briefly. `manual-verification` was a workflow that read the
+  `verified` label, stripped it on every new commit, and was a required status
+  check on `main`, so every pull request carried a red check until the label
+  went on — including ones with nothing to look at. Built at
+  [#88](https://github.com/retiring-studios/directive-47/pull/88), removed here.
+  `main` requires one check now, `Build, test and publish`.
+
+  **Nothing enforces this, which is the trade.** A conditional gate was priced
+  and not taken: GitHub has no "required only sometimes", because a required
+  check that never reports blocks the pull request forever, so the only working
+  version is a check that runs on every pull request and skips itself — which
+  puts an entry on every pull request to enforce a rule that applies to some of
+  them. The rule is worth more than the machinery to enforce it.
 
 ## Releases
 

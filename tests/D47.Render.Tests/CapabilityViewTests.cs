@@ -7,12 +7,20 @@ using Shouldly;
 
 using Xunit;
 
-namespace D47.Panel.Tests;
+namespace D47.Render.Tests;
 
 /// <summary>
-/// The panel renders a capability's answer from its descriptor and its result,
-/// and knows nothing else about it. This is the first thing to consume the
-/// descriptor contract as a surface rather than as a test fixture.
+/// The render turns a capability's answer into text on a surface from its
+/// descriptor and its result, and knows nothing else about it. This is the
+/// first thing to consume the descriptor contract as a surface rather than as
+/// a test fixture.
+///
+/// <para>
+/// The facts still say <c>Panel_</c> because they are #71's acceptance
+/// criteria, and a criterion that has been ticked off is a record. They moved
+/// here with the render and are otherwise unchanged; the panel is still one of
+/// the surfaces they are true of.
+/// </para>
 /// </summary>
 public class CapabilityViewTests
 {

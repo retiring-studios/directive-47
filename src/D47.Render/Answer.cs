@@ -1,6 +1,6 @@
 using D47.Capabilities;
 
-namespace D47.Panel;
+namespace D47.Render;
 
 /// <summary>
 /// One capability's answer, paired with the declaration that says how to show
@@ -9,11 +9,12 @@ namespace D47.Panel;
 ///
 /// <para>
 /// Lives here rather than in <c>D47.Capabilities</c> because the contract
-/// assembly does not reference its consumers. It moves when a second surface
-/// needs it, which is the same move this whole project is expecting.
+/// assembly does not reference its consumers. It arrived in <c>D47.Panel</c>
+/// when the panel was the only surface, and moved here when the game overlay
+/// became the second.
 /// </para>
 /// </summary>
-internal sealed record Answer
+public sealed record Answer
 {
     /// <summary>
     /// The declaration the answer conforms to.

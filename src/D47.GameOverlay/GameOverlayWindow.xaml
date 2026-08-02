@@ -1,0 +1,36 @@
+<Window x:Class="D47.GameOverlay.GameOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:render="clr-namespace:D47.Render;assembly=D47.Render"
+        Title="Directive 47 overlay"
+        AutomationProperties.Name="Directive 47 overlay"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        SizeToContent="WidthAndHeight">
+
+    <!--
+        WindowStyle="None" is not a style choice. AllowsTransparency throws with
+        any other window style, so a per-pixel-alpha overlay cannot also carry an
+        OS caption — which is why moving and resizing will need chrome we draw
+        ourselves, and why that has a spike in front of it.
+
+        ShowActivated="False" so that appearing over Elite does not take the
+        foreground from it. Passing pointer input through is a later story; not
+        stealing focus in the first place is this one's business, because an
+        overlay that alt-tabs the Commander out of the cockpit has broken the
+        one promise the product makes.
+
+        SizeToContent because the render is the only thing here with an opinion
+        about how big it should be. The overlay's real size is the panel's,
+        scaled and aspect-locked, and that arrives with the story about
+        scaling — inventing a design resolution now would be guessing at it.
+    -->
+    <render:CapabilityView x:Name="View" />
+
+</Window>

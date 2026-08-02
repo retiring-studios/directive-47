@@ -1,12 +1,16 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/D47.Capabilities/D47.Capabilities.csproj" />
+    <Project Path="src/D47.GameOverlay/D47.GameOverlay.csproj" />
     <Project Path="src/D47.Help/D47.Help.csproj" />
     <Project Path="src/D47.Panel/D47.Panel.csproj" />
+    <Project Path="src/D47.Render/D47.Render.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/D47.Capabilities.Tests/D47.Capabilities.Tests.csproj" />
+    <Project Path="tests/D47.GameOverlay.Tests/D47.GameOverlay.Tests.csproj" />
     <Project Path="tests/D47.Help.Tests/D47.Help.Tests.csproj" />
     <Project Path="tests/D47.Panel.Tests/D47.Panel.Tests.csproj" />
+    <Project Path="tests/D47.Render.Tests/D47.Render.Tests.csproj" />
   </Folder>
 </Solution>

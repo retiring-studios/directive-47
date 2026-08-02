@@ -1,38 +1,33 @@
 using System.ComponentModel;
 using System.Windows;
 
-using D47.Capabilities;
-using D47.Help;
+using D47.Render;
 
 namespace D47.Panel;
 
 /// <summary>
 /// The panel window. It hosts one <see cref="CapabilityView"/> and hands it the
-/// answer to show; it does not know what is in that answer.
+/// answer to show; it does not know what is in that answer, and it no longer
+/// decides what the answer is.
 ///
 /// <para>
-/// Help is what it shows, because help is the only capability that exists and
-/// it needs no microphone, no network and no game. The registry is built here
-/// for now — a composition root that knows about every capability arrives with
-/// the second one.
+/// Composing that answer moved to <see cref="App"/> when the game overlay
+/// arrived. Two surfaces showing the same answer means one object shown twice,
+/// and a window that builds its own is a window that can disagree with the
+/// overlay about what the Commander asked.
 /// </para>
 /// </summary>
 internal partial class MainWindow : Window
 {
     /// <summary>
-    /// Creates the window and shows help's top-level answer.
+    /// Creates the window around an answer to show.
     /// </summary>
-    public MainWindow()
+    /// <param name="answer">What to render.</param>
+    public MainWindow(Answer answer)
     {
         InitializeComponent();
 
-        var registry = new CapabilityRegistry(HelpCapability.Descriptor);
-
-        View.DataContext = new Answer
-        {
-            Descriptor = HelpCapability.Descriptor,
-            Result = new HelpCapability(registry).Answer(),
-        };
+        View.DataContext = answer;
 
         Closing += HideInsteadOfClosing;
     }

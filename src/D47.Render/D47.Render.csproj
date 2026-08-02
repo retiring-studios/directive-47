@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 1. The one render every visual surface presents — the capability
+        view, the template selection that drives it, and the answer it binds to.
+        WPF, so net10.0-windows and Windows-only, but no hardware and no game:
+        its tests build a visual tree in process and read it back, which a
+        hosted runner does as well as a desk does.
+
+        This project is the move D47.Panel.csproj had been advertising in a
+        comment since the panel was built. The panel kept the window; the render
+        moved out when the game overlay became the second surface to present it.
+
+        A library rather than an application, which is why its types are public.
+        CA1515 is right that an application's types should be internal, and
+        D47.Panel's still are — being consumed by two other projects is this
+        one's whole reason to exist.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
+    </ItemGroup>
+
+</Project>
