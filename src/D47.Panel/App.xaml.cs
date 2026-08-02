@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Resources;
 using System.Windows.Threading;
@@ -64,6 +65,7 @@ internal sealed partial class App : Application, IDisposable
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
     private Overlay? _overlay;
+    private Hotkey? _hotkey;
 
     /// <summary>
     /// Puts the icon in the notification area, before any window is shown.
@@ -113,6 +115,16 @@ internal sealed partial class App : Application, IDisposable
 
         _overlay = Overlay.From(new GameOverlayFactory(), answer);
         _overlay.Show();
+
+        // Ctrl+Alt+D, hard-coded. Choosing it is a settings question and
+        // settings are not built. If another application already owns the
+        // combination this throws, which is deliberate — see the pull request,
+        // where what the application should do about that is an open question
+        // rather than a decision already taken.
+        _hotkey = Hotkey.Register(
+            ModifierKeys.Control | ModifierKeys.Alt,
+            Key.D,
+            () => _overlay?.Toggle());
     }
 
     /// <summary>
@@ -286,6 +298,12 @@ internal sealed partial class App : Application, IDisposable
         // Separately, because NotifyIcon does not own the menu it shows.
         _trayMenu?.Dispose();
         _trayMenu = null;
+
+        // Gives the combination back. Windows would release it when the process
+        // ends anyway; doing it here is what keeps a crash-free exit from
+        // leaving anything behind.
+        _hotkey?.Dispose();
+        _hotkey = null;
     }
 
     /// <summary>

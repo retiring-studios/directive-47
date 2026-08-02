@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Input;
 
 using Rect = System.Windows.Rect;
 
@@ -42,6 +44,10 @@ internal static class Input
 
     private const byte Escape = 0x1B;
     private const uint KeyUp = 0x0002;
+
+    private const byte ShiftKey = 0x10;
+    private const byte ControlKey = 0x11;
+    private const byte AltKey = 0x12;
 
     private const int VirtualScreenLeft = 76;
     private const int VirtualScreenTop = 77;
@@ -108,6 +114,67 @@ internal static class Input
         Thread.Sleep(40);
         keybd_event(Escape, 0, KeyUp, UIntPtr.Zero);
         Thread.Sleep(300);
+    }
+
+    /// <summary>
+    /// Holds the modifiers, taps the key, and lets go — the way a Commander
+    /// presses a hotkey.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Order matters and is not decoration. Windows matches a hotkey on the key
+    /// going down while the modifiers are already held, so releasing the
+    /// modifiers first, or pressing the key first, produces a keystroke nobody
+    /// is listening for and a test that fails for a reason that is not the
+    /// code's.
+    /// </remarks>
+    /// <param name="modifiers">The modifiers to hold.</param>
+    /// <param name="key">The key to tap.</param>
+    internal static void Press(ModifierKeys modifiers, Key key)
+    {
+        byte[] held = VirtualKeysFor(modifiers);
+
+        foreach (byte modifier in held)
+        {
+            keybd_event(modifier, 0, 0, UIntPtr.Zero);
+        }
+
+        Thread.Sleep(40);
+
+        byte pressed = (byte)KeyInterop.VirtualKeyFromKey(key);
+        keybd_event(pressed, 0, 0, UIntPtr.Zero);
+        Thread.Sleep(40);
+        keybd_event(pressed, 0, KeyUp, UIntPtr.Zero);
+        Thread.Sleep(40);
+
+        // Released in reverse, which is what a hand does and what leaves no
+        // modifier stuck down for whatever runs next.
+        for (int index = held.Length - 1; index >= 0; index--)
+        {
+            keybd_event(held[index], 0, KeyUp, UIntPtr.Zero);
+        }
+    }
+
+    private static byte[] VirtualKeysFor(ModifierKeys modifiers)
+    {
+        List<byte> keys = [];
+
+        if (modifiers.HasFlag(ModifierKeys.Control))
+        {
+            keys.Add(ControlKey);
+        }
+
+        if (modifiers.HasFlag(ModifierKeys.Alt))
+        {
+            keys.Add(AltKey);
+        }
+
+        if (modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            keys.Add(ShiftKey);
+        }
+
+        return [.. keys];
     }
 
     private static (uint X, uint Y) ToAbsolute(double x, double y)
