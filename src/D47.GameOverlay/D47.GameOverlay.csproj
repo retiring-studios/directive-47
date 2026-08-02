@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 3. A thin adapter over one external system — Elite Dangerous, and
+        the fact that it has a window this can sit above. Its tests need the
+        game actually running, which is why it is not D47.Panel: the panel's
+        tests must keep running on a hosted runner with no game on it, and a
+        project whose tests would span two tiers is two projects.
+
+        Built by CI even so, and named in ci.slnf for that reason. Compiling it
+        needs no game, and the published single-file exe contains it — what
+        needs the game is D47.GameOverlay.Tests, which is in hardware.slnf and
+        nowhere else.
+
+        Adapters hold no logic. Deciding to carry on without an overlay is
+        logic, and lives outside this project.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.Render\D47.Render.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 3. These need Elite Dangerous running, in borderless windowed mode,
+        so they are in hardware.slnf and in no other filter. No hosted runner has
+        a game on it, and this is the first project in the repo that could not
+        run in CI at all.
+
+        UseWPF because the overlay it drives is a WPF window and the tests build
+        one. D47.Help is referenced so the overlay is fed a real capability's
+        answer rather than a hand-built stand-in.
+
+        xUnit v3, not v2, for the same reason as the other test projects: the
+        SDK template still scaffolds v2, and v3 test projects are executables.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.GameOverlay\D47.GameOverlay.csproj" />
+        <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
+    </ItemGroup>
+
+</Project>
