@@ -507,12 +507,7 @@ capability to save nothing.
   build rather than `dotnet run`. Built at
   [#63](https://github.com/retiring-studios/directive-47/issues/63): the
   artifact is attached to every pull request and kept for fourteen days.
-- **Definition of done includes a manual verification pass by the maintainer.**
-  GitHub does not allow approving your own pull request, so the attestation is
-  not a review approval: it is a required `manual-verification` status check,
-  satisfied by applying the `verified` label, which new commits strip.
-
-  **If something requires manual testing, it gets tested manually before
+- **If something requires manual testing, it gets tested manually before
   merging, and the `verified` label is that attestation.**
 
   So a pull request has to say what needs testing and how to test it: the
@@ -521,13 +516,15 @@ capability to save nothing.
   A step that cannot be written down that concretely is usually not a check at
   all.
 
-  **Built** at
-  [#88](https://github.com/retiring-studios/directive-47/pull/88): the label
-  exists, a workflow produces the check, and a ruleset requires it on `main`.
-  This bullet described the gate for a while before any of that existed, and
-  [#87](https://github.com/retiring-studios/directive-47/pull/87) recorded the
-  gap rather than papering over it. The gap is closed; this paragraph replaces
-  the record of it.
+  **The verification step is neither required nor part of a pull request.** It
+  was, briefly. `manual-verification` was a workflow that read the label,
+  stripped it on every new commit, and was a required status check on `main`, so
+  every pull request carried a red check until the label went on. That was built
+  at [#88](https://github.com/retiring-studios/directive-47/pull/88) and removed
+  here. `main` requires one check now, `Build, test and publish`.
+
+  The label still exists and is still the attestation. Nothing reads it and
+  nothing blocks on it.
 
 ## Releases
 
