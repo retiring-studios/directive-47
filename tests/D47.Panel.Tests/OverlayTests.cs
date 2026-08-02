@@ -10,14 +10,15 @@ using Xunit;
 namespace D47.Panel.Tests;
 
 /// <summary>
-/// What the application does when the machine cannot host an overlay, and what
-/// it does when the overlay is broken. Those are different things and this is
-/// the only place that difference is asserted.
+/// What the application does when the machine cannot host an overlay, what it
+/// does when the overlay is broken, and which way a toggle goes. Those are
+/// three different things and this is the only place any of them is asserted.
 ///
 /// <para>
 /// Tier 1 and in process. Nothing here needs the game, a desktop, or a window
 /// — the whole point of putting a seam in front of the adapter is that the
-/// decision can be tested without a machine that has been broken on purpose.
+/// decisions can be tested without a machine that has been broken on purpose,
+/// and against an overlay that is nothing but a boolean.
 /// </para>
 /// </summary>
 public class OverlayTests
@@ -27,13 +28,18 @@ public class OverlayTests
     {
         var machineThatCannot = new FactoryThatRefuses();
 
-        Should.NotThrow(() => Overlay.Show(machineThatCannot, HelpsAnswer()));
+        Overlay overlay = Should.NotThrow(() => Overlay.From(machineThatCannot, HelpsAnswer()));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no game running, for a reason that has nothing to do
         // with what it claims to check.
         machineThatCannot.WasAsked.ShouldBeTrue(
             "the application should have asked for an overlay before deciding to do without one");
+
+        // And it stays absent rather than failing later. Pressing the hotkey on
+        // a machine that cannot draw an overlay is not an error to report.
+        Should.NotThrow(overlay.Toggle);
+        Should.NotThrow(overlay.Show);
     }
 
     [Fact]
@@ -44,7 +50,42 @@ public class OverlayTests
         // unsupported machine, and this is what stops that being written.
         var broken = new FactoryThatIsBroken();
 
-        Should.Throw<StandInFailure>(() => Overlay.Show(broken, HelpsAnswer()));
+        Should.Throw<StandInFailure>(() => Overlay.From(broken, HelpsAnswer()));
+    }
+
+    [Fact]
+    public void GameOverlay_WhenToldToShowOrHide_TogglesByHotkey()
+    {
+        // The logic half of the criterion. That a keystroke arrives at all is
+        // the hotkey's own business and is asserted where the hotkey is.
+        var overlay = new OverlayThatRemembers();
+        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer());
+
+        toggling.Toggle();
+        overlay.IsVisible.ShouldBeTrue("the first press should put it on screen");
+
+        toggling.Toggle();
+        overlay.IsVisible.ShouldBeFalse("the second press should take it away again");
+
+        toggling.Toggle();
+        overlay.IsVisible.ShouldBeTrue("and the third should bring it back");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenAlreadyShownAtStartup_IsHiddenByTheFirstPress()
+    {
+        // The case a toggle written as "show it" gets wrong. The overlay is
+        // already on screen when the game was running at startup, so the first
+        // thing the Commander presses the key for is to make it go away.
+        var overlay = new OverlayThatRemembers();
+        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer());
+
+        toggling.Show();
+        overlay.IsVisible.ShouldBeTrue();
+
+        toggling.Toggle();
+
+        overlay.IsVisible.ShouldBeFalse("the first press after startup should hide it");
     }
 
     /// <summary>
@@ -54,7 +95,7 @@ public class OverlayTests
     {
         internal bool WasAsked { get; private set; }
 
-        public GameOverlayWindow? Create(Answer answer)
+        public IGameOverlay? Create(Answer answer)
         {
             WasAsked = true;
             return null;
@@ -67,7 +108,33 @@ public class OverlayTests
     /// </summary>
     private sealed class FactoryThatIsBroken : IGameOverlayFactory
     {
-        public GameOverlayWindow? Create(Answer answer) => throw new StandInFailure();
+        public IGameOverlay? Create(Answer answer) => throw new StandInFailure();
+    }
+
+    private sealed class FactoryReturning : IGameOverlayFactory
+    {
+        private readonly IGameOverlay _overlay;
+
+        internal FactoryReturning(IGameOverlay overlay)
+        {
+            _overlay = overlay;
+        }
+
+        public IGameOverlay? Create(Answer answer) => _overlay;
+    }
+
+    /// <summary>
+    /// An overlay that is nothing but whether it is on screen — which is the
+    /// entire reason <see cref="IGameOverlay"/> says nothing about windows or
+    /// about Elite.
+    /// </summary>
+    private sealed class OverlayThatRemembers : IGameOverlay
+    {
+        public bool IsVisible { get; private set; }
+
+        public void Show() => IsVisible = true;
+
+        public void Hide() => IsVisible = false;
     }
 
     private static Answer HelpsAnswer()

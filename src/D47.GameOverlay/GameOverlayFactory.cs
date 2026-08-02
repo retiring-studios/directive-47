@@ -17,8 +17,8 @@ public sealed class GameOverlayFactory : IGameOverlayFactory
     /// The overlay, or <see langword="null"/> when the desktop is not being
     /// composited.
     /// </returns>
-    public GameOverlayWindow? Create(Answer answer) =>
-        DesktopIsComposited() ? new GameOverlayWindow(answer) : null;
+    public IGameOverlay? Create(Answer answer) =>
+        DesktopIsComposited() ? new EliteOverlay(new GameOverlayWindow(answer)) : null;
 
     /// <summary>
     /// Whether Windows is compositing the desktop.

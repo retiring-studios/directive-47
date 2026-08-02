@@ -29,5 +29,5 @@ public interface IGameOverlayFactory
     /// ever finds.
     /// </para>
     /// </returns>
-    GameOverlayWindow? Create(Answer answer);
+    IGameOverlay? Create(Answer answer);
 }

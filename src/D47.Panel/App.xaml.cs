@@ -63,6 +63,7 @@ internal sealed partial class App : Application, IDisposable
 
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
+    private Overlay? _overlay;
 
     /// <summary>
     /// Puts the icon in the notification area, before any window is shown.
@@ -110,7 +111,8 @@ internal sealed partial class App : Application, IDisposable
         MainWindow = new MainWindow(answer);
         MainWindow.Show();
 
-        Overlay.Show(new GameOverlayFactory(), answer);
+        _overlay = Overlay.From(new GameOverlayFactory(), answer);
+        _overlay.Show();
     }
 
     /// <summary>
