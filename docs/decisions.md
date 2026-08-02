@@ -508,16 +508,34 @@ capability to save nothing.
   [#63](https://github.com/retiring-studios/directive-47/issues/63): the
   artifact is attached to every pull request and kept for fourteen days.
 - **Definition of done includes a manual verification pass by the maintainer.**
-  It verifies the things that cannot be verified via automated testing. GitHub
-  does not allow approving your own pull request, so the attestation is not a
-  review approval: it is a required `manual-verification` status check
+  GitHub does not allow approving your own pull request, so the attestation is
+  not a review approval: it is a required `manual-verification` status check,
   satisfied by applying the `verified` label, which new commits strip.
 
-  **Not built.** There is no `verified` label, no workflow producing that check,
-  and no branch protection or ruleset requiring it — so nothing stops a pull
-  request merging without a pass, and several have. Recorded as missing rather
-  than described as though it exists, which is the whole point of the
-  Enforcement section below.
+  **What the gate is for is that nothing merges without the maintainer
+  deciding** — not that every pull request contains something automation could
+  not have checked. This bullet used to give the second reason, and the game
+  overlay's first story is a counterexample to it: everything that story
+  claimed is a fact Windows answers directly — the render is the panel's, the
+  overlay's rectangle is inside the game's, the overlay is in front of it — and
+  all of it is asserted. The check was still red, correctly. An empty pass is
+  therefore a real outcome rather than a rubber stamp: on those changes the
+  attestation says "I looked, nothing here needed eyes", and saying it takes two
+  seconds.
+
+  Where the value shows up is upstream of the label. A pull request has to say
+  what it wants looked at and how to look at it — the action, what a pass looks
+  like, what would be a defect. A step that keeps reappearing is a hole in
+  automation and gets promoted, per the bullet above. A step that cannot be
+  written down that concretely is usually not a check at all.
+
+  **Built** at
+  [#88](https://github.com/retiring-studios/directive-47/pull/88): the label
+  exists, a workflow produces the check, and a ruleset requires it on `main`.
+  This bullet described the gate for a while before any of that existed, and
+  [#87](https://github.com/retiring-studios/directive-47/pull/87) recorded the
+  gap rather than papering over it. The gap is closed; this paragraph replaces
+  the record of it.
 
 ## Releases
 
