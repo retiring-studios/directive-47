@@ -110,7 +110,7 @@ internal sealed partial class App : Application, IDisposable
         MainWindow = new MainWindow(answer);
         MainWindow.Show();
 
-        ShowTheOverlayIfTheGameIsRunning(answer);
+        Overlay.Show(new GameOverlayFactory(), answer);
     }
 
     /// <summary>
@@ -134,36 +134,6 @@ internal sealed partial class App : Application, IDisposable
         };
     }
 
-    /// <summary>
-    /// Puts the overlay over Elite, if Elite is there to be drawn over.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// <para>
-    /// Deliberately thin, and deliberately not yet the thing the feature calls
-    /// "absent, not failed". This checks whether the game is running, which is
-    /// not the same question as whether the overlay could be created — a
-    /// machine that cannot give us a transparent, always-on-top window is its
-    /// own story, and swallowing failures here would report our own defects as
-    /// an unsupported machine.
-    /// </para>
-    /// <para>
-    /// The game is looked for once, at startup. Following it as it starts and
-    /// stops, and showing and hiding the overlay on demand, are later stories —
-    /// so until the hotkey lands, an overlay that appears stays until the
-    /// application exits.
-    /// </para>
-    /// </remarks>
-    /// <param name="answer">What the overlay should render.</param>
-    private static void ShowTheOverlayIfTheGameIsRunning(Answer answer)
-    {
-        if (EliteWindow.Find() is not { } game)
-        {
-            return;
-        }
-
-        new GameOverlayWindow(answer).ShowOver(game);
-    }
 
     /// <summary>
     /// Brings the panel back, from wherever it went.

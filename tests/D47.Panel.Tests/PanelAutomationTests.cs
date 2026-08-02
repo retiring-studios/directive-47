@@ -103,28 +103,6 @@ public class PanelAutomationTests : DesktopTest
         Should.Throw<ArgumentException>(() => Process.GetProcessById(abandoned));
     }
 
-    /// <summary>
-    /// Stands in for an assertion failing mid-test. Its own type so the catch
-    /// that swallows it cannot also swallow a real failure to launch.
-    /// </summary>
-    private sealed class StandInFailure : Exception
-    {
-        internal StandInFailure()
-            : base("stand-in for an assertion failing mid-test")
-        {
-        }
-
-        internal StandInFailure(string message)
-            : base(message)
-        {
-        }
-
-        internal StandInFailure(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
-    }
-
     [Fact]
     public void Automation_Describes_WhatTheTreeActuallyContained()
     {
