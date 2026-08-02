@@ -59,6 +59,21 @@ public partial class GameOverlayWindow : Window
         ArgumentNullException.ThrowIfNull(game);
 
         _game = game;
+
+        // First showing and every showing after it need placing, and they need
+        // it at different moments. Before there is a handle, the placement has
+        // to wait for one, which is what OnSourceInitialized is for — and doing
+        // it there is what keeps the window from appearing somewhere else
+        // first. Afterwards the handle already exists, so the window is placed
+        // while it is still hidden and then shown, which has the same effect
+        // for the same reason.
+        if (new WindowInteropHelper(this).Handle == IntPtr.Zero)
+        {
+            Show();
+            return;
+        }
+
+        PlaceOver(game);
         Show();
     }
 
@@ -78,15 +93,24 @@ public partial class GameOverlayWindow : Window
     {
         base.OnSourceInitialized(e);
 
-        if (_game is not { } game)
+        if (_game is { } game)
         {
-            return;
+            PlaceOver(game);
         }
+    }
 
-        // Placed in physical pixels, which is what the game's bounds are read
-        // in and what SetWindowPos speaks. Going through WPF's Left and Top
-        // would mean converting to device-independent units and back for no
-        // gain — the only thing being decided here is a corner.
+    /// <summary>
+    /// Puts the window's corner on the game's corner.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// In physical pixels, which is what the game's bounds are read in and what
+    /// <c>SetWindowPos</c> speaks. Going through WPF's <c>Left</c> and
+    /// <c>Top</c> would mean converting to device-independent units and back
+    /// for no gain — the only thing being decided here is a corner.
+    /// </remarks>
+    /// <param name="game">The game to sit over.</param>
+    private void PlaceOver(EliteWindow game) =>
         SetWindowPos(
             new WindowInteropHelper(this).Handle,
             TheTopmostBand,
@@ -95,7 +119,6 @@ public partial class GameOverlayWindow : Window
             0,
             0,
             KeepTheSize | LeaveTheFocusAlone);
-    }
 
     // System32 rather than the default probing order: user32 is an operating
     // system library, and naming where it comes from is what stops a DLL of the

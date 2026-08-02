@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Resources;
 using System.Windows.Threading;
@@ -63,6 +64,8 @@ internal sealed partial class App : Application, IDisposable
 
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
+    private Overlay? _overlay;
+    private Hotkey? _hotkey;
 
     /// <summary>
     /// Puts the icon in the notification area, before any window is shown.
@@ -110,7 +113,40 @@ internal sealed partial class App : Application, IDisposable
         MainWindow = new MainWindow(answer);
         MainWindow.Show();
 
-        Overlay.Show(new GameOverlayFactory(), answer);
+        _overlay = Overlay.From(new GameOverlayFactory(), answer);
+        _overlay.Show();
+
+        ClaimTheHotkey();
+    }
+
+    /// <summary>
+    /// Claims <c>Ctrl</c>+<c>Alt</c>+<c>D</c>, and carries on without it if
+    /// something else already has it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Hard-coded, because choosing it is a settings question and settings are
+    /// not built. Losing the combination is not worth refusing to start over —
+    /// the overlay is still shown at startup, the panel still works, and voice
+    /// will eventually toggle it too. But it is recorded, because an absence
+    /// nobody wrote down is indistinguishable from a defect, and the Commander
+    /// pressing a key that does nothing has no other way to find out why.
+    /// </para>
+    /// </remarks>
+    private void ClaimTheHotkey()
+    {
+        _hotkey = Hotkey.TryRegister(
+            ModifierKeys.Control | ModifierKeys.Alt,
+            Key.D,
+            () => _overlay?.Toggle());
+
+        if (_hotkey is null)
+        {
+            Log.Warning(
+                "Could not claim Ctrl+Alt+D — another application already owns it. The overlay "
+                + "cannot be toggled by hotkey this session.");
+        }
     }
 
     /// <summary>
@@ -284,6 +320,12 @@ internal sealed partial class App : Application, IDisposable
         // Separately, because NotifyIcon does not own the menu it shows.
         _trayMenu?.Dispose();
         _trayMenu = null;
+
+        // Gives the combination back. Windows would release it when the process
+        // ends anyway; doing it here is what keeps a crash-free exit from
+        // leaving anything behind.
+        _hotkey?.Dispose();
+        _hotkey = null;
     }
 
     /// <summary>

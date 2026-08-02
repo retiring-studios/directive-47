@@ -226,7 +226,7 @@ The tiers drive the project layout, not just test selection.
 |---|---|---|
 | 0 · Pure | Parsers, planners, routing, state machines, display models, capability descriptors | CI |
 | 1 · Integration, no hardware | Providers against recorded HTTP, journal parsing over fixture logs, WPF layout snapshots | CI |
-| 2 · Hardware | Mic, WASAPI, hotkeys, SendInput, SteamVR overlay | Dev PC |
+| 2 · Hardware | Mic, WASAPI, SteamVR overlay | Dev PC |
 | 3 · Game | Elite Dangerous running — real journal, keybinds actually landing | Dev PC + game |
 
 - **Tiers 2 and 3 contain adapters only, with only the logic required to
@@ -280,6 +280,14 @@ The tiers drive the project layout, not just test selection.
   a game — and synthesized input needs only a desktop, which the runner has.
   The line is "can a hosted runner do this at all", not "does it touch an input
   API".
+
+  **Global hotkeys are Tier 1 for the same reason**, and the table above used to
+  say otherwise: its hardware row listed "hotkeys, SendInput" while this bullet
+  said synthesized input was Tier 1, so `SendInput` appeared on both sides of
+  the line. The principle wins and the row is corrected — a hosted runner has a
+  desktop, can register a global hotkey, and can synthesize the keystroke that
+  fires it. What stays above the line is whether a hotkey arrives *while Elite
+  holds the foreground*, which is Tier 3 because it needs the game.
 - **Integration and end-to-end tests settle on CI once they work.** They take the
   whole desktop for as long as they run, and the maintainer needs that machine
   for other things — so a finished one does not execute locally again. CI sets
