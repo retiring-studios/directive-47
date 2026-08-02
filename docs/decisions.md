@@ -516,15 +516,26 @@ capability to save nothing.
   A step that cannot be written down that concretely is usually not a check at
   all.
 
-  **The verification step is neither required nor part of a pull request.** It
-  was, briefly. `manual-verification` was a workflow that read the label,
-  stripped it on every new commit, and was a required status check on `main`, so
-  every pull request carried a red check until the label went on. That was built
-  at [#88](https://github.com/retiring-studios/directive-47/pull/88) and removed
-  here. `main` requires one check now, `Build, test and publish`.
+  **The verification step is neither required nor part of a pull request unless
+  manual testing is required for newly introduced functionality.** A pull request
+  that introduces something needing a human pass carries `needs-manual-test`,
+  applied by whoever wrote the code, because that is the party who knows what
+  was built and what no test can check. The maintainer applies `verified` when
+  he has done the pass. Neither label is read by CI.
 
-  The label still exists and is still the attestation. Nothing reads it and
-  nothing blocks on it.
+  It was a gate, briefly. `manual-verification` was a workflow that read the
+  `verified` label, stripped it on every new commit, and was a required status
+  check on `main`, so every pull request carried a red check until the label
+  went on — including ones with nothing to look at. Built at
+  [#88](https://github.com/retiring-studios/directive-47/pull/88), removed here.
+  `main` requires one check now, `Build, test and publish`.
+
+  **Nothing enforces this, which is the trade.** A conditional gate was priced
+  and not taken: GitHub has no "required only sometimes", because a required
+  check that never reports blocks the pull request forever, so the only working
+  version is a check that runs on every pull request and skips itself — which
+  puts an entry on every pull request to enforce a rule that applies to some of
+  them. The rule is worth more than the machinery to enforce it.
 
 ## Releases
 

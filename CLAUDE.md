@@ -88,16 +88,20 @@ which is how invented obligations end up being treated as debt. Recording the
 
 **If something requires manual testing, it gets tested manually before merging,
 and the `verified` label is that attestation.** `main` requires one check,
-`Build, test and publish`. There is no check reading the label and nothing
-blocks on it — that gate existed, was required on every pull request, and was
-removed.
+`Build, test and publish`. Nothing reads either label and nothing blocks on
+them — that gate existed, appeared on every pull request whether or not there
+was anything to look at, and was removed.
 
-So the pull request has to say **what needs testing and how to test it**: the
-action, what a pass looks like, and what would be a defect. A step that keeps
-reappearing is a hole in automation — promote it rather than listing it again.
-A step that cannot be written that concretely is usually not a check at all.
+**Apply `needs-manual-test` yourself** when a pull request introduces something
+a test cannot check, and say so when you hand it over. You wrote the code, so
+you know what that is. A pull request without it is claiming the automated
+suite covers everything in it.
 
-**Never apply that label yourself.** Tell him the pull request is ready and what
-is waiting on his eyes.
+Then say **what needs testing and how to test it**: the action, what a pass
+looks like, and what would be a defect. A step that keeps reappearing is a hole
+in automation — promote it rather than listing it again. A step that cannot be
+written that concretely is usually not a check at all.
+
+**Never apply `verified` yourself.** That one is his.
 
 Reasoning behind the decisions already made: `docs/decisions.md`.
