@@ -27,7 +27,12 @@ public class GameOverlayTests : GameTest
     {
         using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
 
-        _output.WriteLine(Screen.DescribeStack());
+        // Read once, while the overlay is up. Asking again from inside a
+        // failure message would describe the stack at the moment of the
+        // assertion, which is a different desktop from the one being asserted
+        // about if anything moved in between.
+        string stack = Screen.DescribeStack();
+        _output.WriteLine(stack);
 
         // The shared render. Help's top level, read off the visual tree the
         // overlay built — the same text the panel's own tests read off the
@@ -43,7 +48,7 @@ public class GameOverlayTests : GameTest
 
         Screen.DepthOf(overlay.Handle).ShouldBeLessThan(
             Screen.DepthOf(Game.Handle),
-            $"The overlay should be in front of the game.{Screen.DescribeStack()}");
+            $"The overlay should be in front of the game.{stack}");
     }
 
     /// <summary>

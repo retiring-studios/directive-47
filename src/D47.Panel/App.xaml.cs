@@ -8,6 +8,11 @@ using System.Windows.Interop;
 using System.Windows.Resources;
 using System.Windows.Threading;
 
+using D47.Capabilities;
+using D47.GameOverlay;
+using D47.Help;
+using D47.Render;
+
 using Forms = System.Windows.Forms;
 
 namespace D47.Panel;
@@ -17,6 +22,13 @@ namespace D47.Panel;
 /// the point rather than an implementation detail: the icon has to outlive
 /// every window, because with the panel and both overlays out of sight it is
 /// the only evidence Directive 47 is running at all.
+///
+/// <para>
+/// It is also the composition root, which it became when the game overlay
+/// turned out to be a second surface for the same answer. The panel used to
+/// build its own; two surfaces building their own would be two answers that can
+/// disagree.
+/// </para>
 ///
 /// <para>
 /// The icon comes from WinForms, aliased here rather than imported, because a
@@ -89,6 +101,68 @@ internal sealed partial class App : Application, IDisposable
                 RestorePanel();
             }
         };
+
+        Answer answer = Compose();
+
+        // Explicitly, rather than through StartupUri, because the window now
+        // takes what it shows as an argument and StartupUri can only call a
+        // parameterless constructor.
+        MainWindow = new MainWindow(answer);
+        MainWindow.Show();
+
+        ShowTheOverlayIfTheGameIsRunning(answer);
+    }
+
+    /// <summary>
+    /// What every surface shows.
+    ///
+    /// <para>
+    /// Help, because help is the only capability that exists and it needs no
+    /// microphone, no network and no game. A composition root that knows about
+    /// every capability arrives with the second one; this is the shape it will
+    /// grow into.
+    /// </para>
+    /// </summary>
+    private static Answer Compose()
+    {
+        var registry = new CapabilityRegistry(HelpCapability.Descriptor);
+
+        return new Answer
+        {
+            Descriptor = HelpCapability.Descriptor,
+            Result = new HelpCapability(registry).Answer(),
+        };
+    }
+
+    /// <summary>
+    /// Puts the overlay over Elite, if Elite is there to be drawn over.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Deliberately thin, and deliberately not yet the thing the feature calls
+    /// "absent, not failed". This checks whether the game is running, which is
+    /// not the same question as whether the overlay could be created — a
+    /// machine that cannot give us a transparent, always-on-top window is its
+    /// own story, and swallowing failures here would report our own defects as
+    /// an unsupported machine.
+    /// </para>
+    /// <para>
+    /// The game is looked for once, at startup. Following it as it starts and
+    /// stops, and showing and hiding the overlay on demand, are later stories —
+    /// so until the hotkey lands, an overlay that appears stays until the
+    /// application exits.
+    /// </para>
+    /// </remarks>
+    /// <param name="answer">What the overlay should render.</param>
+    private static void ShowTheOverlayIfTheGameIsRunning(Answer answer)
+    {
+        if (EliteWindow.Find() is not { } game)
+        {
+            return;
+        }
+
+        new GameOverlayWindow(answer).ShowOver(game);
     }
 
     /// <summary>
