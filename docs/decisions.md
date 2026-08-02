@@ -496,15 +496,21 @@ capability to save nothing.
   is the automated hardware tier's job; the human pass is for new behavior and
   judgment calls. A manual test that keeps recurring is a hole in automation —
   promote it, do not list it.
-- CI is to publish a single-file exe on every PR, so manual passes test an
-  installed build rather than `dotnet run`. Agreed and not yet built — today CI
-  restores, builds and tests only. Until it does, and until there is an app to
-  run, the manual pass and the `manual-verification` check below are dormant
-  rather than skipped.
+- CI publishes a single-file exe on every PR, so manual passes test an installed
+  build rather than `dotnet run`. Built at
+  [#63](https://github.com/retiring-studios/directive-47/issues/63): the
+  artifact is attached to every pull request and kept for fourteen days.
 - **Definition of done includes a manual verification pass by the maintainer.**
-  GitHub does not allow approving your own pull request, so the attestation is
-  not a review approval: it is a required `manual-verification` status check
+  It verifies the things that cannot be verified via automated testing. GitHub
+  does not allow approving your own pull request, so the attestation is not a
+  review approval: it is a required `manual-verification` status check
   satisfied by applying the `verified` label, which new commits strip.
+
+  **Not built.** There is no `verified` label, no workflow producing that check,
+  and no branch protection or ruleset requiring it — so nothing stops a pull
+  request merging without a pass, and several have. Recorded as missing rather
+  than described as though it exists, which is the whole point of the
+  Enforcement section below.
 
 ## Releases
 
