@@ -32,6 +32,12 @@ internal sealed class Hotkey : IDisposable
     private const int WmHotkey = 0x0312;
 
     /// <summary>
+    /// <c>ERROR_HOTKEY_ALREADY_REGISTERED</c>. The one failure that means the
+    /// machine, rather than us.
+    /// </summary>
+    private const int AlreadySpokenFor = 1409;
+
+    /// <summary>
     /// Identifies the registration to the window that owns it. There is one per
     /// window here, so the number never has to be allocated.
     /// </summary>
@@ -77,14 +83,24 @@ internal sealed class Hotkey : IDisposable
     /// Where now comes from, for telling a press apart from the same one still
     /// being held. Defaults to the system clock.
     /// </param>
-    /// <returns>The registration, which the caller owns and must dispose.</returns>
+    /// <returns>
+    /// The registration, which the caller owns and must dispose, or
+    /// <see langword="null"/> when another application already owns the
+    /// combination.
+    ///
+    /// <para>
+    /// Null for that one named reason and nothing else. Another application
+    /// holding a key is a fact about the machine Directive 47 is running on,
+    /// the same shape as a machine that cannot composite — so it is an absence
+    /// to carry on from, not a failure to die of. Every other way this can fail
+    /// throws, because a defect of ours reported as somebody else's hotkey is a
+    /// defect nobody ever finds.
+    /// </para>
+    /// </returns>
     /// <exception cref="InvalidOperationException">
-    /// The combination could not be claimed — most often because another
-    /// application already owns it. Thrown rather than swallowed: a hotkey that
-    /// silently does nothing is indistinguishable from one that is broken, and
-    /// the Commander presses it repeatedly either way.
+    /// The combination could not be claimed for any other reason.
     /// </exception>
-    internal static Hotkey Register(
+    internal static Hotkey? TryRegister(
         ModifierKeys modifiers,
         Key key,
         Action pressed,
@@ -114,11 +130,16 @@ internal sealed class Hotkey : IDisposable
         int failure = Marshal.GetLastWin32Error();
         hotkey.Dispose();
 
+        if (failure == AlreadySpokenFor)
+        {
+            return null;
+        }
+
         throw new InvalidOperationException(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"Could not claim {Describe(modifiers, key)}. Another application is most "
-                + $"likely already using it."),
+                $"Could not claim {Describe(modifiers, key)}, and not because something "
+                + $"else owns it."),
             new Win32Exception(failure));
     }
 

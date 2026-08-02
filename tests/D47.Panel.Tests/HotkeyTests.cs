@@ -55,7 +55,9 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         using var arrived = new ManualResetEventSlim();
 
-        Hotkey hotkey = pump.Invoke(() => Hotkey.Register(Held, Tapped, arrived.Set));
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, arrived.Set))
+            ?? throw new InvalidOperationException(
+                $"{Combination} is already owned on this machine, so this test cannot run.");
 
         try
         {
@@ -75,23 +77,31 @@ public class HotkeyTests : DesktopTest
     }
 
     [Fact]
-    public void Hotkey_WhenTheCombinationIsAlreadyOwned_SaysSoRatherThanGoingQuiet()
+    public void Hotkey_WhenTheCombinationIsAlreadyOwned_IsAbsentNotFailed()
     {
         // The second registration stands in for another application, which is
         // the real case: a combination is claimed system-wide, so whoever asks
-        // second is refused. A hotkey that silently does nothing is
-        // indistinguishable from one that is broken, and the Commander presses
-        // it repeatedly either way.
+        // second is refused.
+        //
+        // Absent rather than thrown, and that was a deliberate change. It used
+        // to throw, on the reasoning that a hotkey silently doing nothing is
+        // indistinguishable from one that is broken — but the caller was the
+        // application's startup, so the consequence was that Directive 47
+        // refused to run at all because something else owned one key. Another
+        // application holding a combination is a fact about the machine, the
+        // same shape as one that cannot composite. What keeps it from being
+        // silent is the line written to the log, not the process dying.
         using var pump = new MessagePump();
 
-        Hotkey owner = pump.Invoke(() => Hotkey.Register(Held, Tapped, () => { }));
+        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => { }))
+            ?? throw new InvalidOperationException(
+                $"{Combination} is already owned on this machine, so this test cannot run.");
 
         try
         {
-            Exception refused = Should.Throw<InvalidOperationException>(
-                () => pump.Invoke(() => Hotkey.Register(Held, Tapped, () => { })));
+            Hotkey? refused = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => { }));
 
-            refused.Message.ShouldContain(Combination);
+            refused.ShouldBeNull("the second claim on a combination should come back empty");
         }
         finally
         {

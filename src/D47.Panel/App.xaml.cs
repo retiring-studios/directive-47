@@ -116,15 +116,37 @@ internal sealed partial class App : Application, IDisposable
         _overlay = Overlay.From(new GameOverlayFactory(), answer);
         _overlay.Show();
 
-        // Ctrl+Alt+D, hard-coded. Choosing it is a settings question and
-        // settings are not built. If another application already owns the
-        // combination this throws, which is deliberate — see the pull request,
-        // where what the application should do about that is an open question
-        // rather than a decision already taken.
-        _hotkey = Hotkey.Register(
+        ClaimTheHotkey();
+    }
+
+    /// <summary>
+    /// Claims <c>Ctrl</c>+<c>Alt</c>+<c>D</c>, and carries on without it if
+    /// something else already has it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Hard-coded, because choosing it is a settings question and settings are
+    /// not built. Losing the combination is not worth refusing to start over —
+    /// the overlay is still shown at startup, the panel still works, and voice
+    /// will eventually toggle it too. But it is recorded, because an absence
+    /// nobody wrote down is indistinguishable from a defect, and the Commander
+    /// pressing a key that does nothing has no other way to find out why.
+    /// </para>
+    /// </remarks>
+    private void ClaimTheHotkey()
+    {
+        _hotkey = Hotkey.TryRegister(
             ModifierKeys.Control | ModifierKeys.Alt,
             Key.D,
             () => _overlay?.Toggle());
+
+        if (_hotkey is null)
+        {
+            Log.Warning(
+                "Could not claim Ctrl+Alt+D — another application already owns it. The overlay "
+                + "cannot be toggled by hotkey this session.");
+        }
     }
 
     /// <summary>
