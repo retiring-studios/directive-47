@@ -44,10 +44,33 @@ namespace D47.Panel;
 internal sealed partial class App : Application, IDisposable
 {
     /// <summary>
-    /// The icon's tooltip, and so also its accessible name — an icon without
-    /// one is anonymous to automation and to a screen reader alike.
+    /// The product's name, wherever Windows shows it back to the Commander.
+    ///
+    /// <para>
+    /// It is the icon's tooltip, and so also the icon's accessible name — one
+    /// without a tooltip is anonymous to automation and to a screen reader
+    /// alike. It is also the caption of the dialog a second copy puts up, where
+    /// anything else would be a window nobody recognizes.
+    /// </para>
     /// </summary>
-    private const string Tooltip = "Directive 47";
+    private const string ProductName = "Directive 47";
+
+    /// <summary>
+    /// What a second copy says before it goes.
+    ///
+    /// <para>
+    /// It says something rather than exiting quietly, because silence is the
+    /// failure this was filed for: a duplicate launch that just runs produces
+    /// two tray icons, two stacked overlays and a hotkey that appears dead, and
+    /// nothing anywhere says why. The second sentence is there because the
+    /// running copy may have no window on screen at all — the icon is the only
+    /// sign of it, and somebody who did not know that has just proved it by
+    /// starting the application again.
+    /// </para>
+    /// </summary>
+    private const string AlreadyRunning =
+        "Directive 47 is already running.\n\n"
+        + "Look for its icon in the notification area, beside the clock.";
 
     /// <summary>
     /// The one deliberate way out. Closing the panel hides it, so exiting has
@@ -62,6 +85,7 @@ internal sealed partial class App : Application, IDisposable
     /// </summary>
     private static readonly TimeSpan ShellFinishesUp = TimeSpan.FromMilliseconds(300);
 
+    private SingleInstance? _theOnlyCopy;
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
     private Overlay? _overlay;
@@ -69,21 +93,36 @@ internal sealed partial class App : Application, IDisposable
     private ForegroundWatcher? _foreground;
 
     /// <summary>
-    /// Puts the icon in the notification area, before any window is shown.
+    /// Claims the right to be the running copy, and then puts the icon in the
+    /// notification area, before any window is shown.
     /// </summary>
     /// <param name="e">The startup arguments.</param>
     [SuppressMessage(
         "Globalization",
         "CA1303:Do not pass literals as localized parameters",
         Justification =
-            "NotifyIcon.Text and the menu item's text are marked localizable. The "
-            + "product's name is not, and \"Exit\" is a single word behind a "
-            + "resource table nobody has decided to build — localizing this "
-            + "application at all is an open question, and a table holding two "
-            + "strings would be machinery standing in for that decision.")]
+            "NotifyIcon.Text, the menu item's text, and MessageBox's text and caption are all "
+            + "marked localizable. The product's name is not, and the rest is \"Exit\" plus two "
+            + "sentences behind a resource table nobody has decided to build — localizing this "
+            + "application at all is an open question, and a table holding three strings would "
+            + "be machinery standing in for that decision.")]
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // First, and before anything that would be visible. Everything below
+        // this line is a thing a second copy must not do — an icon it put up on
+        // the way to saying goodbye is the second icon this exists to prevent.
+        _theOnlyCopy = SingleInstance.TryClaim();
+
+        if (_theOnlyCopy is null)
+        {
+            MessageBox.Show(
+                AlreadyRunning, ProductName, MessageBoxButton.OK, MessageBoxImage.Information);
+
+            Shutdown();
+            return;
+        }
 
         _trayMenu = new Forms.ContextMenuStrip();
         _trayMenu.Items.Add(ExitItem, null, (_, _) => Shutdown());
@@ -91,7 +130,7 @@ internal sealed partial class App : Application, IDisposable
         _trayIcon = new Forms.NotifyIcon
         {
             Icon = TrayIcon(),
-            Text = Tooltip,
+            Text = ProductName,
             ContextMenuStrip = _trayMenu,
             Visible = true,
         };
@@ -348,6 +387,11 @@ internal sealed partial class App : Application, IDisposable
         // past our own lifetime is how a shutdown turns into a crash.
         _foreground?.Dispose();
         _foreground = null;
+
+        // Last, so that nothing another copy would collide with is still up
+        // when the name becomes claimable again.
+        _theOnlyCopy?.Dispose();
+        _theOnlyCopy = null;
     }
 
     /// <summary>

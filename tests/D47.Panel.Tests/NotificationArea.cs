@@ -105,6 +105,37 @@ internal static class NotificationArea
     }
 
     /// <summary>
+    /// How many icons with the given tooltip are in the notification area, on
+    /// show and hidden together.
+    ///
+    /// <para>
+    /// Asked rather than <see cref="Holds"/> when the question is "how many",
+    /// which is a different question with a worse answer: two identical icons
+    /// with no way to tell them apart are two answers to "is it running".
+    /// Deliberately does not short-circuit the way <see cref="Holds"/> does —
+    /// finding one on show says nothing about whether a second is hidden.
+    /// </para>
+    /// </summary>
+    /// <param name="tooltip">The tooltip text the icon was given.</param>
+    /// <exception cref="InvalidOperationException">
+    /// There is no taskbar to look at.
+    /// </exception>
+    internal static int Count(string tooltip)
+    {
+        AutomationElement taskbar = Taskbar();
+        int found = Icons(taskbar, tooltip);
+
+        AutomationElement? chevron = Chevron(taskbar);
+
+        if (chevron is null)
+        {
+            return found;
+        }
+
+        return found + WithOverflowOpen(chevron, overflow => Icons(overflow, tooltip));
+    }
+
+    /// <summary>
     /// Right-clicks an icon and chooses an item from the menu that opens.
     ///
     /// <para>
@@ -331,6 +362,9 @@ internal static class NotificationArea
 
     private static AutomationElement? Icon(AutomationElement under, string tooltip) =>
         TrayButtons(under).FirstOrDefault(button => Name(button) == tooltip);
+
+    private static int Icons(AutomationElement under, string tooltip) =>
+        TrayButtons(under).Count(button => Name(button) == tooltip);
 
     /// <summary>
     /// Right-clicks an icon and chooses from the menu, if the menu turns up.

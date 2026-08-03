@@ -73,15 +73,8 @@ internal sealed class RunningPanel : IDisposable
     /// </exception>
     internal static RunningPanel Launch()
     {
-        string exe = Path.Combine(AppContext.BaseDirectory, "D47.Panel.exe");
-
-        if (!File.Exists(exe))
-        {
-            throw new InvalidOperationException(
-                $"The panel executable should sit beside the tests, at {exe}.");
-        }
-
-        Process process = Process.Start(new ProcessStartInfo(exe) { UseShellExecute = false })
+        Process process = Process.Start(
+                new ProcessStartInfo(Executable()) { UseShellExecute = false })
             ?? throw new InvalidOperationException("The panel did not start.");
 
         try
@@ -94,6 +87,31 @@ internal sealed class RunningPanel : IDisposable
             Kill(process);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Where the application under test is, checked before anything tries to
+    /// start it.
+    ///
+    /// <para>
+    /// Shared with <see cref="SecondInstance"/>, which starts the same
+    /// executable for the opposite reason. A missing exe reported as "the panel
+    /// did not start" sends the reader looking at the panel.
+    /// </para>
+    /// </summary>
+    /// <returns>The full path to the panel.</returns>
+    /// <exception cref="InvalidOperationException">It was not built, or not copied.</exception>
+    internal static string Executable()
+    {
+        string exe = Path.Combine(AppContext.BaseDirectory, "D47.Panel.exe");
+
+        if (!File.Exists(exe))
+        {
+            throw new InvalidOperationException(
+                $"The panel executable should sit beside the tests, at {exe}.");
+        }
+
+        return exe;
     }
 
     /// <summary>
