@@ -17,10 +17,18 @@ namespace D47.VrOverlay.Tests;
 ///
 /// <para>
 /// Tier 2. What is asserted is what the compositor thinks — that an overlay
-/// exists under Directive 47's key, that it is showing, and that the texture on
-/// it is the size of the render rather than of something else. Nobody can look
-/// through the headset from a test, so "shows the panel's content" is claimed
-/// as far as the runtime will answer for it and no further.
+/// exists under Directive 47's key, that it is showing, that the quad is the
+/// size it was asked for, and that nothing is left behind when it goes.
+/// </para>
+///
+/// <para>
+/// Not what is on it. SteamVR will not answer for a raw overlay's pixels, so
+/// there is a real gap here and it is named rather than papered over: delete the
+/// <c>SetOverlayRaw</c> call and every test in this class still passes. The
+/// bytes on our side of that call are covered by
+/// <see cref="PanelRenderTests"/>, which needs no headset; that the bytes
+/// arrived is covered by a person putting the headset on, which is what the
+/// pull request asks for.
 /// </para>
 ///
 /// <para>
