@@ -139,8 +139,17 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   the visual surfaces is therefore guaranteed by construction rather than by
   discipline: a capability cannot appear on one visual surface and not another, because there
   is only one render.
-- **The render lives in `D47.Panel` until a second surface needs it.** The game
-  overlay and the VR overlay present this same render.
+- **The render lives in `D47.Render`.** It started in `D47.Panel`, on the
+  condition that it move out when a second surface needed it. The game overlay
+  was that second surface, so it moved; the VR overlay is the third and presents
+  the same render again.
+- **How a surface learns the render changed: a render source, and not a bus.**
+  The render is handed round as an immutable answer, so "changed" is value
+  equality and a surface repaints when the answer it holds is replaced. There is
+  no event bus, and this deliberately is not the beginning of one. The push-to-talk
+  loop, the journal watchers and the live log all want something to publish on,
+  none of them exists yet, and a bus shaped against no traffic is a bus that gets
+  rewritten. When one is designed it can carry this rather than replace it.
 - **The panel is an application, so its types are internal.** CA1515 is right
   about that, and the tests reach them through `InternalsVisibleTo` rather than
   widening the surface to suit a test. WPF classes need `x:ClassModifier` to
@@ -217,6 +226,24 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
 - **`TimeProvider` and `FakeTimeProvider`**, not a hand-rolled `IClock`.
 - **Interfaces at every process boundary.** NSubstitute for stubs; hand-written
   fakes for stateful things such as the journal source and the audio device.
+  NSubstitute is not in `Directory.Packages.props` yet and nothing has needed it
+  — every double so far is a hand-written nested class in the test that uses it.
+  It is a decision about what to reach for, not a package that has been taken.
+
+- **Application data lives in `%LOCALAPPDATA%\Directive 47\`.** Two things
+  needed somewhere to write before anything needed a settings page: the log, and
+  what the application remembers across restarts. They answer to one place.
+- **What is remembered is a plain file the Commander can edit.** String keys in
+  the words someone would say — `game overlay opacity`, not `OverlayAlpha` —
+  because until there is a settings page, hand-editing that file *is* the
+  settings page. Settings proper are a schema projected to the panel and to a
+  voice capability, built on this rather than beside it.
+- **The log is hand-rolled and has one level.** `Microsoft.Extensions.Logging`
+  has no in-box file provider, so the framework that looks free costs a package
+  in a redistributed single-file exe. It rolls once at a megabyte and keeps two
+  files, and it swallows its own failures — a logger that can take the
+  application down is worse than no log. Callers take it as an `Action<string>`
+  rather than as a type, so nothing is coupled to it having been a logger.
 
 ## Test tiers
 
@@ -299,6 +326,14 @@ The tiers drive the project layout, not just test selection.
   `CI`, has nobody at the keyboard, and gates every pull request. On a
   development machine they skip with the reason in the test output, unless
   `D47_DESKTOP_TESTS=1` opts in.
+
+  **Tests that need the game are the exception, and do not skip.**
+  `D47.GameOverlay.Tests` throws when Elite is not running rather than skipping,
+  because there is no stand-in for the game that would make its claims mean
+  anything — so a skip there is a green build that checked nothing, which is the
+  one result worse than a red one. The cost is real and accepted: `dotnet test`
+  over the whole solution goes red on a machine with no game, and `ci.slnf` is
+  what CI runs for exactly that reason.
 
   **Writing one is the exception, and deliberately so.** A test still being
   shaped is developed locally; pushing to CI for each iteration is slower than
@@ -404,6 +439,28 @@ The tiers drive the project layout, not just test selection.
   makes LGPL's relink obligation awkward to satisfy.
 - **Standing rejection: FluentAssertions v8**, which moved to a paid commercial
   license under Xceed in early 2025. Shouldly is used instead.
+- **SteamVR is reached through Valve's own bindings, vendored, not packaged.**
+  `openvr_api.cs` and `openvr_api.dll` are copied into the tree from the OpenVR
+  SDK. Both are BSD-3-Clause and both come from the people who wrote the runtime,
+  so this adds no package, no transitive surface and no exception — the native
+  binary is the one the allowlist would have sent us to look at anyway, and it
+  is a loader stub that finds SteamVR at run time rather than SteamVR itself.
+  Attribution is owed and goes in `NOTICE.md`.
+
+  **The packaged options were priced and none survived.** The maintained-wrapper
+  ecosystem stopped around 2021. The one with a clean declared license is
+  five years dormant, ships a stale copy of the same native binary, throws where
+  we need absent-not-failed, and does not wrap the one call we actually make.
+  Two others declare no license at all, which under the rule above is a stop
+  before they can even be evaluated.
+
+  **Hand-rolling was the tempting answer and is the wrong one.** It is the same
+  instinct that was right for the nearest-name matcher and the tray icon, and
+  this is not the same size of thing: the overlay interface is an eighty-slot
+  function-pointer table where a wrong slot is silent memory corruption rather
+  than a compile error, and the layout moves whenever the interface version
+  does. Vendoring a generated file we do not maintain is the more conservative
+  choice, not the less.
 - Enforcement: `Directory.Packages.props` is already in `permissions.ask`, so a
   new package stops for the maintainer. A CI license scan over direct packages
   is agreed and not yet built.
@@ -479,6 +536,19 @@ capability to save nothing.
   awkward to write means the design is wrong, and duplication appearing across
   the second and third test is telling you what the abstraction is. Test code
   gets refactored too.
+- **A test that cannot fail is worse than no test**, and finding out which kind
+  you wrote means running it against code deliberately broken to fail it. It
+  reports confidence it never earned, and it does it in the one place nobody
+  looks twice — a green suite. Four have been caught this way. Two were deleted
+  earlier in the MVP epic, one of them a foreground test that passed just as
+  happily against an overlay built to steal focus. Two more were attempts to
+  assert that resizing the overlay did not lay its contents out again, and both
+  passed against every build that could have failed them, because a `Viewbox`
+  measures its child against infinity whatever size it is.
+- **An assertion that is true by construction is a finding, not a line to keep.**
+  Delete it, and put why it was always true in a comment where the next person
+  will go looking. That is worth more than the assertion was: the next person's
+  instinct will be to add it back.
 - **Build it when you need it, not before.** A field with no consumer is a guess
   about a consumer. The counter-argument was made and rejected: a required field
   on a widely-implemented contract looks cheap to add now and expensive to add
@@ -569,22 +639,46 @@ capability to save nothing.
   defined", or "1.0.0 when the MVP lands" is inferable from commit history.
   Started at 0.1.0 with the first feature-complete state, help from the
   capability registry.
-- **The per-PR artifact is real; the stable channel is not.** Every pull request
-  publishes a self-contained single-file exe and attaches it, and a publish that
-  produces nothing fails the run rather than passing with nothing attached.
-  Releasing on epic complete is not built.
-- **Self-contained, single file, not trimmed.** Self-contained because the
-  artifact is what a manual pass installs and runs, and it has to work on a
-  machine with no .NET on it. Not trimmed because trimming and WPF's reflection
-  over XAML do not get along. The cost is an exe of about 165MB, which is why
-  the per-PR artifact is kept for fourteen days rather than the default ninety —
-  it exists to be downloaded once and tried, and a release is what keeps a build
-  for good.
+- **The per-PR artifact is real; the stable channel is not, and now blocks
+  something.** Every pull request publishes a build and attaches it, and a
+  publish that produces nothing fails the run rather than passing with nothing
+  attached. Releasing on epic complete is still not built — which used to cost
+  nothing and no longer does, because an updater with nothing to update from is
+  a feature with no second half. A tag, a release, and assets that do not expire
+  come before the update stories, not after them.
+- **Self-contained and not trimmed.** Self-contained because the artifact is
+  what a manual pass installs and runs, and it has to work on a machine with no
+  .NET on it. Not trimmed because trimming and WPF's reflection over XAML do not
+  get along. The cost is about 165MB either way, which is why the per-PR artifact
+  is kept for fourteen days rather than the default ninety — it exists to be
+  downloaded once and tried, and a release is what keeps a build for good.
+
+  **Single file was the third of these and is being given up**, for the updater
+  and for the patching that a folder publish makes possible. It was worth having
+  while the only channel was "download this one thing and run it".
 - **The published exe's version is asserted in CI, not assumed.** The workflow
   reads `Version` from the project, publishes, and then fails if the exe does not
   report it. A publish quietly emitting a default or stale version is the kind
   of thing nobody notices until an installed build claims the wrong number, and
   by then it is in someone's hands.
-- Updater candidate is Velopack, on one condition: update availability must
-  surface in the panel and the overlay, with installation deferred to app exit.
-  No installer window yanking you out of VR.
+- **The updater is Velopack, and the condition was met.** Update availability is
+  checked headlessly and rendered by us, so the notice appears in the panel and
+  on the overlay like anything else we draw; installation is handed to the
+  updater on the way out, so no installer window ever opens while the overlay is
+  shown. A failed check leaves a line in the log and interrupts nobody.
+- **Taking it costs the single file, and that is the price of the condition.**
+  Velopack wants a folder publish. What gets installed is a small stub beside an
+  updater and a `current` directory, per-user, no administrator. So "download one
+  file and run it" becomes "download the installer and run it", and the property
+  worth keeping was never the file count — it is that there is nothing else to
+  install first. The exchange is that updates become per-file patches: a change
+  to our own assemblies ships as a patch rather than as 165MB of unchanged WPF
+  and runtime, which is only possible because the publish is a folder.
+- **The 60-second rule.** The updater waits a minute for the application to exit
+  and then stops waiting. Asking it to update is therefore something done on the
+  way out, never at the moment the Commander accepts — accepting from a running
+  session and carrying on flying is exactly the mid-session interruption the
+  whole feature exists to prevent.
+- **Not signed, and that shows.** An unsigned installer means SmartScreen has
+  something to say the first time. Priced and accepted for now; a certificate is
+  what fixes it, not a change of updater.
