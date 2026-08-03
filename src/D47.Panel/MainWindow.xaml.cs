@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 
@@ -54,7 +55,46 @@ internal partial class MainWindow : Window
         DrawAtTheZoom();
         _zoom.Changed += (_, _) => DrawAtTheZoom();
 
+        PreviewKeyDown += (_, pressed) =>
+            pressed.Handled = Do(ZoomGestures.For(pressed.Key, Keyboard.Modifiers));
+
+        PreviewMouseWheel += (_, turned) =>
+            turned.Handled = Do(ZoomGestures.For(turned.Delta, Keyboard.Modifiers));
+
         Closing += HideInsteadOfClosing;
+    }
+
+    /// <summary>
+    /// Does what a gesture asked for, and says whether it was one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Whether it was one is what the caller marks the event handled with, and
+    /// the distinction matters in both directions: a zoom gesture that was not
+    /// marked would also scroll the region under it, and an ordinary wheel or
+    /// keypress that was marked would stop working entirely.
+    /// </remarks>
+    /// <param name="asked">What the gesture asked for.</param>
+    /// <returns>Whether it asked for anything.</returns>
+    private bool Do(ZoomGesture asked)
+    {
+        switch (asked)
+        {
+            case ZoomGesture.Bigger:
+                _zoom.In();
+                return true;
+
+            case ZoomGesture.Smaller:
+                _zoom.Out();
+                return true;
+
+            case ZoomGesture.LifeSize:
+                _zoom.Reset();
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     /// <summary>
