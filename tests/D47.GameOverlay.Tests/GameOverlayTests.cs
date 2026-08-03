@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 
 using D47.Capabilities;
@@ -86,6 +87,80 @@ public class GameOverlayTests : GameTest
         Screen.OwnerOf(x, y).ShouldBe(
             overlay.Handle,
             "and it should switch back, on the same window, without being recreated");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenEliteLosesFocus_ShowsItsChromeForMovingAndResizing()
+    {
+        // The window half. That the application asks for chrome at the right
+        // moment is logic and lives in CI; that asking produces furniture on a
+        // real transparent, topmost window is this.
+        using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
+
+        IntPtr before = overlay.Handle;
+
+        overlay.ChromeOnScreen().ShouldBeEmpty(
+            "the overlay starts with the game in front, so nothing should be covering it");
+
+        overlay.ShowChrome(true);
+
+        overlay.ChromeOnScreen().ShouldBe(
+            ["DragBar", "Grip"],
+            ignoreOrder: true,
+            customMessage: "with the game away there should be a bar to drag and a grip to pull");
+
+        overlay.ShowChrome(false);
+
+        overlay.ChromeOnScreen().ShouldBeEmpty("and it should go away again");
+
+        overlay.Handle.ShouldBe(
+            before,
+            "showing and hiding chrome must not recreate the window");
+    }
+
+    [Fact]
+    public void GameOverlay_AtAnySize_IsTheSizeAndShapeOfTheRender()
+    {
+        // Written after the maintainer found both symptoms of not doing this.
+        // The window took its size from a render that had been measured but
+        // never laid out, so it came out too narrow for its own title bar — and
+        // the shape it took from that was wrong, so the render letterboxed
+        // inside its own window and the chrome, which hangs off the window's
+        // edges, was stranded away from anything visible.
+        //
+        // The window keeping the render's shape is what makes both impossible.
+        Answer answer = HelpsAnswer();
+        using var overlay = RunningOverlay.ShownOver(Game, answer);
+
+        // The size first, worked out independently. The shape assertions below
+        // pass whether or not this holds — the render is pinned to whatever the
+        // overlay decided, so a window and a render that are both wrong agree
+        // with each other perfectly. Two symptoms, two guards.
+        Size wanted = overlay.WhatTheRenderWants(answer);
+        Size used = overlay.NaturalSize();
+
+        used.Width.ShouldBe(
+            wanted.Width,
+            tolerance: 0.5,
+            customMessage: "the overlay should lay its render out at the size the render wants");
+
+        used.Height.ShouldBe(wanted.Height, tolerance: 0.5);
+
+        (double window, double render) = overlay.Shapes();
+
+        window.ShouldBe(
+            render,
+            tolerance: 0.01,
+            customMessage: "the window should open at the render's own shape");
+
+        overlay.ResizeTo(600);
+
+        (double wider, double stillTheRender) = overlay.Shapes();
+
+        wider.ShouldBe(
+            stillTheRender,
+            tolerance: 0.01,
+            customMessage: "and keep it after being resized, or the render floats inside its own window");
     }
 
     // There is deliberately no test here for the overlay leaving the foreground

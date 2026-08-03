@@ -135,6 +135,78 @@ internal sealed class RunningOverlay : IDisposable
     }
 
     /// <summary>
+    /// The size the overlay laid its render out at.
+    /// </summary>
+    internal Size NaturalSize() => OnItsOwnThread(window => window.NaturalSize);
+
+    /// <summary>
+    /// What the render actually wants, worked out independently of the overlay.
+    ///
+    /// <para>
+    /// Laid out rather than merely measured, which is the whole point of it. A
+    /// control that has never been through a layout pass has not resolved its
+    /// templates, so measuring alone reports the size of an almost empty box —
+    /// and an overlay that sized itself that way would be too small for its own
+    /// contents while looking internally consistent.
+    /// </para>
+    /// </summary>
+    internal Size WhatTheRenderWants(Answer answer) =>
+        OnItsOwnThread(_ =>
+        {
+            var view = new CapabilityView { DataContext = answer };
+
+            view.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            view.Arrange(new Rect(view.DesiredSize));
+            view.UpdateLayout();
+
+            return view.DesiredSize;
+        });
+
+    /// <summary>
+    /// The shape of the window and the shape of the render in it, as
+    /// width over height. They are supposed to be the same number.
+    /// </summary>
+    internal (double Window, double Render) Shapes() =>
+        OnItsOwnThread(window =>
+        {
+            Size render = window.NaturalSize;
+
+            return (window.ActualWidth / window.ActualHeight, render.Width / render.Height);
+        });
+
+    /// <summary>
+    /// Makes the overlay a given width, the way dragging the grip would.
+    /// </summary>
+    /// <param name="width">How wide to make it.</param>
+    internal void ResizeTo(double width) =>
+        OnItsOwnThread(window =>
+        {
+            Size render = window.NaturalSize;
+
+            window.Width = width;
+            window.Height = width * (render.Height / render.Width);
+        });
+
+    /// <summary>
+    /// Shows or hides the furniture for moving and resizing.
+    /// </summary>
+    /// <param name="shown">Whether it should be on show.</param>
+    internal void ShowChrome(bool shown) =>
+        OnItsOwnThread(window => window.ShowsChrome = shown);
+
+    /// <summary>
+    /// The names of the chrome elements currently on screen, which is empty
+    /// when the chrome is away.
+    /// </summary>
+    internal IReadOnlyList<string> ChromeOnScreen() =>
+        OnItsOwnThread(window =>
+        {
+            List<string> shown = [];
+            CollectChrome(window, shown);
+            return (IReadOnlyList<string>)shown;
+        });
+
+    /// <summary>
     /// Every line of text the overlay put on screen, top to bottom.
     ///
     /// <para>
@@ -180,6 +252,61 @@ internal sealed class RunningOverlay : IDisposable
         _thread.Join(LongEnoughToClose);
     }
 
+    /// <summary>
+    /// Runs something against the window on the thread that owns it.
+    /// </summary>
+    private T OnItsOwnThread<T>(Func<GameOverlayWindow, T> what)
+    {
+        if (_dispatcher is not { } dispatcher || _window is not { } window)
+        {
+            throw new InvalidOperationException("The overlay is not running.");
+        }
+
+        return dispatcher.Invoke(() => what(window));
+    }
+
+    private void OnItsOwnThread(Action<GameOverlayWindow> what) =>
+        OnItsOwnThread<object?>(window =>
+        {
+            what(window);
+            return null;
+        });
+
+    /// <summary>
+    /// The named elements that are actually rendering. A collapsed parent takes
+    /// its children with it, so asking each element whether it is visible is
+    /// what "on screen" means here.
+    /// </summary>
+    private static void CollectChrome(DependencyObject node, List<string> shown)
+    {
+        int children = VisualTreeHelper.GetChildrenCount(node);
+
+        for (int child = 0; child < children; child++)
+        {
+            DependencyObject descendant = VisualTreeHelper.GetChild(node, child);
+
+            if (descendant is FrameworkElement { Name.Length: > 0 } named
+                && named.IsVisible
+                && (named.Name == "DragBar" || named.Name == "Grip"))
+            {
+                shown.Add(named.Name);
+            }
+
+            CollectChrome(descendant, shown);
+        }
+    }
+
+    /// <summary>
+    /// The text actually on screen.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Visibility is checked, and it has to be. A collapsed element is still in
+    /// the visual tree, so a walk that ignores visibility reports words nobody
+    /// can see — which is exactly what happened when the chrome arrived: the
+    /// bar's own label turned up in what the overlay was said to be presenting,
+    /// while the bar was collapsed and invisible.
+    /// </remarks>
     private static void Collect(DependencyObject node, List<string> lines)
     {
         int children = VisualTreeHelper.GetChildrenCount(node);
@@ -188,7 +315,7 @@ internal sealed class RunningOverlay : IDisposable
         {
             DependencyObject descendant = VisualTreeHelper.GetChild(node, child);
 
-            if (descendant is TextBlock block)
+            if (descendant is TextBlock { IsVisible: true } block)
             {
                 lines.Add(block.Text);
             }

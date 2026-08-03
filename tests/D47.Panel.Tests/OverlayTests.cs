@@ -118,6 +118,24 @@ public class OverlayTests
     }
 
     [Fact]
+    public void GameOverlay_WhenEliteLosesFocus_ShowsItsChromeForMovingAndResizing()
+    {
+        var overlay = new OverlayThatRemembers();
+        var following = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), IsTheGame);
+
+        following.ForegroundIsNow(TheGame);
+
+        overlay.ShowsChrome.ShouldBeFalse(
+            "with the game in front there is nothing to grab, and every pixel of chrome is a "
+            + "pixel of cockpit covered");
+
+        following.ForegroundIsNow(SomethingElse);
+
+        overlay.ShowsChrome.ShouldBeTrue(
+            "with the game not in front, the overlay has to be grabbable");
+    }
+
+    [Fact]
     public void GameOverlay_WhenTheMachineCannotHostOne_IgnoresTheForegroundEntirely()
     {
         // The absent case reaches this path too: the foreground changes on any
@@ -178,6 +196,8 @@ public class OverlayTests
         public bool IsVisible { get; private set; }
 
         public bool PassesInputThrough { get; set; }
+
+        public bool ShowsChrome { get; set; }
 
         public void Show() => IsVisible = true;
 

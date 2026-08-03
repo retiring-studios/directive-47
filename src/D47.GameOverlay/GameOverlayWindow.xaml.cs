@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 
 using D47.Render;
@@ -48,8 +50,15 @@ public partial class GameOverlayWindow : Window
     /// </summary>
     private const long PassesThrough = 0x00000020;
 
+    /// <summary>
+    /// Small enough to be a glance and large enough to still be grabbed. Below
+    /// this the grip is most of what is left.
+    /// </summary>
+    private const double SmallestWorthHaving = 120;
+
     private EliteWindow? _game;
     private bool _passesInputThrough;
+    private double _shape;
 
     /// <summary>
     /// Creates the overlay around an answer to show.
@@ -59,6 +68,83 @@ public partial class GameOverlayWindow : Window
     {
         InitializeComponent();
         View.DataContext = answer;
+
+        FitTheRender(answer);
+    }
+
+    /// <summary>
+    /// Gives the window the render's own size to start at.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Asked of the render rather than declared anywhere: the controls decide
+    /// how big the render is, and every surface is that size. From here the
+    /// <c>Viewbox</c> scales whatever the window becomes, so this is the size at
+    /// which the scale is exactly one.
+    /// </para>
+    /// <para>
+    /// Arranged and laid out, not merely measured. A control that has never
+    /// been through a layout pass has not resolved its templates — the answer's
+    /// template is chosen by looking up a resource, and that lookup needs the
+    /// control connected — so measuring alone returns the size of an almost
+    /// empty box. That shipped once: the window came out too narrow for its own
+    /// title bar, and the shape taken from it was wrong enough that the
+    /// contents letterboxed inside their own window and left the chrome
+    /// stranded at the edges. <c>D47.Render.Tests</c> had the sequence right
+    /// all along.
+    /// </para>
+    /// <para>
+    /// The render is then pinned to that size, which is what makes the
+    /// <c>Viewbox</c> a pure scale. Left free, it would measure again at every
+    /// new window size and lay itself out differently — reflowing, which is the
+    /// one thing the overlay must never do.
+    /// </para>
+    /// </remarks>
+    /// <summary>
+    /// How big the render wants to be, asked of an instance that belongs to
+    /// nobody.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A throwaway rather than the one in the window, and the difference is not
+    /// academic: the one in the window already has a parent, so measuring it
+    /// out of band asks what it wants *inside a Viewbox inside a Grid* rather
+    /// than what it wants. That came out exactly one padding narrower — 64
+    /// device-independent pixels — than the truth, which is the sort of wrong
+    /// that looks plausible.
+    /// </para>
+    /// <para>
+    /// Arranged and laid out, not merely measured. Templates are resolved
+    /// during layout, and the answer's template is chosen by a resource lookup
+    /// that needs the control connected — so measuring alone returns the size of
+    /// an almost empty box.
+    /// </para>
+    /// </remarks>
+    /// <param name="answer">What the render would be showing.</param>
+    /// <returns>Its natural size.</returns>
+    private static Size WhatTheRenderWants(Answer answer)
+    {
+        var asking = new CapabilityView { DataContext = answer };
+
+        asking.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        asking.Arrange(new Rect(asking.DesiredSize));
+        asking.UpdateLayout();
+
+        return asking.DesiredSize;
+    }
+
+    private void FitTheRender(Answer answer)
+    {
+        Size natural = WhatTheRenderWants(answer);
+
+        View.Width = natural.Width;
+        View.Height = natural.Height;
+
+        Width = natural.Width;
+        Height = natural.Height;
+        _shape = natural.Height / natural.Width;
     }
 
     /// <summary>
@@ -86,6 +172,75 @@ public partial class GameOverlayWindow : Window
             _passesInputThrough = value;
             ApplyPassingThrough();
         }
+    }
+
+    /// <summary>
+    /// The size the render was laid out at — the size at which the
+    /// <c>Viewbox</c>'s scale is exactly one.
+    ///
+    /// <para>
+    /// The window is expected to keep this shape at every size. When it does
+    /// not, the render letterboxes inside its own window and the chrome, which
+    /// hangs off the window's edges, is left stranded away from anything
+    /// visible.
+    /// </para>
+    /// </summary>
+    public Size NaturalSize => new(View.Width, View.Height);
+
+    /// <summary>
+    /// Whether the furniture for moving and resizing is on show.
+    /// </summary>
+    public bool ShowsChrome
+    {
+        get => Chrome.Visibility == Visibility.Visible;
+        set => Chrome.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Drags the whole overlay by its bar.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <c>DragMove</c> throws if the left button is not actually down by the
+    /// time it is called, which can happen when the press and the release race
+    /// each other. Guarded rather than caught, because the guard says what is
+    /// true and a catch would only say that something went wrong.
+    /// </remarks>
+    /// <param name="sender">The bar.</param>
+    /// <param name="e">The press.</param>
+    private void MoveTheOverlay(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
+    /// <summary>
+    /// Scales the overlay by its grip, keeping its shape.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// One dimension is dragged and the other follows, because the overlay's
+    /// shape is the render's and a resize is only ever a scale. The horizontal
+    /// change leads for no better reason than that a corner drag reads as a
+    /// width to most people.
+    /// </para>
+    /// <para>
+    /// The shape came from the render at construction, so it is the render's
+    /// proportions being preserved rather than whatever the window happened to
+    /// be when somebody first grabbed the grip.
+    /// </para>
+    /// </remarks>
+    /// <param name="sender">The grip.</param>
+    /// <param name="e">How far it moved.</param>
+    private void ResizeTheOverlay(object sender, DragDeltaEventArgs e)
+    {
+        double width = Math.Max(SmallestWorthHaving, ActualWidth + e.HorizontalChange);
+
+        Width = width;
+        Height = width * _shape;
     }
 
     /// <summary>

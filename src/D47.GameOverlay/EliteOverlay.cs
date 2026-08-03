@@ -42,6 +42,13 @@ public sealed class EliteOverlay : IGameOverlay
     }
 
     /// <inheritdoc />
+    public bool ShowsChrome
+    {
+        get => _window.ShowsChrome;
+        set => _window.ShowsChrome = value;
+    }
+
+    /// <inheritdoc />
     public void Show()
     {
         if (EliteWindow.Find() is { } game)
