@@ -1,14 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-        Tier 2, and hardware.slnf only. What is left to assert once the
-        arithmetic lives in D47.Placement.Tests and the carry-on-without-it
-        logic lives in D47.Panel.Tests is what a real headset does with a real
-        overlay, and there is no stand-in for that which would make the claim
-        mean anything.
+        hardware.slnf only, because of what will be here rather than what is
+        here now. Once the arithmetic lives in D47.Placement.Tests and the
+        carry-on-without-it logic lives in D47.Panel.Tests, what is left to
+        assert is what a real headset does with a real overlay, and there is no
+        stand-in for that which would make the claim mean anything.
 
-        The same rule D47.GameOverlay.Tests follows applies here: these do not
-        skip when the hardware is absent. A skip would be a green build that
+        What is here now needs no headset: that the vendored binding loads and
+        its entry points resolve. That belongs beside the binding rather than
+        anywhere else, and it is cheap enough to run every time this filter does.
+
+        These do not skip when the hardware is absent, the same rule
+        D47.GameOverlay.Tests follows — a skip would be a green build that
         checked nothing. See the Test tiers section of docs/decisions.md.
 
         xUnit v3, not v2 — the SDK template still scaffolds v2, and v3 test
