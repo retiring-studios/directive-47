@@ -77,7 +77,7 @@ internal sealed class Zoom
     /// <summary>
     /// The zoom as it would be said and as the panel shows it — "100%".
     /// </summary>
-    public string AsSaid => Percentage(Factor) + "%";
+    public string AsSaid => AsWritten(Factor) + "%";
 
     /// <summary>
     /// Whether there is anywhere further in to go, which is what greys out the

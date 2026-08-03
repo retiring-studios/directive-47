@@ -115,14 +115,30 @@ internal sealed class RunningPanel : IDisposable
     }
 
     /// <summary>
-    /// Every line of text the window presents, in tree order — what a screen
-    /// reader would read out, rather than what the visual tree was built from.
+    /// Every line of text the rendered answer presents, in tree order — what a
+    /// screen reader would read out, rather than what the visual tree was built
+    /// from.
     /// </summary>
+    ///
+    /// <remarks>
+    /// Under the answer rather than under the window, and it used to be under
+    /// the window. The panel has chrome now — the zoom strip along the bottom —
+    /// so a walk from the window reports what the panel says about itself mixed
+    /// in with what it is showing. The distinction is exactly what the test
+    /// using this is about: whether the answer reached the screen, not whether
+    /// the furniture did.
+    /// </remarks>
     internal IReadOnlyList<string> VisibleText()
     {
         List<string> lines = [];
 
-        AutomationElementCollection texts = Window.FindAll(
+        AutomationElement answer = Window.FindFirst(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.NameProperty, "Capability answer"))
+            ?? throw new InvalidOperationException(
+                $"The panel is presenting no capability answer at all.{Describe()}");
+
+        AutomationElementCollection texts = answer.FindAll(
             TreeScope.Descendants,
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text));
 
