@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Windows;
 
 using D47.GameOverlay;
 using D47.Render;
@@ -327,10 +328,174 @@ public class OverlayTests
         _recorded.ShouldHaveSingleItem().ShouldContain("cannot host an overlay");
     }
 
+    [Fact]
+    public void GameOverlay_WhenRepositioned_RemembersItsPlaceAcrossRestart()
+    {
+        // The story's whole criterion, both halves of it in one test because
+        // they are one gesture: an overlay dragged somewhere and pulled to a
+        // size is left like that, and an overlay that forgets either half is
+        // one more thing to set up before every session.
+        using var remembered = new TemporaryStore();
+        var moved = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(moved),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add,
+            whereTheScreensAre: Screens);
+
+        moved.DraggedTo(new Point(640, 360), 1.5);
+
+        // A second open is the next run. Written down as the Commander let go,
+        // not on the way out — there is no way out to hook, and a value that
+        // only survives a clean exit is one that does not survive a crash.
+        var restarted = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(restarted),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add,
+            whereTheScreensAre: Screens);
+
+        restarted.Position.ShouldBe(new Point(640, 360), "where it was left");
+        restarted.Scale.ShouldBe(1.5, "and the size it was left at");
+
+        _recorded.ShouldBeEmpty("nothing was carried on without");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenNothingWasEverRemembered_IsLeftToStartOverTheGame()
+    {
+        // The fallback, and the reason it has to be one. Placing the overlay
+        // over the game is the right answer exactly once — on a machine that
+        // has never been told anywhere else — and it was the unconditional
+        // answer until this story.
+        using var remembered = new TemporaryStore();
+        var overlay = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        overlay.WasPlaced.ShouldBeFalse(
+            "with nothing remembered, the overlay's own answer — the game's corner — is the one "
+            + "to leave alone");
+
+        _recorded.ShouldBeEmpty("a first run is not an event");
+    }
+
+    [Theory]
+    [InlineData("", "", "")]
+    [InlineData("left a bit", "360", "1.5")]
+    [InlineData("640", "down a bit", "1.5")]
+    [InlineData("640", "360", "half")]
+    [InlineData("640", "360", "0")]
+    [InlineData("640", "360", "-1.5")]
+    [InlineData("6,40", "360", "1.5")]
+    [InlineData("640", "", "1.5")]
+    public void GameOverlay_WhenWhatWasRememberedIsNotAPlace_StartsOverTheGame(
+        string left, string top, string scale)
+    {
+        // Same trade as the opacity beside it. remembered.json is a file
+        // somebody opens and edits, so anything at all can be in it, and
+        // refusing to start over a hand-typed number would be a worse answer
+        // than putting the overlay back where a first run would have put it.
+        //
+        // A scale of zero or less is in here because it parses perfectly and is
+        // not a size. So is a comma for a decimal point, because the file has
+        // to mean the same thing on every machine that opens it.
+        using var remembered = new TemporaryStore();
+        Store store = remembered.Open();
+
+        store.Write("game overlay left", left);
+        store.Write("game overlay top", top);
+        store.Write("game overlay scale", scale);
+
+        var overlay = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        overlay.WasPlaced.ShouldBeFalse("an unusable place is no answer, not a failure");
+
+        _recorded.ShouldHaveSingleItem().ShouldContain(
+            "game overlay left",
+            customMessage: "the fix is a line in a file, and nobody can correct one they cannot "
+            + "identify");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenOnlySomeOfThePlaceWasRemembered_StartsOverTheGame()
+    {
+        // Two thirds of a place is not a place. It is also not a first run, so
+        // it says so — a file somebody has half-edited is exactly the case
+        // where silence looks like the setting being ignored.
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write("game overlay left", "640");
+
+        var overlay = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        overlay.WasPlaced.ShouldBeFalse();
+        _recorded.ShouldHaveSingleItem().ShouldContain("game overlay top");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenWhereItWasLeftIsNoLongerOnAnyScreen_StartsOverTheGame()
+    {
+        // The monitor that is not there any more. A position remembered on a
+        // second screen is a perfectly good pair of numbers and nowhere at all
+        // once that screen is unplugged, and an overlay restored onto it is one
+        // the Commander can neither see nor grab — so the failure is invisible
+        // and looks like the overlay never came back.
+        using var remembered = new TemporaryStore();
+        Store store = remembered.Open();
+
+        store.Write("game overlay left", "5000");
+        store.Write("game overlay top", "300");
+        store.Write("game overlay scale", "1");
+
+        var overlay = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add,
+            whereTheScreensAre: Screens);
+
+        overlay.WasPlaced.ShouldBeFalse("a place nobody can see is not a place to restore to");
+
+        _recorded.ShouldHaveSingleItem().ShouldContain(
+            "5000",
+            customMessage: "an overlay that silently did not come back where it was left is "
+            + "indistinguishable from one that did not come back");
+    }
+
     private static readonly IntPtr TheGame = new(1);
     private static readonly IntPtr SomethingElse = new(2);
 
     private static bool IsTheGame(IntPtr window) => window == TheGame;
+
+    /// <summary>
+    /// The screens this machine is pretending to have. Fixed, so that a test
+    /// about a position being off the edge of the desktop says the same thing
+    /// on a laptop, on the dev PC's two monitors, and on a hosted runner.
+    /// </summary>
+    private static Rect Screens() => new(0, 0, 3840, 2160);
 
     /// <summary>
     /// A machine that cannot composite, without breaking one.
@@ -368,9 +533,9 @@ public class OverlayTests
     }
 
     /// <summary>
-    /// An overlay that is nothing but whether it is on screen — which is the
-    /// entire reason <see cref="IGameOverlay"/> says nothing about windows or
-    /// about Elite.
+    /// An overlay that is nothing but whether it is on screen and where it is —
+    /// which is the entire reason <see cref="IGameOverlay"/> says nothing about
+    /// windows or about Elite.
     /// </summary>
     private sealed class OverlayThatRemembers : IGameOverlay
     {
@@ -381,6 +546,44 @@ public class OverlayTests
         public bool ShowsChrome { get; set; }
 
         public double Opacity { get; set; }
+
+        public Point Position { get; private set; }
+
+        public double Scale { get; private set; } = 1;
+
+        public event EventHandler? MovedOrResized;
+
+        /// <summary>
+        /// Whether anything ever told it where to go.
+        ///
+        /// <para>
+        /// The distinction the real window turns into "over the game or where
+        /// it was left", and the reason a position of nowhere in particular is
+        /// not enough to assert on: <c>(0, 0)</c> is a place somebody could
+        /// genuinely have left it.
+        /// </para>
+        /// </summary>
+        internal bool WasPlaced { get; private set; }
+
+        public void PlaceAt(Point corner, double scale)
+        {
+            Position = corner;
+            Scale = scale;
+            WasPlaced = true;
+        }
+
+        /// <summary>
+        /// The Commander finishing a drag or a pull on the grip.
+        /// </summary>
+        /// <param name="corner">Where they left it.</param>
+        /// <param name="scale">How big they left it.</param>
+        internal void DraggedTo(Point corner, double scale)
+        {
+            Position = corner;
+            Scale = scale;
+
+            MovedOrResized?.Invoke(this, EventArgs.Empty);
+        }
 
         public void Show() => IsVisible = true;
 
