@@ -420,6 +420,16 @@ internal sealed partial class App : Application, IDisposable
 
         using Stream stream = resource.Stream;
 
+        // The file's 128 and 256 frames are PNG-compressed, and GDI+ cannot read
+        // those — Icon.ToBitmap throws ArgumentOutOfRangeException on one rather
+        // than drawing a blank. SmallIconSize grows with display scaling, so past
+        // 400% this asks for more than 64 and selects one of them.
+        //
+        // No clamp, deliberately. NotifyIcon hands Shell_NotifyIcon the HICON,
+        // and Windows builds that, decoding PNG frames perfectly well; nothing
+        // here goes near GDI+. Guarding a path this does not take would be code
+        // for a failure that cannot happen. ApplicationIconTests measures both
+        // halves of that claim so it stops being a claim.
         return new Icon(stream, Forms.SystemInformation.SmallIconSize);
     }
 }
