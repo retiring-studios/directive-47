@@ -69,7 +69,7 @@ public partial class GameOverlayWindow : Window
         InitializeComponent();
         View.DataContext = answer;
 
-        FitTheRender();
+        FitTheRender(answer);
     }
 
     /// <summary>
@@ -77,16 +77,70 @@ public partial class GameOverlayWindow : Window
     /// </summary>
     ///
     /// <remarks>
+    /// <para>
     /// Asked of the render rather than declared anywhere: the controls decide
     /// how big the render is, and every surface is that size. From here the
     /// <c>Viewbox</c> scales whatever the window becomes, so this is the size at
     /// which the scale is exactly one.
+    /// </para>
+    /// <para>
+    /// Arranged and laid out, not merely measured. A control that has never
+    /// been through a layout pass has not resolved its templates — the answer's
+    /// template is chosen by looking up a resource, and that lookup needs the
+    /// control connected — so measuring alone returns the size of an almost
+    /// empty box. That shipped once: the window came out too narrow for its own
+    /// title bar, and the shape taken from it was wrong enough that the
+    /// contents letterboxed inside their own window and left the chrome
+    /// stranded at the edges. <c>D47.Render.Tests</c> had the sequence right
+    /// all along.
+    /// </para>
+    /// <para>
+    /// The render is then pinned to that size, which is what makes the
+    /// <c>Viewbox</c> a pure scale. Left free, it would measure again at every
+    /// new window size and lay itself out differently — reflowing, which is the
+    /// one thing the overlay must never do.
+    /// </para>
     /// </remarks>
-    private void FitTheRender()
+    /// <summary>
+    /// How big the render wants to be, asked of an instance that belongs to
+    /// nobody.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A throwaway rather than the one in the window, and the difference is not
+    /// academic: the one in the window already has a parent, so measuring it
+    /// out of band asks what it wants *inside a Viewbox inside a Grid* rather
+    /// than what it wants. That came out exactly one padding narrower — 64
+    /// device-independent pixels — than the truth, which is the sort of wrong
+    /// that looks plausible.
+    /// </para>
+    /// <para>
+    /// Arranged and laid out, not merely measured. Templates are resolved
+    /// during layout, and the answer's template is chosen by a resource lookup
+    /// that needs the control connected — so measuring alone returns the size of
+    /// an almost empty box.
+    /// </para>
+    /// </remarks>
+    /// <param name="answer">What the render would be showing.</param>
+    /// <returns>Its natural size.</returns>
+    private static Size WhatTheRenderWants(Answer answer)
     {
-        View.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var asking = new CapabilityView { DataContext = answer };
 
-        Size natural = View.DesiredSize;
+        asking.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        asking.Arrange(new Rect(asking.DesiredSize));
+        asking.UpdateLayout();
+
+        return asking.DesiredSize;
+    }
+
+    private void FitTheRender(Answer answer)
+    {
+        Size natural = WhatTheRenderWants(answer);
+
+        View.Width = natural.Width;
+        View.Height = natural.Height;
 
         Width = natural.Width;
         Height = natural.Height;
@@ -119,6 +173,19 @@ public partial class GameOverlayWindow : Window
             ApplyPassingThrough();
         }
     }
+
+    /// <summary>
+    /// The size the render was laid out at — the size at which the
+    /// <c>Viewbox</c>'s scale is exactly one.
+    ///
+    /// <para>
+    /// The window is expected to keep this shape at every size. When it does
+    /// not, the render letterboxes inside its own window and the chrome, which
+    /// hangs off the window's edges, is left stranded away from anything
+    /// visible.
+    /// </para>
+    /// </summary>
+    public Size NaturalSize => new(View.Width, View.Height);
 
     /// <summary>
     /// Whether the furniture for moving and resizing is on show.

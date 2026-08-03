@@ -118,6 +118,51 @@ public class GameOverlayTests : GameTest
             "showing and hiding chrome must not recreate the window");
     }
 
+    [Fact]
+    public void GameOverlay_AtAnySize_IsTheSizeAndShapeOfTheRender()
+    {
+        // Written after the maintainer found both symptoms of not doing this.
+        // The window took its size from a render that had been measured but
+        // never laid out, so it came out too narrow for its own title bar — and
+        // the shape it took from that was wrong, so the render letterboxed
+        // inside its own window and the chrome, which hangs off the window's
+        // edges, was stranded away from anything visible.
+        //
+        // The window keeping the render's shape is what makes both impossible.
+        Answer answer = HelpsAnswer();
+        using var overlay = RunningOverlay.ShownOver(Game, answer);
+
+        // The size first, worked out independently. The shape assertions below
+        // pass whether or not this holds — the render is pinned to whatever the
+        // overlay decided, so a window and a render that are both wrong agree
+        // with each other perfectly. Two symptoms, two guards.
+        Size wanted = overlay.WhatTheRenderWants(answer);
+        Size used = overlay.NaturalSize();
+
+        used.Width.ShouldBe(
+            wanted.Width,
+            tolerance: 0.5,
+            customMessage: "the overlay should lay its render out at the size the render wants");
+
+        used.Height.ShouldBe(wanted.Height, tolerance: 0.5);
+
+        (double window, double render) = overlay.Shapes();
+
+        window.ShouldBe(
+            render,
+            tolerance: 0.01,
+            customMessage: "the window should open at the render's own shape");
+
+        overlay.ResizeTo(600);
+
+        (double wider, double stillTheRender) = overlay.Shapes();
+
+        wider.ShouldBe(
+            stillTheRender,
+            tolerance: 0.01,
+            customMessage: "and keep it after being resized, or the render floats inside its own window");
+    }
+
     // There is deliberately no test here for the overlay leaving the foreground
     // alone. One was written and deleted: it passed with ShowActivated="False"
     // and passed just as happily with it set to "True", which makes it a test
