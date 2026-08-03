@@ -110,15 +110,38 @@ internal partial class MainWindow : Window
     {
         base.OnSourceInitialized(e);
 
+        DpiScale scale = VisualTreeHelper.GetDpi(this);
         Size frame = TheFrameWindowsDraws();
 
-        Width = _controls.Width + frame.Width;
-        Height = _controls.Height + frame.Height;
+        Width = (WholePixels(_controls.Width, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
+        Height = (WholePixels(_controls.Height, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
     }
 
     /// <summary>
+    /// What the controls want, in the whole pixels a window is obliged to be a
+    /// number of, rounded up.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Up rather than to nearest, and the difference is 17 pixels rather than
+    /// one. What the controls want is fractional, a window is a whole number of
+    /// real pixels, and rounding to nearest lands short about half the time —
+    /// at which point the scrollbar appears in a window built not to need one,
+    /// takes its own width off the render, wraps the label into what is left and
+    /// makes it taller still. Rounding up costs at most one row of pixels of
+    /// background nobody can distinguish from the render's own padding. Found on
+    /// CI, which runs at 100% and rounded down where this desk at 150% had
+    /// rounded up.
+    /// </remarks>
+    /// <param name="want">What the controls asked for.</param>
+    /// <param name="scale">How many real pixels there are to one of those.</param>
+    /// <returns>The same size in whole real pixels, never less.</returns>
+    private static double WholePixels(double want, double scale) =>
+        Math.Ceiling(want * scale);
+
+    /// <summary>
     /// How much bigger this window is than the room inside it — a border either
-    /// side and a title bar above.
+    /// side and a title bar above, in physical pixels.
     /// </summary>
     ///
     /// <remarks>
@@ -128,15 +151,15 @@ internal partial class MainWindow : Window
     /// short by 8 device-independent pixels in each direction on Windows 11,
     /// which draws a resize border it does not count. Measured, not reasoned
     /// about: a window sized that way came out 8 shorter than its own contents,
-    /// which raised the scrollbar, which took 17 more off the width, which
-    /// wrapped the one line of label onto two and made it taller still. The
-    /// difference between the two rectangles is not an estimate of any of that.
+    /// and 8 short is 17 wrong once the scrollbar it raises has taken its width
+    /// off the render. The difference between the two rectangles is not an
+    /// estimate of any of that.
     /// </para>
     /// <para>
-    /// Both rectangles are in physical pixels, which is what Windows speaks and
-    /// what makes the scale necessary — everything else here is in
-    /// device-independent ones. The frame does not depend on how big the window
-    /// currently is, so it can be read before the window has been given its size.
+    /// Physical pixels, which is what Windows speaks and what the fit is worked
+    /// out in — everything else here is in device-independent ones. The frame
+    /// does not depend on how big the window currently is, so it can be read
+    /// before the window has been given its size.
     /// </para>
     /// </remarks>
     /// <returns>The width and height the frame adds.</returns>
@@ -147,11 +170,9 @@ internal partial class MainWindow : Window
         GetWindowRect(handle, out Rectangle window);
         GetClientRect(handle, out Rectangle inside);
 
-        DpiScale scale = VisualTreeHelper.GetDpi(this);
-
         return new Size(
-            ((window.Right - window.Left) - (inside.Right - inside.Left)) / scale.DpiScaleX,
-            ((window.Bottom - window.Top) - (inside.Bottom - inside.Top)) / scale.DpiScaleY);
+            (window.Right - window.Left) - (inside.Right - inside.Left),
+            (window.Bottom - window.Top) - (inside.Bottom - inside.Top));
     }
 
     /// <summary>

@@ -40,14 +40,16 @@ namespace D47.Panel.Tests;
 public class PanelSizeTests
 {
     /// <summary>
-    /// How far out the fit is allowed to be, in device-independent pixels.
+    /// How far out the fit is allowed to be, in device-independent pixels: one
+    /// real pixel, at the densest the screen can be and still call them the same
+    /// thing.
     ///
     /// <para>
-    /// A window is a whole number of real pixels, and what the controls want is
-    /// not — so the fit lands on the pixel either side of it, which is a whole
-    /// device-independent pixel at 100% and two thirds of one at 150%. Anything
-    /// this tolerance would hide is smaller than the smallest thing the screen
-    /// can draw.
+    /// A window is a whole number of real pixels and what the controls want is
+    /// not, so the fit lands on the pixel above what was asked for — up rather
+    /// than to nearest, because landing short raises a scrollbar in a window
+    /// built not to need one. What this tolerance hides is that one pixel, and
+    /// nothing the screen can draw is smaller.
     /// </para>
     /// </summary>
     private const double ARoundingError = 1.0;
