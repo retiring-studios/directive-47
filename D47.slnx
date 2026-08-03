@@ -15,6 +15,7 @@
     <Project Path="tests/D47.Help.Tests/D47.Help.Tests.csproj" />
     <Project Path="tests/D47.Journal.Tests/D47.Journal.Tests.csproj" />
     <Project Path="tests/D47.Panel.Tests/D47.Panel.Tests.csproj" />
+    <Project Path="tests/D47.Placement.Tests/D47.Placement.Tests.csproj" />
     <Project Path="tests/D47.Render.Tests/D47.Render.Tests.csproj" />
     <Project Path="tests/D47.TestSupport/D47.TestSupport.csproj" />
     <Project Path="tests/D47.VrOverlay.Tests/D47.VrOverlay.Tests.csproj" />
