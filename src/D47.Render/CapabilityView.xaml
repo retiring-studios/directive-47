@@ -3,12 +3,35 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:D47.Render"
              Background="#FF0B0D10"
-             Padding="32">
+             Padding="32"
+             FontFamily="pack://application:,,,/D47.Render;component/assets/fonts/#Saira"
+             FontStretch="Condensed">
 
     <!--
         VR-legible density from the first commit: large type, high contrast, few
         rows. The overlays present this same render, and a target tuned for a
         flat monitor is unreadable in a headset.
+
+        The typeface is set here, once, because it is a property of what is drawn
+        rather than of any one surface: the panel and both overlays present this
+        render and so all get it together. Saira Condensed, embedded — see
+        D47.Render.csproj. Body text is Regular 400, which is the inherited
+        default; anything emphatic asks for FontWeight="SemiBold" and gets the
+        600 face.
+
+        The family is #Saira and the width is a FontStretch, which is not a
+        stylistic choice. Saira treats width as an axis: both files declare the
+        typographic family "Saira" at stretch Condensed, and "Saira Condensed" is
+        only the Win32 name of the Regular file. Naming that instead resolves —
+        and then answers every weight with the 400 file, because a Win32 family
+        holds one face. So SemiBold would silently come back synthetically
+        emboldened from Regular. If the width ever moves to Saira Semi Condensed,
+        the fallback the issue records, this attribute is the edit.
+
+        The trailing slash on the folder and the #Family suffix are both
+        required, and a URI missing either does not fail: WPF falls back to the
+        system font and draws. TypefaceTests resolves the face rather than
+        reading the string back, for exactly that reason.
     -->
     <UserControl.Resources>
         <local:DisplayModelTemplateSelector x:Key="ByDisplayModel" />
