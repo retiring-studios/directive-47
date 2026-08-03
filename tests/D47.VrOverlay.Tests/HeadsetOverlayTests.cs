@@ -65,14 +65,22 @@ public class HeadsetOverlayTests : HeadsetTest
     }
 
     [Fact]
-    public void Overlay_ShowsTheRenderRatherThanSomethingItsOwnSize()
+    public void Overlay_IsAQuadTheSizeItWasAskedFor()
     {
-        // The half that makes the fact above mean "the panel's content". An
-        // overlay showing a blank quad of the wrong size would satisfy every
-        // assertion up there.
+        // What is left of "and it is the render on it" once the compositor
+        // turns out not to answer for its own pixels.
+        //
+        // Both readback calls were tried, on this machine, against a real
+        // SteamVR. GetOverlayTextureSize answers InvalidHandle and
+        // GetOverlayImageData answers InvalidTexture, because both report on
+        // textures set some other way — a GPU handle for the first, an image
+        // file for the second. A SetOverlayRaw overlay has neither, and there
+        // is no third call that reads a raw one back.
+        //
+        // So the quad's own geometry is the most the runtime will confirm, and
+        // whether the render looks right on it is a person putting the headset
+        // on. That step is in the pull request rather than pretended at here.
         Answer answer = Fixtures.HelpsAnswer();
-
-        (int width, int height) = StaThread.Run(() => PanelRender.Measure(answer));
 
         using IHeadsetOverlay overlay = StaThread.Run(
             () => new HeadsetOverlayFactory().Create(answer))
@@ -81,18 +89,20 @@ public class HeadsetOverlayTests : HeadsetTest
         overlay.Show();
 
         ulong handle = 0;
-        OpenVR.Overlay.FindOverlay(HeadsetOverlayFactory.Key, ref handle);
 
-        uint onTheQuad = 0;
-        uint andTallness = 0;
+        OpenVR.Overlay.FindOverlay(HeadsetOverlayFactory.Key, ref handle)
+            .ShouldBe(EVROverlayError.None, "the overlay should be findable first");
 
-        OpenVR.Overlay.GetOverlayTextureSize(handle, ref onTheQuad, ref andTallness)
+        float across = 0;
+
+        OpenVR.Overlay.GetOverlayWidthInMeters(handle, ref across)
             .ShouldBe(EVROverlayError.None);
 
-        onTheQuad.ShouldBe(
-            (uint)width, "the texture should be the render, not a quad of some other size");
-
-        andTallness.ShouldBe((uint)height);
+        across.ShouldBe(
+            0.5f,
+            tolerance: 0.001,
+            customMessage: "the quad should be the size the adapter asked for, which is what "
+                + "says the overlay was configured rather than merely created");
     }
 
     [Fact]
