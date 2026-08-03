@@ -40,7 +40,7 @@ public static class HeadLocked
         Numbers.MustBeFinite(head.Position, nameof(head));
         Numbers.MustBeFinite(inView, nameof(inView));
 
-        Quaternion facing = Facing(head.Orientation);
+        Quaternion facing = Turn.Of(head.Orientation);
 
         // Rotation and translation kept apart and then put together by hand
         // rather than multiplying two matrices. The rotation has to act on the
@@ -54,30 +54,43 @@ public static class HeadLocked
     }
 
     /// <summary>
-    /// The orientation as a rotation: finite, and unit length.
+    /// The offset that keeps a world-locked overlay exactly where it is, so
+    /// that changing mode moves nothing.
     /// </summary>
     ///
     /// <remarks>
-    /// Normalised rather than required normalised. A quaternion out of a
-    /// tracking runtime drifts off unit length over a session, and one that is
-    /// one per cent long scales everything it touches — so the overlay creeps
-    /// away from the Commander the longer they play, which reads as the overlay
-    /// being wrong rather than the pose it was handed.
+    /// The inverse of what <see cref="Follows"/> does, and deliberately spelled
+    /// as one: take the gap between the overlay and the head in the world, and
+    /// turn it back into the head's own frame.
+    ///
+    /// <para>
+    /// The conjugate rather than <c>Quaternion.Inverse</c>, which divides by the
+    /// length squared and so does the normalising twice. For a rotation the two
+    /// are the same answer, and the conjugate says which fact is being used.
+    /// </para>
+    /// <para>
+    /// Turning the gap the wrong way round is the mistake this invites, and it
+    /// is invisible to a Commander looking straight ahead: with the head at the
+    /// identity the conjugate and the rotation are the same thing. That is why
+    /// the switching tests run over three head poses rather than one.
+    /// </para>
     /// </remarks>
-    private static Quaternion Facing(Quaternion orientation)
+    /// <param name="head">Where the Commander's head is now.</param>
+    /// <param name="placed">Where the overlay is bolted.</param>
+    /// <returns>Where it sits relative to the head.</returns>
+    /// <exception cref="ArgumentException">
+    /// Some part of either pose is not a finite number, or the head's
+    /// orientation is not a rotation.
+    /// </exception>
+    public static Vector3 TakingOver(Pose head, Pose placed)
     {
-        Numbers.MustBeFinite(orientation, nameof(orientation));
+        Numbers.MustBeFinite(head.Position, nameof(head));
+        Numbers.MustBeFinite(placed.Position, nameof(placed));
 
-        // Checked rather than left to Quaternion.Normalize, which answers NaN
-        // for a quaternion of nothing instead of saying so — the same trap
-        // Vector3.Normalize sets, and Anchor sidesteps it the same way.
-        if (orientation.LengthSquared() == 0)
-        {
-            throw new ArgumentException(
-                "An orientation of nothing is not a rotation.",
-                nameof(orientation));
-        }
+        Quaternion facing = Turn.Of(head.Orientation);
 
-        return Quaternion.Normalize(orientation);
+        return Vector3.Transform(
+            placed.Position - head.Position,
+            Quaternion.Conjugate(facing));
     }
 }
