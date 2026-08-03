@@ -25,4 +25,26 @@
         <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
     </ItemGroup>
 
+    <!--
+        Saira Condensed, embedded so it is present on a machine that has never
+        installed it. Linked, because assets/ is shared repository content rather
+        than this project's own; the Link is what puts the font at the stable
+        resource path the pack URI in CapabilityView.xaml names.
+
+        Two static faces rather than the variable font: Regular 400 for body,
+        SemiBold 600 for anything emphatic.
+
+        OFL.txt is a Resource for the same reason the fonts are. The Open Font
+        License requires the license text to travel with the font, and CI
+        publishes one self-contained file and attaches only that — so a copy
+        sitting next to the exe would not reach anybody.
+    -->
+    <ItemGroup>
+        <Resource Include="..\..\assets\fonts\SairaCondensed-Regular.ttf"
+                  Link="assets\fonts\SairaCondensed-Regular.ttf" />
+        <Resource Include="..\..\assets\fonts\SairaCondensed-SemiBold.ttf"
+                  Link="assets\fonts\SairaCondensed-SemiBold.ttf" />
+        <Resource Include="..\..\assets\fonts\OFL.txt" Link="assets\fonts\OFL.txt" />
+    </ItemGroup>
+
 </Project>
