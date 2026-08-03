@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 2. The thin adapter between Directive 47 and SteamVR: it takes the
+        render, puts it on a texture, and hands the texture to an overlay quad.
+        Nothing in here decides anything — where the quad goes is D47.Placement,
+        and whether to have one at all is logic that lives outside the adapter,
+        the same shape as D47.GameOverlay and for the same reason.
+
+        In ci.slnf as well as hardware.slnf, exactly like D47.GameOverlay:
+        compiling it needs no headset, and the published exe contains it. Only
+        the tests are hardware-only.
+
+        UseWPF because the render is a WPF control and getting pixels out of one
+        means RenderTargetBitmap. That is also why this is net10.0-windows while
+        D47.Placement is not.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <!--
+        Valve's own bindings, vendored rather than packaged. Both files come
+        from ValveSoftware/openvr and both are BSD-3-Clause, so this adds no
+        package, no transitive surface and no licence exception — see the
+        Dependencies section of docs/decisions.md for why the packaged options
+        were rejected and why hand-rolling this one was not the same size of
+        thing as the other hand-rolls in this repo.
+
+        openvr_api.cs is generated, 8,887 lines of it, and is not ours to tidy.
+        It is excluded from analysis in .editorconfig rather than being edited
+        into compliance, because editing it is what makes the next refresh a
+        merge instead of a copy.
+
+        openvr_api.dll is a loader stub that finds SteamVR at run time; SteamVR
+        itself is not redistributed. It goes in as None rather than through a
+        runtime-specific package layout because the single-file bundler
+        classifies by what a file is, not by where NuGet put it — a plain copied
+        file is bundled identically, and IncludeNativeLibrariesForSelfExtract is
+        already set in CI.
+    -->
+    <ItemGroup>
+        <!--
+            openvr_api.cs is not named here: the SDK globs .cs from the project
+            directory already, and naming it as well is a duplicate-item error
+            rather than a harmless restatement. Its analysis exclusion is keyed
+            off the vendor folder in .editorconfig instead.
+        -->
+        <!--
+            Link, so it lands beside the assembly rather than in an output
+            vendor\ folder. None preserves the relative path by default, and
+            DllImport("openvr_api") probes the application directory — the
+            difference is a DllNotFoundException at the first call rather than
+            anything a build would tell you about.
+        -->
+        <None Include="vendor\openvr_api.dll"
+              Link="openvr_api.dll"
+              CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.Placement\D47.Placement.csproj" />
+        <ProjectReference Include="..\D47.Render\D47.Render.csproj" />
+    </ItemGroup>
+
+</Project>

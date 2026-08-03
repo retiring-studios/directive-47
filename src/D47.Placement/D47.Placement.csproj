@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 0. Where the headset overlay goes is arithmetic — a pose, a ray, a
+        distance and a transform — and none of it needs a headset, a runtime or
+        a window to be true. So it runs in CI like every other pure project.
+
+        Separate from D47.VrOverlay deliberately, and not because the code would
+        not fit there. A project whose tests span two tiers is two projects, and
+        putting this arithmetic in the adapter would move head-locked,
+        world-locked and gaze-ray anchoring out of CI and onto the dev PC, where
+        they would only run when somebody had a headset plugged in. That is the
+        opposite of what their own Feature says: the transform is pure math,
+        unit-testable with no VR runtime present.
+
+        No package references and no project references. Placement talks about
+        vectors and matrices, not about OpenVR — the adapter is what turns one
+        into the other, so nothing here has ever heard of Valve.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+</Project>

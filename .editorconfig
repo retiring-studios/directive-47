@@ -111,3 +111,36 @@ dotnet_naming_rule.members_are_pascal.severity = none
 dotnet_diagnostic.CA1034.severity = none
 dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1861.severity = none
+
+# Vendored third-party source
+[src/**/vendor/**.cs]
+# Valve's OpenVR bindings, copied in from ValveSoftware/openvr rather than
+# taken as a package — see the Dependencies section of docs/decisions.md. The
+# file says "This file is auto-generated, do not edit it" at the top and means
+# it: 8,887 lines of declarations for interfaces we mostly never call.
+#
+# Excluded from analysis rather than edited into compliance. Editing it is what
+# turns the next refresh from a copy into a merge, and the whole reason to
+# vendor Valve's own file instead of hand-rolling the interop was that we do
+# not want to own it.
+#
+# Analysis only. It still compiles under the same nullable and language
+# settings as everything else, so this hides opinions rather than errors.
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.CS1591.severity = none
+
+# CA5392 is named on its own because the bulk setting above does not reach it.
+# Security-category rules turned on by AnalysisLevel=latest-all survive
+# dotnet_analyzer_diagnostic.severity = none, which is worth knowing before
+# assuming a vendored file is fully excluded — it is not, and the next rule
+# that leaks will have to be named here too.
+#
+# What it wants is DefaultDllImportSearchPaths on the eleven P/Invokes, which
+# is what src/D47.GameOverlay does for user32 with System32 named explicitly,
+# so that a DLL of the same name beside the exe cannot be loaded instead. That
+# answer is wrong here and the difference is the point: openvr_api.dll is ours,
+# shipped inside our own exe and self-extracted beside it, so the application
+# directory is exactly where it is supposed to come from. Pointing this at
+# System32 would stop it loading at all.
+dotnet_diagnostic.CA5392.severity = none
