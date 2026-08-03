@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 1. Elite writes its journals to a directory on disk and this reads
+        them, so the tests are integration tests over fixture logs rather than
+        pure ones. A directory and a file handle are all it needs — no window,
+        no device, no running game — so net10.0 rather than net10.0-windows,
+        and it belongs in ci.slnf like every other project needing no hardware.
+
+        No package references, and deliberately none. A journal line is UTF-8
+        text terminated by CRLF, which System.IO already reads. Turning those
+        lines into semantic events is a separate criterion under
+        [#14](https://github.com/retiring-studios/directive-47/issues/14), and
+        nothing in this project needs to understand what a line says.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+</Project>
