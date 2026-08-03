@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Input;
 
@@ -49,13 +50,19 @@ public class HotkeyTests : DesktopTest
 
     private static readonly TimeSpan LongEnoughToArrive = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Where a refused claim writes itself down. One per test, because xUnit
+    /// builds the class afresh for each fact.
+    /// </summary>
+    private readonly List<string> _recorded = [];
+
     [Fact]
     public void Hotkey_WhenPressed_RunsWhatItWasGiven()
     {
         using var pump = new MessagePump();
         using var arrived = new ManualResetEventSlim();
 
-        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, arrived.Set))
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, arrived.Set).Or(_recorded.Add))
             ?? throw new InvalidOperationException(
                 $"{Combination} is already owned on this machine, so this test cannot run.");
 
@@ -86,7 +93,8 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         int fired = 0;
 
-        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => Interlocked.Increment(ref fired)))
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => Interlocked.Increment(ref fired))
+                .Or(_recorded.Add))
             ?? throw new InvalidOperationException(
                 $"{Combination} is already owned on this machine, so this test cannot run.");
 
@@ -123,15 +131,25 @@ public class HotkeyTests : DesktopTest
         // silent is the line written to the log, not the process dying.
         using var pump = new MessagePump();
 
-        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => { }))
+        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => { }).Or(_recorded.Add))
             ?? throw new InvalidOperationException(
                 $"{Combination} is already owned on this machine, so this test cannot run.");
 
         try
         {
-            Hotkey? refused = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => { }));
+            Perhaps<Hotkey> refused = pump.Invoke(
+                () => Hotkey.TryRegister(Held, Tapped, () => { }));
 
-            refused.ShouldBeNull("the second claim on a combination should come back empty");
+            refused.Or(_recorded.Add).ShouldBeNull(
+                "the second claim on a combination should come back empty");
+
+            // And the words come from the claim rather than from whoever asked
+            // for it. The application used to write its own sentence naming
+            // Ctrl+Alt+D, which was a second copy of a value it had passed in
+            // and free to disagree with what was actually attempted. This test
+            // asks for Ctrl+Shift+D, so a sentence naming anything else is that
+            // bug.
+            _recorded.ShouldHaveSingleItem().ShouldContain(Combination);
         }
         finally
         {

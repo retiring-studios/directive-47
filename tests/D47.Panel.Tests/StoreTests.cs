@@ -95,6 +95,16 @@ public class StoreTests
     }
 
     [Fact]
+    public void Store_WhenOpenedWithoutBeingToldWhere_KeepsItselfBesideTheLog()
+    {
+        // Reading is all this does — a store nobody has written to creates no
+        // file — so it is safe to ask on the machine running the tests.
+        Store.Open(Nowhere).Location.ShouldBe(
+            ApplicationData.File("remembered.json"),
+            customMessage: "the store and the log were supposed to settle this once, together");
+    }
+
+    [Fact]
     public void Store_WhenItWrites_LeavesNothingBehindButTheStore()
     {
         using var temporary = new TemporaryStore();
@@ -105,5 +115,15 @@ public class StoreTests
         // way to do it and it is invisible when it works — the visible failure
         // is a folder slowly filling with the debris of every write.
         temporary.Files().ShouldBe(["remembered.json"]);
+    }
+
+    /// <summary>
+    /// Somewhere for a record to go that is not the maintainer's own log. The
+    /// fact above only asks where the store would live, and a real logger passed
+    /// there would be a test reaching into <c>%LOCALAPPDATA%</c>.
+    /// </summary>
+    private static void Nowhere(string ignored)
+    {
+        // Deliberately empty.
     }
 }

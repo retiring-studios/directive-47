@@ -70,20 +70,27 @@ internal sealed class Store
     /// <summary>
     /// Opens the store the application uses.
     /// </summary>
+    /// <param name="record">Where to note a store that would not open, and why.</param>
     /// <returns>The store, holding whatever the last run left in it.</returns>
-    internal static Store Open() => OpenAt(ApplicationData.File(FileName));
+    internal static Store Open(Action<string> record) =>
+        OpenAt(ApplicationData.File(FileName), record);
 
     /// <summary>
     /// Opens a store at a given path, for a test that must not touch the
     /// Commander's own.
     /// </summary>
+    ///
+    /// <remarks>
+    /// Where to record is an argument rather than a default, and it stopped
+    /// being one when the log became a thing the application owns rather than a
+    /// static. A default would have been this class quietly deciding where its
+    /// own absences go.
+    /// </remarks>
     /// <param name="file">Where the store is, or will be.</param>
-    /// <param name="record">
-    /// Where to note that something was carried on from. Defaults to the log.
-    /// </param>
+    /// <param name="record">Where to note a store that would not open, and why.</param>
     /// <returns>The store, holding whatever was readable.</returns>
-    internal static Store OpenAt(string file, Action<string>? record = null) =>
-        new(file, ReadFrom(file, record ?? Log.Warning));
+    internal static Store OpenAt(string file, Action<string> record) =>
+        new(file, ReadFrom(file, record));
 
     /// <summary>
     /// The file this store is kept in.

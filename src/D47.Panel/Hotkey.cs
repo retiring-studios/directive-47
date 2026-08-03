@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -104,23 +105,40 @@ internal sealed class Hotkey : IDisposable
     /// <param name="key">The key to press.</param>
     /// <param name="pressed">What to do when it arrives.</param>
     /// <returns>
-    /// The registration, which the caller owns and must dispose, or
-    /// <see langword="null"/> when another application already owns the
+    /// The registration, which the caller owns and must dispose, or an absence
+    /// carrying what to say about it when another application already owns the
     /// combination.
     ///
     /// <para>
-    /// Null for that one named reason and nothing else. Another application
+    /// Absent for that one named reason and nothing else. Another application
     /// holding a key is a fact about the machine Directive 47 is running on,
     /// the same shape as a machine that cannot composite — so it is an absence
     /// to carry on from, not a failure to die of. Every other way this can fail
     /// throws, because a defect of ours reported as somebody else's hotkey is a
     /// defect nobody ever finds.
     /// </para>
+    /// <para>
+    /// The words come from here rather than from the caller, and that is the
+    /// point of handing them back. The application used to write its own
+    /// sentence naming <c>Ctrl</c>+<c>Alt</c>+<c>D</c> — a second copy of a
+    /// value it had passed in, free to disagree with what was actually
+    /// attempted. Described from the arguments, it cannot.
+    /// </para>
     /// </returns>
     /// <exception cref="InvalidOperationException">
     /// The combination could not be claimed for any other reason.
     /// </exception>
-    internal static Hotkey? TryRegister(ModifierKeys modifiers, Key key, Action pressed)
+    [SuppressMessage(
+        "Reliability",
+        "CA2000:Dispose objects before losing scope",
+        Justification =
+            "Ownership passes to the caller, which is what the return documents and what "
+            + "App and every test do. The analyzer recognised that while the registration "
+            + "was handed back directly and stopped when it began travelling inside a "
+            + "Perhaps, which it cannot see through. Both failure paths still dispose "
+            + "explicitly before returning, and the successful one is the caller's from "
+            + "the moment it is returned.")]
+    internal static Perhaps<Hotkey> TryRegister(ModifierKeys modifiers, Key key, Action pressed)
     {
         var messages = new HwndSource(
             new HwndSourceParameters("Directive 47 hotkeys") { WindowStyle = Invisible });
@@ -140,7 +158,7 @@ internal sealed class Hotkey : IDisposable
             ToNative(modifiers),
             KeyInterop.VirtualKeyFromKey(key)))
         {
-            return hotkey;
+            return Perhaps<Hotkey>.Of(hotkey);
         }
 
         int failure = Marshal.GetLastWin32Error();
@@ -148,7 +166,11 @@ internal sealed class Hotkey : IDisposable
 
         if (failure == AlreadySpokenFor)
         {
-            return null;
+            return Perhaps<Hotkey>.Absent(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Could not claim {Describe(modifiers, key)} — another application already "
+                    + $"owns it. The overlay cannot be toggled by hotkey this session."));
         }
 
         throw new InvalidOperationException(
