@@ -26,10 +26,12 @@ namespace D47.Panel;
 /// </summary>
 internal static class Log
 {
-    private static readonly string File = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Directive 47",
-        "directive-47.log");
+    /// <summary>
+    /// Where the log goes. The path it used to work out for itself was chosen
+    /// because a single line had to go somewhere; the folder is now a decision,
+    /// made once and shared with the store.
+    /// </summary>
+    private static readonly string File = ApplicationData.File("directive-47.log");
 
     /// <summary>
     /// Records that something did not work and the application went on anyway.
