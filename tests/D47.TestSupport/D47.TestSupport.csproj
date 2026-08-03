@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Test machinery shared by more than one test project. Not a test project:
+        it holds no facts, references no runner, and nothing here executes on its
+        own.
+
+        It pairs with no production project, which the one-.Tests.csproj-per-
+        production-.csproj guideline allows. The alternative was linked source
+        files — the same coupling with worse tooling, and no place to put the
+        comment explaining why any of it exists.
+
+        net10.0-windows and UseWPF because two of the three things in here build
+        or walk real visual trees. The Tier 0 test projects do not reference it
+        and have no reason to.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <!--
+        D47.Help, because the fixture in here is a real capability's answer
+        rather than a hand-built stand-in. Help is the only capability that
+        exists, and it needs no microphone, no network and no game.
+    -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.Render\D47.Render.csproj" />
+        <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
+    </ItemGroup>
+
+</Project>

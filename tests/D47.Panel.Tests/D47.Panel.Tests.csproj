@@ -25,6 +25,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\D47.Panel\D47.Panel.csproj" />
+        <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
     </ItemGroup>
 
 </Project>
