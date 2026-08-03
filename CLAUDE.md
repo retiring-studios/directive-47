@@ -129,6 +129,28 @@ and the `verified` label is that attestation.** `main` requires one check,
 them — that gate existed, appeared on every pull request whether or not there
 was anything to look at, and was removed.
 
+**`main` also requires the branch be up to date with it.** The check alone was
+not enough once several stories ran at once. CI tests the merge of a branch into
+`main`, but only as of the moment the run started — so a pull request could go in
+on a green light earned against a `main` that had since moved three merges on.
+That happened; it was fine, and nothing had checked that it was.
+
+The cost is real and is the point: **every merge invalidates every other open
+pull request**, and each then needs updating from `main` and a re-run before it
+can land. Merging the least entangled one first is what keeps that cheap. It is
+also why nobody merges their own work — see below.
+
+**Sessions open pull requests. The maintainer merges.** Three stories running at
+once means three sessions that cannot see each other, and the one thing they must
+not do is land work while somebody else is still reading it. Reviewing them
+together is also the only way the seam between two of them gets looked at: a pull
+request that touches `App.xaml.cs` and one that touches `Overlay.cs` merge
+cleanly and can still disagree about what a method takes.
+
+Nothing else needs coordinating between sessions, and nothing should be. What
+landed is `git log origin/main`; what is in flight is `gh pr list`. Both are
+authoritative and neither goes stale, which is more than a briefing can say.
+
 **Apply `needs-manual-test` yourself** when a pull request introduces something
 a test cannot check, and say so when you hand it over. You wrote the code, so
 you know what that is. A pull request without it is claiming the automated
