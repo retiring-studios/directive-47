@@ -46,8 +46,8 @@ public static class Anchor
         // tracking frame. All three then travel into a transform and come out
         // as an overlay that is somewhere nobody can find, which reads as a
         // defect in the overlay rather than in what it was told.
-        MustBeFinite(gaze.From, nameof(gaze));
-        MustBeFinite(gaze.Towards, nameof(gaze));
+        Numbers.MustBeFinite(gaze.From, nameof(gaze));
+        Numbers.MustBeFinite(gaze.Towards, nameof(gaze));
 
         // Finite first, and it has to be first: every comparison against NaN is
         // false, so NaN is neither negative nor zero and walks straight through
@@ -76,16 +76,5 @@ public static class Anchor
         // above is what makes that impossible here, and doing the division in
         // the open is what keeps the two facts next to each other.
         return gaze.From + (gaze.Towards / reach * distance);
-    }
-
-    private static void MustBeFinite(Vector3 part, string name)
-    {
-        if (!float.IsFinite(part.X) || !float.IsFinite(part.Y) || !float.IsFinite(part.Z))
-        {
-            throw new ArgumentException(
-                $"A gaze ray has to be made of finite numbers, and this one was {part}. "
-                + "A dropped tracking frame is the usual reason.",
-                name);
-        }
     }
 }
