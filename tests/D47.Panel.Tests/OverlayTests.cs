@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using D47.Capabilities;
 using D47.GameOverlay;
@@ -25,12 +26,19 @@ namespace D47.Panel.Tests;
 /// </summary>
 public class OverlayTests
 {
+    /// <summary>
+    /// Where this test's absences are written down. One per test, because xUnit
+    /// builds the class afresh for each fact.
+    /// </summary>
+    private readonly List<string> _recorded = [];
+
     [Fact]
     public void GameOverlay_WhenItCannotBeCreated_IsAbsentNotFailed()
     {
         var machineThatCannot = new FactoryThatRefuses();
 
-        Overlay overlay = Should.NotThrow(() => Overlay.From(machineThatCannot, HelpsAnswer()));
+        Overlay overlay = Should.NotThrow(
+            () => Overlay.From(machineThatCannot, HelpsAnswer(), _recorded.Add));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no game running, for a reason that has nothing to do
@@ -45,6 +53,31 @@ public class OverlayTests
     }
 
     [Fact]
+    public void GameOverlay_WhenTheMachineCannotHostOne_LeavesARecord()
+    {
+        // Silent from the day the overlay was built until #104. Nothing was
+        // wrong with the code: the Commander had no overlay and nothing
+        // anywhere said so, which is indistinguishable from a defect and is the
+        // whole reason that story exists.
+        Overlay.From(new FactoryThatRefuses(), HelpsAnswer(), _recorded.Add);
+
+        _recorded.ShouldHaveSingleItem().ShouldContain(
+            "cannot host an overlay",
+            customMessage: "an absence nobody wrote down is indistinguishable from a defect");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenTheMachineCanHostOne_SaysNothingAtAll()
+    {
+        // The other half, and the one that keeps the log worth reading. A line
+        // written on every ordinary startup is a line nobody looks at twice.
+        Overlay.From(
+            new FactoryReturning(new OverlayThatRemembers()), HelpsAnswer(), _recorded.Add);
+
+        _recorded.ShouldBeEmpty("nothing was carried on without");
+    }
+
+    [Fact]
     public void GameOverlay_WhenCreationFailsForAnyOtherReason_SaysSoRatherThanGoingQuiet()
     {
         // The criterion that matters more than the one above it. "Absent, not
@@ -52,7 +85,7 @@ public class OverlayTests
         // unsupported machine, and this is what stops that being written.
         var broken = new FactoryThatIsBroken();
 
-        Should.Throw<StandInFailure>(() => Overlay.From(broken, HelpsAnswer()));
+        Should.Throw<StandInFailure>(() => Overlay.From(broken, HelpsAnswer(), _recorded.Add));
     }
 
     [Fact]
@@ -61,7 +94,7 @@ public class OverlayTests
         // The logic half of the criterion. That a keystroke arrives at all is
         // the hotkey's own business and is asserted where the hotkey is.
         var overlay = new OverlayThatRemembers();
-        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer());
+        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add);
 
         toggling.Toggle();
         overlay.IsVisible.ShouldBeTrue("the first press should put it on screen");
@@ -80,7 +113,7 @@ public class OverlayTests
         // already on screen when the game was running at startup, so the first
         // thing the Commander presses the key for is to make it go away.
         var overlay = new OverlayThatRemembers();
-        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer());
+        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add);
 
         toggling.Show();
         overlay.IsVisible.ShouldBeTrue();
@@ -94,7 +127,8 @@ public class OverlayTests
     public void GameOverlay_WhileEliteHasFocus_PassesAllPointerInputThroughToTheGame()
     {
         var overlay = new OverlayThatRemembers();
-        var following = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), IsTheGame);
+        var following = Overlay.From(
+            new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add, IsTheGame);
 
         following.ForegroundIsNow(TheGame);
 
@@ -108,7 +142,8 @@ public class OverlayTests
         // The half that makes the chrome possible at all. An overlay that is
         // always click-through can never be grabbed and moved.
         var overlay = new OverlayThatRemembers();
-        var following = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), IsTheGame);
+        var following = Overlay.From(
+            new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add, IsTheGame);
 
         following.ForegroundIsNow(TheGame);
         following.ForegroundIsNow(SomethingElse);
@@ -121,7 +156,8 @@ public class OverlayTests
     public void GameOverlay_WhenEliteLosesFocus_ShowsItsChromeForMovingAndResizing()
     {
         var overlay = new OverlayThatRemembers();
-        var following = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), IsTheGame);
+        var following = Overlay.From(
+            new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add, IsTheGame);
 
         following.ForegroundIsNow(TheGame);
 
@@ -141,7 +177,8 @@ public class OverlayTests
         // The absent case reaches this path too: the foreground changes on any
         // machine, whether or not there is an overlay to tell about it.
         var machineThatCannot = new FactoryThatRefuses();
-        var following = Overlay.From(machineThatCannot, HelpsAnswer(), IsTheGame);
+        var following = Overlay.From(
+            machineThatCannot, HelpsAnswer(), _recorded.Add, IsTheGame);
 
         Should.NotThrow(() => following.ForegroundIsNow(TheGame));
     }

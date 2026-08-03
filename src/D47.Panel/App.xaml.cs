@@ -85,6 +85,18 @@ internal sealed partial class App : Application, IDisposable
     /// </summary>
     private static readonly TimeSpan ShellFinishesUp = TimeSpan.FromMilliseconds(300);
 
+    /// <summary>
+    /// Where everything that carried on without something writes it down.
+    ///
+    /// <para>
+    /// Built first and handed to everything that composes, rather than reached
+    /// for as a static. What records an absence is then visible in every
+    /// signature that can produce one, which is what makes forgetting to pass it
+    /// a compile error instead of a habit.
+    /// </para>
+    /// </summary>
+    private readonly Log _log = Log.InApplicationData();
+
     private SingleInstance? _theOnlyCopy;
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
@@ -153,7 +165,7 @@ internal sealed partial class App : Application, IDisposable
         MainWindow = new MainWindow(answer);
         MainWindow.Show();
 
-        _overlay = Overlay.From(new GameOverlayFactory(), answer);
+        _overlay = Overlay.From(new GameOverlayFactory(), answer, _log.Warning);
         _overlay.Show();
 
         FollowTheForeground();
@@ -189,21 +201,19 @@ internal sealed partial class App : Application, IDisposable
     /// nobody wrote down is indistinguishable from a defect, and the Commander
     /// pressing a key that does nothing has no other way to find out why.
     /// </para>
+    /// <para>
+    /// There is no longer an <c>if</c> here saying so. The claim hands back the
+    /// reason with the absence, and unwrapping it is what writes it down — so
+    /// the sentence names whatever combination was actually asked for, and this
+    /// method could not skip recording if it tried.
+    /// </para>
     /// </remarks>
-    private void ClaimTheHotkey()
-    {
+    private void ClaimTheHotkey() =>
         _hotkey = Hotkey.TryRegister(
-            ModifierKeys.Control | ModifierKeys.Alt,
-            Key.D,
-            () => _overlay?.Toggle());
-
-        if (_hotkey is null)
-        {
-            Log.Warning(
-                "Could not claim Ctrl+Alt+D — another application already owns it. The overlay "
-                + "cannot be toggled by hotkey this session.");
-        }
-    }
+                ModifierKeys.Control | ModifierKeys.Alt,
+                Key.D,
+                () => _overlay?.Toggle())
+            .Or(_log.Warning);
 
     /// <summary>
     /// What every surface shows.

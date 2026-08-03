@@ -20,6 +20,22 @@ namespace D47.Panel;
 /// </summary>
 internal sealed class Overlay
 {
+    /// <summary>
+    /// What to say when the machine cannot host one.
+    ///
+    /// <para>
+    /// This absence was silent from the day it was built until
+    /// [#104](https://github.com/retiring-studios/directive-47/issues/104).
+    /// Nothing was wrong with the code — the Commander simply had no overlay
+    /// and nothing anywhere said so, which is exactly the failure that story is
+    /// about.
+    /// </para>
+    /// </summary>
+    private const string NoOverlay =
+        "This machine cannot host an overlay over the game — it is not compositing the "
+        + "desktop, which is what a transparent window needs. Directive 47 has started "
+        + "without one; the panel is unaffected.";
+
     private readonly IGameOverlay? _overlay;
     private readonly Func<IntPtr, bool> _isTheGame;
 
@@ -49,6 +65,7 @@ internal sealed class Overlay
     /// </remarks>
     /// <param name="overlays">Where an overlay comes from.</param>
     /// <param name="answer">What it should render.</param>
+    /// <param name="record">Where to note that there is no overlay, and why.</param>
     /// <param name="isTheGame">
     /// Whether a given window belongs to Elite. Defaults to asking the real
     /// game.
@@ -58,11 +75,24 @@ internal sealed class Overlay
     internal static Overlay From(
         IGameOverlayFactory overlays,
         Answer answer,
+        Action<string> record,
         Func<IntPtr, bool>? isTheGame = null)
     {
         ArgumentNullException.ThrowIfNull(overlays);
 
-        return new Overlay(overlays.Create(answer), isTheGame ?? EliteWindow.IsTheGame);
+        // The reason is composed here rather than asked of the factory, and the
+        // contract is what makes that honest: null from Create means the
+        // machine and only the machine — no compositor, no driver — because
+        // every other failure throws. So "this machine cannot host one" is the
+        // whole of what null is allowed to mean, and saying it here keeps
+        // Perhaps out of an adapter's public contract, where it would need a
+        // home both projects can see and would be a project decision taken for
+        // one type.
+        Perhaps<IGameOverlay> made = overlays.Create(answer) is { } overlay
+            ? Perhaps<IGameOverlay>.Of(overlay)
+            : Perhaps<IGameOverlay>.Absent(NoOverlay);
+
+        return new Overlay(made.Or(record), isTheGame ?? EliteWindow.IsTheGame);
     }
 
     /// <summary>

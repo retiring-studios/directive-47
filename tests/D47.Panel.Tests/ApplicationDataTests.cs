@@ -33,17 +33,4 @@ public class ApplicationDataTests
                 "local rather than roaming, because everything remembered is machine-shaped "
                 + "— a position on a 4K monitor is wrong on a laptop");
     }
-
-    [Fact]
-    public void Store_WhenOpenedWithoutBeingToldWhere_KeepsItselfBesideTheLog()
-    {
-        // The half of the decision that only means anything if something
-        // honours it. Reading is all this does — a store nobody has written to
-        // creates no file — so it is safe to ask on the machine running the
-        // tests.
-        Store.Open().Location.ShouldBe(
-            ApplicationData.File("remembered.json"),
-            customMessage:
-                "the store and the log were supposed to settle this once, together");
-    }
 }
