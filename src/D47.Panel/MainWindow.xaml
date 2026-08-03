@@ -6,9 +6,14 @@
         Title="Directive 47"
         AutomationProperties.Name="Directive 47"
         Height="720"
-        Width="960"
-        Background="#FF0B0D10">
+        Width="960">
 
+    <!--
+        Deliberately no Background. There is one render, it fills the window, and
+        the background is a property of what that render draws — see
+        D47.Render/Palette.cs. This window naming one of its own is how it came
+        to disagree with the render in the first place.
+    -->
     <render:CapabilityView x:Name="View" />
 
 </Window>
