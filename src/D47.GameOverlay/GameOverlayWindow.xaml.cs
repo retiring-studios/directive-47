@@ -73,35 +73,6 @@ public partial class GameOverlayWindow : Window
     }
 
     /// <summary>
-    /// Gives the window the render's own size to start at.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// <para>
-    /// Asked of the render rather than declared anywhere: the controls decide
-    /// how big the render is, and every surface is that size. From here the
-    /// <c>Viewbox</c> scales whatever the window becomes, so this is the size at
-    /// which the scale is exactly one.
-    /// </para>
-    /// <para>
-    /// Arranged and laid out, not merely measured. A control that has never
-    /// been through a layout pass has not resolved its templates — the answer's
-    /// template is chosen by looking up a resource, and that lookup needs the
-    /// control connected — so measuring alone returns the size of an almost
-    /// empty box. That shipped once: the window came out too narrow for its own
-    /// title bar, and the shape taken from it was wrong enough that the
-    /// contents letterboxed inside their own window and left the chrome
-    /// stranded at the edges. <c>D47.Render.Tests</c> had the sequence right
-    /// all along.
-    /// </para>
-    /// <para>
-    /// The render is then pinned to that size, which is what makes the
-    /// <c>Viewbox</c> a pure scale. Left free, it would measure again at every
-    /// new window size and lay itself out differently — reflowing, which is the
-    /// one thing the overlay must never do.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// How big the render wants to be, asked of an instance that belongs to
     /// nobody.
     /// </summary>
@@ -135,6 +106,29 @@ public partial class GameOverlayWindow : Window
         return asking.DesiredSize;
     }
 
+    /// <summary>
+    /// Gives the window the render's own size to start at, and pins the render
+    /// to it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Asked of the render rather than declared anywhere: the controls decide
+    /// how big the render is, and every surface is that size. From here the
+    /// <c>Viewbox</c> scales whatever the window becomes, so this is the size at
+    /// which the scale is exactly one.
+    /// </para>
+    /// <para>
+    /// The pin is what makes the <c>Viewbox</c> a pure scale rather than a
+    /// scale of something that keeps changing size. It is not what stops the
+    /// render reflowing — a <c>Viewbox</c> measures its child against infinity
+    /// at every window size, so nothing under one reflows with or without it.
+    /// Established while writing
+    /// <c>GameOverlay_WhenResized_ScalesItsContentsRatherThanReflowingThem</c>,
+    /// which could not be made to fail by removing the pin.
+    /// </para>
+    /// </remarks>
+    /// <param name="answer">What the render will be showing.</param>
     private void FitTheRender(Answer answer)
     {
         Size natural = WhatTheRenderWants(answer);

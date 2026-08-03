@@ -176,6 +176,44 @@ internal sealed class RunningOverlay : IDisposable
         });
 
     /// <summary>
+    /// How much of the window a line of the render actually covers.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The line's own layout size is not returned alongside it, and two attempts
+    /// to do so were thrown away rather than kept. Asserting that the line's
+    /// <c>ActualWidth</c> holds still is worthless — a single line of text wants
+    /// the width of its text however much room it is given. Asserting it of the
+    /// whole render is worthless for a subtler reason: a <c>Viewbox</c> measures
+    /// its child against infinity whatever size it is, so the render never
+    /// reflows while there is one, and the assertion passes against every build
+    /// that could be made to fail it. Both were measured against deliberately
+    /// broken code before being dropped.
+    /// </para>
+    /// <para>
+    /// What is left is the one number that moves: a scaled line covers more of
+    /// the window and a reflowed one does not. <c>TransformToAncestor</c> rather
+    /// than arithmetic, because the scale belongs to the <c>Viewbox</c> and
+    /// computing it here would be asserting the number this test exists to
+    /// check.
+    /// </para>
+    /// </remarks>
+    /// <returns>The size the first line covers, in the window's own coordinates.</returns>
+    internal Size LineOnTheWindow() =>
+        OnItsOwnThread(window =>
+        {
+            TextBlock line = FirstVisibleLine(window)
+                ?? throw new InvalidOperationException(
+                    "The overlay is showing no text, so there is nothing to have scaled.");
+
+            return line
+                .TransformToAncestor(window)
+                .TransformBounds(new Rect(0, 0, line.ActualWidth, line.ActualHeight))
+                .Size;
+        });
+
+    /// <summary>
     /// Makes the overlay a given width, the way dragging the grip would.
     /// </summary>
     /// <param name="width">How wide to make it.</param>
@@ -293,17 +331,18 @@ internal sealed class RunningOverlay : IDisposable
     }
 
     /// <summary>
-    /// The text actually on screen.
+    /// The first line of the render that is actually being drawn.
     /// </summary>
     ///
     /// <remarks>
-    /// Visibility is checked, and it has to be. A collapsed element is still in
-    /// the visual tree, so a walk that ignores visibility reports words nobody
-    /// can see — which is exactly what happened when the chrome arrived: the
-    /// bar's own label turned up in what the overlay was said to be presenting,
-    /// while the bar was collapsed and invisible.
+    /// Visibility is checked for the same reason <see cref="CollectChrome"/>
+    /// checks it: the chrome's own label is a <c>TextBlock</c> in this tree, and
+    /// a walk that ignored visibility would measure the drag bar's caption
+    /// instead of the render's first line.
     /// </remarks>
-    private static void Collect(DependencyObject node, List<string> lines)
+    /// <param name="node">Where to start looking.</param>
+    /// <returns>The line, or null if nothing is being drawn.</returns>
+    private static TextBlock? FirstVisibleLine(DependencyObject node)
     {
         int children = VisualTreeHelper.GetChildrenCount(node);
 
@@ -311,12 +350,18 @@ internal sealed class RunningOverlay : IDisposable
         {
             DependencyObject descendant = VisualTreeHelper.GetChild(node, child);
 
-            if (descendant is TextBlock { IsVisible: true } block)
+            if (descendant is TextBlock { IsVisible: true } line)
             {
-                lines.Add(block.Text);
+                return line;
             }
 
-            Collect(descendant, lines);
+            if (FirstVisibleLine(descendant) is { } found)
+            {
+                return found;
+            }
         }
+
+        return null;
     }
+
 }

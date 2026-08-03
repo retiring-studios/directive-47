@@ -162,6 +162,58 @@ public class GameOverlayTests : GameTest
             customMessage: "and keep it after being resized, or the render floats inside its own window");
     }
 
+    [Fact]
+    public void GameOverlay_WhenResized_ScalesItsContentsRatherThanReflowingThem()
+    {
+        // The sibling of GameOverlay_AtAnySize_IsTheSizeAndShapeOfTheRender, and
+        // not the same claim. That one guards the window's shape — that the
+        // render is not letterboxed inside a box of the wrong proportions. This
+        // one guards what happens to the contents when the grip is pulled, which
+        // a window of the right shape can still get wrong by laying them out
+        // again at the new size.
+        //
+        // The Viewbox is what makes the difference, so removing it is what this
+        // test has to go red against — and it does.
+        //
+        // One number, deliberately. The obvious second assertion is that the
+        // contents did not get laid out again, and there is no way to write it
+        // that can fail: a Viewbox measures its child against infinity at every
+        // window size, so nothing under one ever reflows, and an assertion that
+        // it did not is true of every build including the broken ones. It was
+        // written twice, run against both breakages, and dropped both times.
+        // What is left says the same thing from the only side that moves.
+        Answer answer = Fixtures.HelpsAnswer();
+        using var overlay = RunningOverlay.ShownOver(Game, answer);
+
+        Size drawn = overlay.LineOnTheWindow();
+
+        double from = overlay.NaturalSize().Width;
+        const double Factor = 2.0;
+
+        overlay.ResizeTo(from * Factor);
+
+        Size drawnBigger = overlay.LineOnTheWindow();
+
+        // Twice the window is twice the line. Scaled, because a line that had
+        // been laid out again at the new size would still be the width of its
+        // own text — bigger box, same words, which is the failure this names.
+        drawnBigger.Width.ShouldBe(
+            drawn.Width * Factor,
+            tolerance: 1.0,
+            customMessage:
+                $"the window doubled, so the line should have gone from {drawn.Width} to "
+                + $"{drawn.Width * Factor} on screen, and it went to {drawnBigger.Width}");
+
+        // And uniformly, in both directions, or it is stretched rather than
+        // scaled and the contents no longer keep their proportions.
+        drawnBigger.Height.ShouldBe(
+            drawn.Height * Factor,
+            tolerance: 1.0,
+            customMessage:
+                $"the line went from {drawn.Height} to {drawnBigger.Height} tall, "
+                + $"where doubling uniformly would have made it {drawn.Height * Factor}");
+    }
+
     // There is deliberately no test here for the overlay leaving the foreground
     // alone. One was written and deleted: it passed with ShowActivated="False"
     // and passed just as happily with it set to "True", which makes it a test
