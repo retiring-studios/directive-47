@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 
-using D47.Capabilities;
 using D47.GameOverlay;
-using D47.Help;
 using D47.Render;
+using D47.TestSupport;
 
 using Shouldly;
 
@@ -38,7 +37,7 @@ public class OverlayTests
         var machineThatCannot = new FactoryThatRefuses();
 
         Overlay overlay = Should.NotThrow(
-            () => Overlay.From(machineThatCannot, HelpsAnswer(), _recorded.Add));
+            () => Overlay.From(machineThatCannot, Fixtures.HelpsAnswer(), _recorded.Add));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no game running, for a reason that has nothing to do
@@ -59,7 +58,7 @@ public class OverlayTests
         // wrong with the code: the Commander had no overlay and nothing
         // anywhere said so, which is indistinguishable from a defect and is the
         // whole reason that story exists.
-        Overlay.From(new FactoryThatRefuses(), HelpsAnswer(), _recorded.Add);
+        Overlay.From(new FactoryThatRefuses(), Fixtures.HelpsAnswer(), _recorded.Add);
 
         _recorded.ShouldHaveSingleItem().ShouldContain(
             "cannot host an overlay",
@@ -72,7 +71,7 @@ public class OverlayTests
         // The other half, and the one that keeps the log worth reading. A line
         // written on every ordinary startup is a line nobody looks at twice.
         Overlay.From(
-            new FactoryReturning(new OverlayThatRemembers()), HelpsAnswer(), _recorded.Add);
+            new FactoryReturning(new OverlayThatRemembers()), Fixtures.HelpsAnswer(), _recorded.Add);
 
         _recorded.ShouldBeEmpty("nothing was carried on without");
     }
@@ -85,7 +84,7 @@ public class OverlayTests
         // unsupported machine, and this is what stops that being written.
         var broken = new FactoryThatIsBroken();
 
-        Should.Throw<StandInFailure>(() => Overlay.From(broken, HelpsAnswer(), _recorded.Add));
+        Should.Throw<StandInFailure>(() => Overlay.From(broken, Fixtures.HelpsAnswer(), _recorded.Add));
     }
 
     [Fact]
@@ -94,7 +93,7 @@ public class OverlayTests
         // The logic half of the criterion. That a keystroke arrives at all is
         // the hotkey's own business and is asserted where the hotkey is.
         var overlay = new OverlayThatRemembers();
-        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add);
+        var toggling = Overlay.From(new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add);
 
         toggling.Toggle();
         overlay.IsVisible.ShouldBeTrue("the first press should put it on screen");
@@ -113,7 +112,7 @@ public class OverlayTests
         // already on screen when the game was running at startup, so the first
         // thing the Commander presses the key for is to make it go away.
         var overlay = new OverlayThatRemembers();
-        var toggling = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add);
+        var toggling = Overlay.From(new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add);
 
         toggling.Show();
         overlay.IsVisible.ShouldBeTrue();
@@ -128,7 +127,7 @@ public class OverlayTests
     {
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
-            new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add, IsTheGame);
+            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
 
         following.ForegroundIsNow(TheGame);
 
@@ -143,7 +142,7 @@ public class OverlayTests
         // always click-through can never be grabbed and moved.
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
-            new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add, IsTheGame);
+            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
 
         following.ForegroundIsNow(TheGame);
         following.ForegroundIsNow(SomethingElse);
@@ -157,7 +156,7 @@ public class OverlayTests
     {
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
-            new FactoryReturning(overlay), HelpsAnswer(), _recorded.Add, IsTheGame);
+            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
 
         following.ForegroundIsNow(TheGame);
 
@@ -178,7 +177,7 @@ public class OverlayTests
         // machine, whether or not there is an overlay to tell about it.
         var machineThatCannot = new FactoryThatRefuses();
         var following = Overlay.From(
-            machineThatCannot, HelpsAnswer(), _recorded.Add, IsTheGame);
+            machineThatCannot, Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
 
         Should.NotThrow(() => following.ForegroundIsNow(TheGame));
     }
@@ -241,14 +240,4 @@ public class OverlayTests
         public void Hide() => IsVisible = false;
     }
 
-    private static Answer HelpsAnswer()
-    {
-        var registry = new CapabilityRegistry(HelpCapability.Descriptor);
-
-        return new Answer
-        {
-            Descriptor = HelpCapability.Descriptor,
-            Result = new HelpCapability(registry).Answer(),
-        };
-    }
 }

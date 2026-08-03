@@ -35,6 +35,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\D47.Render\D47.Render.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
+        <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
     </ItemGroup>
 
 </Project>

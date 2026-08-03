@@ -13,7 +13,7 @@ first-class surface, not an afterthought.
 |---|---|
 | `D47.slnx` | Solution, at the repo root |
 | `src/` | Production projects, `D47.*` |
-| `tests/` | One `.Tests.csproj` per production project |
+| `tests/` | One `.Tests.csproj` per production project, plus `D47.TestSupport` for machinery more than one of them needs |
 | `assets/` | Icons, images, audio, other media |
 | `docs/` | `decisions.md` and anything else written down |
 | `scripts/` | Provisioning and local automation |

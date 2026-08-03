@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 
 using D47.Render;
+using D47.TestSupport;
 
 namespace D47.GameOverlay.Tests;
 
@@ -223,12 +224,7 @@ internal sealed class RunningOverlay : IDisposable
             throw new InvalidOperationException("The overlay is not running.");
         }
 
-        return dispatcher.Invoke(() =>
-        {
-            List<string> lines = [];
-            Collect(window, lines);
-            return (IReadOnlyList<string>)lines;
-        });
+        return dispatcher.Invoke(() => VisualTree.TextIn(window));
     }
 
     /// <summary>

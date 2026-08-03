@@ -1,9 +1,8 @@
 using System;
 using System.Windows;
 
-using D47.Capabilities;
-using D47.Help;
 using D47.Render;
+using D47.TestSupport;
 
 using Shouldly;
 
@@ -28,7 +27,7 @@ public class GameOverlayTests : GameTest
     [Fact]
     public void GameOverlay_WhenShown_DrawsTheSharedRenderOverTheGame()
     {
-        using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
+        using var overlay = RunningOverlay.ShownOver(Game, Fixtures.HelpsAnswer());
 
         // Read once, while the overlay is up. Asking again from inside a
         // failure message would describe the stack at the moment of the
@@ -66,7 +65,7 @@ public class GameOverlayTests : GameTest
         // mean the test performing a focus steal to prove the overlay does not
         // perform one, and it is the same manoeuvre that made an earlier
         // foreground test vacuous.
-        using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
+        using var overlay = RunningOverlay.ShownOver(Game, Fixtures.HelpsAnswer());
 
         Rect box = overlay.Bounds;
         int x = (int)(box.X + (box.Width / 2));
@@ -95,7 +94,7 @@ public class GameOverlayTests : GameTest
         // The window half. That the application asks for chrome at the right
         // moment is logic and lives in CI; that asking produces furniture on a
         // real transparent, topmost window is this.
-        using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
+        using var overlay = RunningOverlay.ShownOver(Game, Fixtures.HelpsAnswer());
 
         IntPtr before = overlay.Handle;
 
@@ -129,7 +128,7 @@ public class GameOverlayTests : GameTest
         // edges, was stranded away from anything visible.
         //
         // The window keeping the render's shape is what makes both impossible.
-        Answer answer = HelpsAnswer();
+        Answer answer = Fixtures.HelpsAnswer();
         using var overlay = RunningOverlay.ShownOver(Game, answer);
 
         // The size first, worked out independently. The shape assertions below
@@ -176,20 +175,4 @@ public class GameOverlayTests : GameTest
     // panel, and that is a bigger change to how this project's tests are put
     // together than a story should take on its own. See the pull request.
 
-    /// <summary>
-    /// Help's top-level answer, composed the way the panel composes it. Help is
-    /// the only capability that exists, and it needs no microphone, no network
-    /// and no game — which matters here, because everything else in this test
-    /// does need the game and the render must not.
-    /// </summary>
-    private static Answer HelpsAnswer()
-    {
-        var registry = new CapabilityRegistry(HelpCapability.Descriptor);
-
-        return new Answer
-        {
-            Descriptor = HelpCapability.Descriptor,
-            Result = new HelpCapability(registry).Answer(),
-        };
-    }
 }

@@ -234,6 +234,11 @@ The tiers drive the project layout, not just test selection.
 - **One `.Tests.csproj` per production `.csproj`.** The production project's
   tier determines the kind of tests in its pair. A project whose tests would
   span two tiers is two projects.
+- **One `.Tests.csproj` per production `.csproj` is a guideline, not a law.**
+  Where a differently shaped test project makes sense, make one.
+  `D47.TestSupport` pairs with nothing and holds machinery more than one test
+  project needs; the alternative was linked source files, which is the same
+  coupling with worse tooling.
 - **Projects split by tier, never by capability.** Capabilities share a project;
   a new one is created only when its tests would land in a different tier, or to
   keep the capability contract free of anything that consumes it. One project per
