@@ -80,6 +80,45 @@ public sealed class EliteWindow
     }
 
     /// <summary>
+    /// Whether a window belongs to the running game.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Asked by process rather than by comparing handles. The game has more
+    /// than one window over its lifetime — a launcher, a splash, the game
+    /// itself — and any of them being in front means the Commander is looking
+    /// at Elite rather than at us.
+    /// </remarks>
+    /// <param name="window">The window to ask about.</param>
+    /// <returns>Whether the game owns it.</returns>
+    public static bool IsTheGame(IntPtr window)
+    {
+        if (window == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        // A zero thread id means the window is gone, which is not the game.
+        if (GetWindowThreadProcessId(window, out uint owner) == 0)
+        {
+            return false;
+        }
+
+        foreach (Process game in Process.GetProcessesByName(GameProcess))
+        {
+            using (game)
+            {
+                if (game.Id == owner)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// A Win32 <c>RECT</c>, which is two corners where WPF's
     /// <see cref="Rect"/> is a corner and a size.
     /// </summary>
@@ -99,4 +138,8 @@ public sealed class EliteWindow
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr window, out Box box);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
 }

@@ -1,3 +1,5 @@
+using System.Windows;
+
 using D47.Capabilities;
 using D47.Help;
 using D47.Render;
@@ -49,6 +51,41 @@ public class GameOverlayTests : GameTest
         Screen.DepthOf(overlay.Handle).ShouldBeLessThan(
             Screen.DepthOf(Game.Handle),
             $"The overlay should be in front of the game.{stack}");
+    }
+
+    [Fact]
+    public void GameOverlay_WhileEliteHasFocus_PassesAllPointerInputThroughToTheGame()
+    {
+        // The effect half of the criterion. Whether the application decides
+        // correctly when Elite comes forward is logic, asserted in CI against a
+        // stand-in; whether the decision does anything is this, and it needs a
+        // real window over a real game.
+        //
+        // Deliberately not driven by giving Elite the foreground. That would
+        // mean the test performing a focus steal to prove the overlay does not
+        // perform one, and it is the same manoeuvre that made an earlier
+        // foreground test vacuous.
+        using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
+
+        Rect box = overlay.Bounds;
+        int x = (int)(box.X + (box.Width / 2));
+        int y = (int)(box.Y + (box.Height / 2));
+
+        Screen.OwnerOf(x, y).ShouldBe(
+            overlay.Handle,
+            $"before passing input through, a click at ({x},{y}) belongs to the overlay");
+
+        overlay.PassInputThrough(true);
+
+        Screen.OwnerOf(x, y).ShouldNotBe(
+            overlay.Handle,
+            $"passing input through, the same pixel should belong to whatever is behind it{Screen.DescribeStack()}");
+
+        overlay.PassInputThrough(false);
+
+        Screen.OwnerOf(x, y).ShouldBe(
+            overlay.Handle,
+            "and it should switch back, on the same window, without being recreated");
     }
 
     // There is deliberately no test here for the overlay leaving the foreground

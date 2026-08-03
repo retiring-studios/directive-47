@@ -21,10 +21,12 @@ namespace D47.Panel;
 internal sealed class Overlay
 {
     private readonly IGameOverlay? _overlay;
+    private readonly Func<IntPtr, bool> _isTheGame;
 
-    private Overlay(IGameOverlay? overlay)
+    private Overlay(IGameOverlay? overlay, Func<IntPtr, bool> isTheGame)
     {
         _overlay = overlay;
+        _isTheGame = isTheGame;
     }
 
     /// <summary>
@@ -47,13 +49,49 @@ internal sealed class Overlay
     /// </remarks>
     /// <param name="overlays">Where an overlay comes from.</param>
     /// <param name="answer">What it should render.</param>
+    /// <param name="isTheGame">
+    /// Whether a given window belongs to Elite. Defaults to asking the real
+    /// game.
+    /// </param>
     /// <returns>The overlay, or one that will quietly do nothing.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="overlays"/> is null.</exception>
-    internal static Overlay From(IGameOverlayFactory overlays, Answer answer)
+    internal static Overlay From(
+        IGameOverlayFactory overlays,
+        Answer answer,
+        Func<IntPtr, bool>? isTheGame = null)
     {
         ArgumentNullException.ThrowIfNull(overlays);
 
-        return new Overlay(overlays.Create(answer));
+        return new Overlay(overlays.Create(answer), isTheGame ?? EliteWindow.IsTheGame);
+    }
+
+    /// <summary>
+    /// Takes the mouse out of the way when the game comes forward, and takes it
+    /// back when the game goes away.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Both halves matter. While Elite is in front, a click over the overlay
+    /// has to reach the cockpit underneath — an overlay that swallows one is
+    /// worse than no overlay. While it is not, the overlay has to be reachable,
+    /// or there is nothing for a Commander to grab and move.
+    /// </para>
+    /// <para>
+    /// Told rather than asked. Windows says when the foreground changes and the
+    /// application reacts; polling for it would be a timer that is either
+    /// slower than an alt-tab or busy for no reason.
+    /// </para>
+    /// </remarks>
+    /// <param name="window">Whatever is now in front.</param>
+    internal void ForegroundIsNow(IntPtr window)
+    {
+        if (_overlay is not { } overlay)
+        {
+            return;
+        }
+
+        overlay.PassesInputThrough = _isTheGame(window);
     }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using System;
+
 using D47.Capabilities;
 using D47.GameOverlay;
 using D47.Help;
@@ -88,6 +90,49 @@ public class OverlayTests
         overlay.IsVisible.ShouldBeFalse("the first press after startup should hide it");
     }
 
+    [Fact]
+    public void GameOverlay_WhileEliteHasFocus_PassesAllPointerInputThroughToTheGame()
+    {
+        var overlay = new OverlayThatRemembers();
+        var following = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), IsTheGame);
+
+        following.ForegroundIsNow(TheGame);
+
+        overlay.PassesInputThrough.ShouldBeTrue(
+            "a click over the overlay has to reach the cockpit underneath it");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenSomethingElseHasFocus_TakesTheMouseBack()
+    {
+        // The half that makes the chrome possible at all. An overlay that is
+        // always click-through can never be grabbed and moved.
+        var overlay = new OverlayThatRemembers();
+        var following = Overlay.From(new FactoryReturning(overlay), HelpsAnswer(), IsTheGame);
+
+        following.ForegroundIsNow(TheGame);
+        following.ForegroundIsNow(SomethingElse);
+
+        overlay.PassesInputThrough.ShouldBeFalse(
+            "with the game not in front there is nothing to pass input through to");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenTheMachineCannotHostOne_IgnoresTheForegroundEntirely()
+    {
+        // The absent case reaches this path too: the foreground changes on any
+        // machine, whether or not there is an overlay to tell about it.
+        var machineThatCannot = new FactoryThatRefuses();
+        var following = Overlay.From(machineThatCannot, HelpsAnswer(), IsTheGame);
+
+        Should.NotThrow(() => following.ForegroundIsNow(TheGame));
+    }
+
+    private static readonly IntPtr TheGame = new(1);
+    private static readonly IntPtr SomethingElse = new(2);
+
+    private static bool IsTheGame(IntPtr window) => window == TheGame;
+
     /// <summary>
     /// A machine that cannot composite, without breaking one.
     /// </summary>
@@ -131,6 +176,8 @@ public class OverlayTests
     private sealed class OverlayThatRemembers : IGameOverlay
     {
         public bool IsVisible { get; private set; }
+
+        public bool PassesInputThrough { get; set; }
 
         public void Show() => IsVisible = true;
 
