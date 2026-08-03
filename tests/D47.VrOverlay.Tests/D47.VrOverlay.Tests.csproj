@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 2, and hardware.slnf only. What is left to assert once the
+        arithmetic lives in D47.Placement.Tests and the carry-on-without-it
+        logic lives in D47.Panel.Tests is what a real headset does with a real
+        overlay, and there is no stand-in for that which would make the claim
+        mean anything.
+
+        The same rule D47.GameOverlay.Tests follows applies here: these do not
+        skip when the hardware is absent. A skip would be a green build that
+        checked nothing. See the Test tiers section of docs/decisions.md.
+
+        xUnit v3, not v2 — the SDK template still scaffolds v2, and v3 test
+        projects are executables.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.VrOverlay\D47.VrOverlay.csproj" />
+        <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
+    </ItemGroup>
+
+</Project>
