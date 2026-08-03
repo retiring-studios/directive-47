@@ -100,6 +100,18 @@ internal static class Screen
         WindowFromPoint(new NativePoint { X = x, Y = y });
 
     /// <summary>
+    /// The window Windows currently considers foreground.
+    ///
+    /// <para>
+    /// Asked of the operating system, because being in front is its opinion and
+    /// not something an application can report about itself. It is the whole of
+    /// what "the overlay must not steal the foreground" reduces to.
+    /// </para>
+    /// </summary>
+    /// <returns>The foreground window, or zero when nothing holds it.</returns>
+    internal static IntPtr Foreground() => GetForegroundWindow();
+
+    /// <summary>
     /// A window's title, for saying which window is meant. Empty when it has
     /// none, which plenty of real windows do.
     /// </summary>
@@ -191,4 +203,8 @@ internal static class Screen
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern IntPtr WindowFromPoint(NativePoint point);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr GetForegroundWindow();
 }
