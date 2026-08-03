@@ -49,6 +49,19 @@ public sealed class EliteOverlay : IGameOverlay
     }
 
     /// <inheritdoc />
+    ///
+    /// <remarks>
+    /// The window's own <c>Opacity</c>, which WPF applies to everything drawn
+    /// in it. Nothing inside the render knows this happened, which is the point
+    /// — the panel shows the same render and is fully opaque.
+    /// </remarks>
+    public double Opacity
+    {
+        get => _window.Opacity;
+        set => _window.Opacity = value;
+    }
+
+    /// <inheritdoc />
     public void Show()
     {
         if (EliteWindow.Find() is { } game)

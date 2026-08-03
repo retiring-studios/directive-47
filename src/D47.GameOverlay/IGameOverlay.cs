@@ -45,6 +45,24 @@ public interface IGameOverlay
     bool ShowsChrome { get; set; }
 
     /// <summary>
+    /// How solid the overlay is, from 0 for invisible to 1 for opaque.
+    ///
+    /// <para>
+    /// The whole surface, text included. One number for all of it is what a
+    /// window does unaided; the alternative — no background on the render, and
+    /// each surface supplying its own backdrop so the text stays solid at every
+    /// setting — was considered and not taken, because it moves the backdrop out
+    /// of the render for a benefit nobody has found they need yet.
+    /// </para>
+    ///
+    /// <para>
+    /// Not <c>AllowsTransparency</c>, which is the capability to have per-pixel
+    /// alpha at all and is already on. This is the knob.
+    /// </para>
+    /// </summary>
+    double Opacity { get; set; }
+
+    /// <summary>
     /// Puts the overlay over the game.
     ///
     /// <para>
