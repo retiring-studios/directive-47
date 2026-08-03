@@ -20,6 +20,18 @@ public interface IGameOverlay
     bool IsVisible { get; }
 
     /// <summary>
+    /// Whether the mouse goes straight through to whatever is underneath.
+    ///
+    /// <para>
+    /// True while Elite is in front, because a rectangle that quietly swallows
+    /// a click is not something to put on a cockpit. False when it is not,
+    /// because an overlay nothing can ever click is an overlay nothing can ever
+    /// grab and move.
+    /// </para>
+    /// </summary>
+    bool PassesInputThrough { get; set; }
+
+    /// <summary>
     /// Puts the overlay over the game.
     ///
     /// <para>

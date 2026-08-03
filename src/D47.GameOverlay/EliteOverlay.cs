@@ -35,6 +35,13 @@ public sealed class EliteOverlay : IGameOverlay
     public bool IsVisible => _window.IsVisible;
 
     /// <inheritdoc />
+    public bool PassesInputThrough
+    {
+        get => _window.PassesInputThrough;
+        set => _window.PassesInputThrough = value;
+    }
+
+    /// <inheritdoc />
     public void Show()
     {
         if (EliteWindow.Find() is { } game)

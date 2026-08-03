@@ -84,6 +84,22 @@ internal static class Screen
     }
 
     /// <summary>
+    /// Which window owns a pixel — the window a click there would go to.
+    ///
+    /// <para>
+    /// This is the question "does input pass through" actually reduces to.
+    /// Windows skips click-through windows when answering it, so a window that
+    /// is visibly on top of a pixel and does not own it is one the mouse goes
+    /// straight past.
+    /// </para>
+    /// </summary>
+    /// <param name="x">Screen x.</param>
+    /// <param name="y">Screen y.</param>
+    /// <returns>The window that would receive a click there.</returns>
+    internal static IntPtr OwnerOf(int x, int y) =>
+        WindowFromPoint(new NativePoint { X = x, Y = y });
+
+    /// <summary>
     /// A window's title, for saying which window is meant. Empty when it has
     /// none, which plenty of real windows do.
     /// </summary>
@@ -132,6 +148,13 @@ internal static class Screen
     /// <see cref="Rect"/> is a corner and a size.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        internal int X;
+        internal int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct Box
     {
         internal int Left;
@@ -164,4 +187,8 @@ internal static class Screen
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern int GetWindowText(IntPtr window, [Out] char[] text, int capacity);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr WindowFromPoint(NativePoint point);
 }

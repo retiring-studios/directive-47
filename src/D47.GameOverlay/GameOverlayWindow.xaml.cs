@@ -37,7 +37,19 @@ public partial class GameOverlayWindow : Window
     /// </summary>
     private const uint LeaveTheFocusAlone = 0x0010;
 
+    /// <summary>
+    /// The index of a window's extended style, for reading and writing it.
+    /// </summary>
+    private const int ExtendedStyle = -20;
+
+    /// <summary>
+    /// <c>WS_EX_TRANSPARENT</c>. The mouse is not offered to this window at
+    /// all — Windows looks straight past it to whatever is behind.
+    /// </summary>
+    private const long PassesThrough = 0x00000020;
+
     private EliteWindow? _game;
+    private bool _passesInputThrough;
 
     /// <summary>
     /// Creates the overlay around an answer to show.
@@ -47,6 +59,33 @@ public partial class GameOverlayWindow : Window
     {
         InitializeComponent();
         View.DataContext = answer;
+    }
+
+    /// <summary>
+    /// Whether the mouse goes straight through to the game.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// A window style rather than anything WPF knows about, toggled on the live
+    /// window. The window is never recreated to change it — measured in the
+    /// spike, which set and cleared this flag and watched the pixel change hands
+    /// while the handle stayed the same.
+    ///
+    /// <para>
+    /// Remembered even before there is a handle to apply it to, because the
+    /// composition decides where the foreground is before the overlay has ever
+    /// been shown.
+    /// </para>
+    /// </remarks>
+    public bool PassesInputThrough
+    {
+        get => _passesInputThrough;
+
+        set
+        {
+            _passesInputThrough = value;
+            ApplyPassingThrough();
+        }
     }
 
     /// <summary>
@@ -97,6 +136,29 @@ public partial class GameOverlayWindow : Window
         {
             PlaceOver(game);
         }
+
+        // Whatever was decided before there was a handle to decide it on.
+        ApplyPassingThrough();
+    }
+
+    /// <summary>
+    /// Puts the current decision onto the window, if there is a window yet.
+    /// </summary>
+    private void ApplyPassingThrough()
+    {
+        IntPtr handle = new WindowInteropHelper(this).Handle;
+
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        long style = GetWindowLongPtr(handle, ExtendedStyle).ToInt64();
+
+        SetWindowLongPtr(
+            handle,
+            ExtendedStyle,
+            new IntPtr(_passesInputThrough ? style | PassesThrough : style & ~PassesThrough));
     }
 
     /// <summary>
@@ -123,6 +185,16 @@ public partial class GameOverlayWindow : Window
     // System32 rather than the default probing order: user32 is an operating
     // system library, and naming where it comes from is what stops a DLL of the
     // same name beside the executable being loaded instead.
+    // The Ptr forms, not the plain ones. On 64-bit Windows an extended style is
+    // a pointer-sized value, and the 32-bit calls silently truncate it.
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowLongPtrW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SetWindowLongPtrW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr SetWindowLongPtr(IntPtr window, int index, IntPtr value);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [return: MarshalAs(UnmanagedType.Bool)]

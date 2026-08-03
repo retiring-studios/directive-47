@@ -121,6 +121,20 @@ internal sealed class RunningOverlay : IDisposable
         new(game, answer);
 
     /// <summary>
+    /// Turns click-through on or off, on the thread that owns the window.
+    /// </summary>
+    /// <param name="through">Whether the mouse should go straight past it.</param>
+    internal void PassInputThrough(bool through)
+    {
+        if (_dispatcher is not { } dispatcher || _window is not { } window)
+        {
+            throw new InvalidOperationException("The overlay is not running.");
+        }
+
+        dispatcher.Invoke(() => window.PassesInputThrough = through);
+    }
+
+    /// <summary>
     /// Every line of text the overlay put on screen, top to bottom.
     ///
     /// <para>

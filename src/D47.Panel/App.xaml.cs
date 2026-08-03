@@ -66,6 +66,7 @@ internal sealed partial class App : Application, IDisposable
     private Forms.ContextMenuStrip? _trayMenu;
     private Overlay? _overlay;
     private Hotkey? _hotkey;
+    private ForegroundWatcher? _foreground;
 
     /// <summary>
     /// Puts the icon in the notification area, before any window is shown.
@@ -116,7 +117,23 @@ internal sealed partial class App : Application, IDisposable
         _overlay = Overlay.From(new GameOverlayFactory(), answer);
         _overlay.Show();
 
+        FollowTheForeground();
         ClaimTheHotkey();
+    }
+
+    /// <summary>
+    /// Keeps the overlay out of the mouse's way while Elite is in front, and in
+    /// it when Elite is not.
+    /// </summary>
+    private void FollowTheForeground()
+    {
+        // Asked once before anything changes. The game is usually already in
+        // front when Directive 47 starts — it has to be running for there to be
+        // an overlay at all — and waiting for a change would leave the overlay
+        // eating clicks until the Commander alt-tabbed for some other reason.
+        _overlay?.ForegroundIsNow(ForegroundWatcher.InFrontNow());
+
+        _foreground = ForegroundWatcher.Watch(window => _overlay?.ForegroundIsNow(window));
     }
 
     /// <summary>
@@ -326,6 +343,11 @@ internal sealed partial class App : Application, IDisposable
         // leaving anything behind.
         _hotkey?.Dispose();
         _hotkey = null;
+
+        // The hook holds a pointer to a callback of ours. Leaving it installed
+        // past our own lifetime is how a shutdown turns into a crash.
+        _foreground?.Dispose();
+        _foreground = null;
     }
 
     /// <summary>
