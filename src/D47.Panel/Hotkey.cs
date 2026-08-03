@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -51,8 +50,11 @@ internal sealed class Hotkey : IDisposable
     /// </summary>
     private const int TheOnlyOne = 1;
 
-
-
+    /// <summary>
+    /// What <c>RegisterHotKey</c> calls the modifiers. Its own numbers, not
+    /// WPF's <see cref="ModifierKeys"/>, which is why <see cref="ToNative"/>
+    /// exists rather than a cast.
+    /// </summary>
     private const uint Alt = 0x0001;
     private const uint Control = 0x0002;
     private const uint Shift = 0x0004;
@@ -101,8 +103,7 @@ internal sealed class Hotkey : IDisposable
     /// Must be called on a thread with a running message loop, because that is
     /// what dispatches the message Windows posts.
     /// </remarks>
-    /// <param name="modifiers">The modifiers to hold.</param>
-    /// <param name="key">The key to press.</param>
+    /// <param name="combination">The combination to claim.</param>
     /// <param name="pressed">What to do when it arrives.</param>
     /// <returns>
     /// The registration, which the caller owns and must dispose, or an absence
@@ -122,9 +123,12 @@ internal sealed class Hotkey : IDisposable
     /// point of handing them back. The application used to write its own
     /// sentence naming <c>Ctrl</c>+<c>Alt</c>+<c>D</c> — a second copy of a
     /// value it had passed in, free to disagree with what was actually
-    /// attempted. Described from the arguments, it cannot.
+    /// attempted. Described from the argument, it cannot.
     /// </para>
     /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="combination"/> is null.
+    /// </exception>
     /// <exception cref="InvalidOperationException">
     /// The combination could not be claimed for any other reason.
     /// </exception>
@@ -138,12 +142,16 @@ internal sealed class Hotkey : IDisposable
             + "Perhaps, which it cannot see through. Both failure paths still dispose "
             + "explicitly before returning, and the successful one is the caller's from "
             + "the moment it is returned.")]
-    internal static Perhaps<Hotkey> TryRegister(ModifierKeys modifiers, Key key, Action pressed)
+    internal static Perhaps<Hotkey> TryRegister(Combination combination, Action pressed)
     {
+        ArgumentNullException.ThrowIfNull(combination);
+
         var messages = new HwndSource(
             new HwndSourceParameters("Directive 47 hotkeys") { WindowStyle = Invisible });
 
-        var hotkey = new Hotkey(messages, pressed, KeyInterop.VirtualKeyFromKey(key));
+        var hotkey = new Hotkey(
+            messages, pressed, KeyInterop.VirtualKeyFromKey(combination.Key));
+
         messages.AddHook(hotkey.OnMessage);
 
         // Deliberately without MOD_NOREPEAT, which Windows offers for exactly
@@ -151,12 +159,12 @@ internal sealed class Hotkey : IDisposable
         // hotkey invisible to synthesized input — with it, an injected press
         // produces no message at all, not merely no repeats — so it bought
         // correct behaviour at the price of never being able to test that the
-        // hotkey arrives. RepeatGuard does the same job where a test can see it.
+        // hotkey arrives. HeldKey does the same job where a test can see it.
         if (RegisterHotKey(
             messages.Handle,
             TheOnlyOne,
-            ToNative(modifiers),
-            KeyInterop.VirtualKeyFromKey(key)))
+            ToNative(combination.Modifiers),
+            KeyInterop.VirtualKeyFromKey(combination.Key)))
         {
             return Perhaps<Hotkey>.Of(hotkey);
         }
@@ -169,15 +177,14 @@ internal sealed class Hotkey : IDisposable
             return Perhaps<Hotkey>.Absent(
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Could not claim {Describe(modifiers, key)} — another application already "
+                    $"Could not claim {combination} — another application already "
                     + $"owns it. The overlay cannot be toggled by hotkey this session."));
         }
 
         throw new InvalidOperationException(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"Could not claim {Describe(modifiers, key)}, and not because something "
-                + $"else owns it."),
+                $"Could not claim {combination}, and not because something else owns it."),
             new Win32Exception(failure));
     }
 
@@ -277,46 +284,6 @@ internal sealed class Hotkey : IDisposable
         }
 
         return native;
-    }
-
-    /// <summary>
-    /// The combination, spelled the way a person writes it.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// Built rather than taken from <c>ModifierKeys.ToString()</c>, which
-    /// spells the flags in the enum's own order — "Alt, Control, Shift" — and
-    /// would put the message's wording at the mercy of how somebody declared
-    /// an enum.
-    /// </remarks>
-    /// <param name="modifiers">The modifiers held.</param>
-    /// <param name="key">The key pressed.</param>
-    /// <returns>Something like <c>Ctrl+Alt+D</c>.</returns>
-    private static string Describe(ModifierKeys modifiers, Key key)
-    {
-        var described = new StringBuilder();
-
-        if (modifiers.HasFlag(ModifierKeys.Control))
-        {
-            described.Append("Ctrl+");
-        }
-
-        if (modifiers.HasFlag(ModifierKeys.Alt))
-        {
-            described.Append("Alt+");
-        }
-
-        if (modifiers.HasFlag(ModifierKeys.Shift))
-        {
-            described.Append("Shift+");
-        }
-
-        if (modifiers.HasFlag(ModifierKeys.Windows))
-        {
-            described.Append("Win+");
-        }
-
-        return described.Append(key).ToString();
     }
 
     // System32 rather than the default probing order: user32 is an operating
