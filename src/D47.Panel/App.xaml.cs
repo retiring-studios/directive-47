@@ -165,7 +165,8 @@ internal sealed partial class App : Application, IDisposable
         MainWindow = new MainWindow(answer);
         MainWindow.Show();
 
-        _overlay = Overlay.From(new GameOverlayFactory(), answer, _log.Warning);
+        _overlay = Overlay.From(
+            new GameOverlayFactory(), answer, Store.Open(_log.Warning), _log.Warning);
         _overlay.Show();
 
         FollowTheForeground();

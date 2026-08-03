@@ -13,8 +13,9 @@ namespace D47.Panel.Tests;
 
 /// <summary>
 /// What the application does when the machine cannot host an overlay, what it
-/// does when the overlay is broken, and which way a toggle goes. Those are
-/// three different things and this is the only place any of them is asserted.
+/// does when the overlay is broken, which way a toggle goes, and how see-through
+/// the overlay starts. Those are four different things and this is the only
+/// place any of them is asserted.
 ///
 /// <para>
 /// Tier 1 and in process. Nothing here needs the game, a desktop, or a window
@@ -34,10 +35,12 @@ public class OverlayTests
     [Fact]
     public void GameOverlay_WhenItCannotBeCreated_IsAbsentNotFailed()
     {
+        using var remembered = new TemporaryStore();
         var machineThatCannot = new FactoryThatRefuses();
 
         Overlay overlay = Should.NotThrow(
-            () => Overlay.From(machineThatCannot, Fixtures.HelpsAnswer(), _recorded.Add));
+            () => Overlay.From(
+                machineThatCannot, Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no game running, for a reason that has nothing to do
@@ -58,7 +61,10 @@ public class OverlayTests
         // wrong with the code: the Commander had no overlay and nothing
         // anywhere said so, which is indistinguishable from a defect and is the
         // whole reason that story exists.
-        Overlay.From(new FactoryThatRefuses(), Fixtures.HelpsAnswer(), _recorded.Add);
+        using var remembered = new TemporaryStore();
+
+        Overlay.From(
+            new FactoryThatRefuses(), Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add);
 
         _recorded.ShouldHaveSingleItem().ShouldContain(
             "cannot host an overlay",
@@ -70,8 +76,13 @@ public class OverlayTests
     {
         // The other half, and the one that keeps the log worth reading. A line
         // written on every ordinary startup is a line nobody looks at twice.
+        using var remembered = new TemporaryStore();
+
         Overlay.From(
-            new FactoryReturning(new OverlayThatRemembers()), Fixtures.HelpsAnswer(), _recorded.Add);
+            new FactoryReturning(new OverlayThatRemembers()),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
 
         _recorded.ShouldBeEmpty("nothing was carried on without");
     }
@@ -82,9 +93,11 @@ public class OverlayTests
         // The criterion that matters more than the one above it. "Absent, not
         // failed" is one try/catch away from reporting our own defects as an
         // unsupported machine, and this is what stops that being written.
+        using var remembered = new TemporaryStore();
         var broken = new FactoryThatIsBroken();
 
-        Should.Throw<StandInFailure>(() => Overlay.From(broken, Fixtures.HelpsAnswer(), _recorded.Add));
+        Should.Throw<StandInFailure>(
+            () => Overlay.From(broken, Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add));
     }
 
     [Fact]
@@ -92,8 +105,10 @@ public class OverlayTests
     {
         // The logic half of the criterion. That a keystroke arrives at all is
         // the hotkey's own business and is asserted where the hotkey is.
+        using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
-        var toggling = Overlay.From(new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add);
+        var toggling = Overlay.From(
+            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add);
 
         toggling.Toggle();
         overlay.IsVisible.ShouldBeTrue("the first press should put it on screen");
@@ -111,8 +126,10 @@ public class OverlayTests
         // The case a toggle written as "show it" gets wrong. The overlay is
         // already on screen when the game was running at startup, so the first
         // thing the Commander presses the key for is to make it go away.
+        using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
-        var toggling = Overlay.From(new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add);
+        var toggling = Overlay.From(
+            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add);
 
         toggling.Show();
         overlay.IsVisible.ShouldBeTrue();
@@ -125,9 +142,14 @@ public class OverlayTests
     [Fact]
     public void GameOverlay_WhileEliteHasFocus_PassesAllPointerInputThroughToTheGame()
     {
+        using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
-            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add,
+            IsTheGame);
 
         following.ForegroundIsNow(TheGame);
 
@@ -140,9 +162,14 @@ public class OverlayTests
     {
         // The half that makes the chrome possible at all. An overlay that is
         // always click-through can never be grabbed and moved.
+        using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
-            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add,
+            IsTheGame);
 
         following.ForegroundIsNow(TheGame);
         following.ForegroundIsNow(SomethingElse);
@@ -154,9 +181,14 @@ public class OverlayTests
     [Fact]
     public void GameOverlay_WhenEliteLosesFocus_ShowsItsChromeForMovingAndResizing()
     {
+        using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
-            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add,
+            IsTheGame);
 
         following.ForegroundIsNow(TheGame);
 
@@ -175,11 +207,124 @@ public class OverlayTests
     {
         // The absent case reaches this path too: the foreground changes on any
         // machine, whether or not there is an overlay to tell about it.
+        using var remembered = new TemporaryStore();
         var machineThatCannot = new FactoryThatRefuses();
         var following = Overlay.From(
-            machineThatCannot, Fixtures.HelpsAnswer(), _recorded.Add, IsTheGame);
+            machineThatCannot, Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add, IsTheGame);
 
         Should.NotThrow(() => following.ForegroundIsNow(TheGame));
+    }
+
+    [Fact]
+    public void GameOverlay_WhenNothingWasEverRemembered_StartsSeeThroughRatherThanSolid()
+    {
+        // A solid dark box over the cockpit is what this story is about, so the
+        // setting has to ship doing something visible. 0.75 is where it starts,
+        // not a finding about where it belongs — see
+        // [#95](https://github.com/retiring-studios/directive-47/issues/95).
+        using var remembered = new TemporaryStore();
+        var overlay = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        overlay.Opacity.ShouldBe(0.75, "what is under the overlay has to stay readable");
+    }
+
+    [Fact]
+    public void GameOverlay_OnRestart_IsAsSeeThroughAsItWasLeft()
+    {
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write("game overlay opacity", "0.4");
+
+        var overlay = new OverlayThatRemembers();
+
+        // A second open is the next run. The setting is only worth having if it
+        // survives one.
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        overlay.Opacity.ShouldBe(0.4);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("half")]
+    [InlineData("0,4")]
+    [InlineData("1.5")]
+    [InlineData("-0.1")]
+    public void GameOverlay_WhenWhatWasRememberedIsNotAnOpacity_StartsAtTheDefault(
+        string nonsense)
+    {
+        // The file is indented JSON in a folder the Commander can open, so
+        // somebody editing it by hand is the expected way this value changes
+        // until there is a settings page. Anything but a number from 0 to 1 is
+        // not an opacity — including one written in a language whose decimal
+        // separator is a comma, because the file has to mean the same thing on
+        // every machine.
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write("game overlay opacity", nonsense);
+
+        var overlay = new OverlayThatRemembers();
+
+        Overlay.From(
+            new FactoryReturning(overlay),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        overlay.Opacity.ShouldBe(0.75, "an unusable setting is no answer, not a failure");
+
+        _recorded.ShouldHaveSingleItem().ShouldContain(
+            "game overlay opacity",
+            customMessage: "a setting nobody could use is exactly the kind of absence to record");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenWhatWasRememberedIsNotAnOpacity_QuotesWhatItFound()
+    {
+        // The fix is a line in a file, and nobody can correct a line they cannot
+        // identify.
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write("game overlay opacity", "half");
+
+        Overlay.From(
+            new FactoryReturning(new OverlayThatRemembers()),
+            Fixtures.HelpsAnswer(),
+            remembered.Open(),
+            _recorded.Add);
+
+        _recorded.ShouldHaveSingleItem().ShouldContain("\"half\"");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenTheMachineCannotHostOne_SaysNothingAboutTheSetting()
+    {
+        // The absent case reaches this path too, and it has nothing to apply an
+        // opacity to. One absence is worth reporting — there is no overlay — and
+        // a second line about a setting that would have gone onto a surface
+        // nobody has is noise on top of it.
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write("game overlay opacity", "half");
+
+        Should.NotThrow(
+            () => Overlay.From(
+                new FactoryThatRefuses(),
+                Fixtures.HelpsAnswer(),
+                remembered.Open(),
+                _recorded.Add));
+
+        _recorded.ShouldHaveSingleItem().ShouldContain("cannot host an overlay");
     }
 
     private static readonly IntPtr TheGame = new(1);
@@ -234,6 +379,8 @@ public class OverlayTests
         public bool PassesInputThrough { get; set; }
 
         public bool ShowsChrome { get; set; }
+
+        public double Opacity { get; set; }
 
         public void Show() => IsVisible = true;
 
