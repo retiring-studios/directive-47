@@ -61,6 +61,19 @@ public partial class GameOverlayWindow : Window
     private double _shape;
 
     /// <summary>
+    /// Where the overlay has been put, in physical screen pixels, or null while
+    /// it has never been put anywhere.
+    ///
+    /// <para>
+    /// Null is the whole of "never been placed", and it is what makes the
+    /// game's corner a fallback rather than the answer. It fills in from two
+    /// directions — <see cref="PlaceAt"/> on the way up, from whatever the last
+    /// run wrote down, and the end of every drag after that.
+    /// </para>
+    /// </summary>
+    private Point? _putAt;
+
+    /// <summary>
     /// Creates the overlay around an answer to show.
     /// </summary>
     /// <param name="answer">What to render.</param>
@@ -191,6 +204,92 @@ public partial class GameOverlayWindow : Window
     }
 
     /// <summary>
+    /// Where the window's top-left corner is, in physical screen pixels.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Asked of Windows rather than computed from <c>Left</c> and <c>Top</c>.
+    /// Those are device-independent, so turning them into pixels means applying
+    /// a scale factor that is itself per-monitor — arithmetic that is wrong in
+    /// exactly the case this feature has to survive, which is a window on the
+    /// second screen. Before there is a window to ask, the answer is wherever
+    /// it has been told to go.
+    /// </remarks>
+    public Point Position =>
+        GetWindowRect(new WindowInteropHelper(this).Handle, out Box box)
+            ? new Point(box.Left, box.Top)
+            : _putAt ?? default;
+
+    /// <summary>
+    /// How much bigger than the render's own size the window has been made.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Both widths are device-independent, so the ratio between them is not in
+    /// any units at all — which is the reason a scale is what gets remembered
+    /// rather than a width.
+    /// </remarks>
+    public double Scale => Width / View.Width;
+
+    /// <summary>
+    /// Raised once the Commander has finished moving or resizing the overlay.
+    /// </summary>
+    public event EventHandler? MovedOrResized;
+
+    /// <summary>
+    /// Puts the window at a given corner and size, instead of over the game.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The size is applied here and the corner is only remembered, because a
+    /// window without a handle cannot be moved and this is normally called
+    /// before there is one. <c>OnSourceInitialized</c> is where it lands, which
+    /// is also what keeps the overlay from appearing at the game's corner first
+    /// and stepping across the screen afterwards.
+    /// </para>
+    /// <para>
+    /// A scale that would make the overlay smaller than the grip is worth is
+    /// pulled back up to that size, by the same rule and the same number the
+    /// grip itself enforces. A remembered value nobody could grab is not a
+    /// reason to refuse to start.
+    /// </para>
+    /// </remarks>
+    /// <param name="corner">Its top-left corner, in physical screen pixels.</param>
+    /// <param name="scale">How much bigger than the render's own size to be.</param>
+    public void PlaceAt(Point corner, double scale)
+    {
+        _putAt = corner;
+
+        MakeItThisWide(View.Width * scale);
+
+        if (new WindowInteropHelper(this).Handle != IntPtr.Zero)
+        {
+            PutItWhereItGoes();
+        }
+    }
+
+    /// <summary>
+    /// Makes the window a given width, keeping the render's shape and never
+    /// going below the size a grip is worth having.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The one place the overlay's single degree of freedom is turned into two
+    /// numbers. Both callers used to do this themselves, which made "a
+    /// remembered size obeys the same floor the grip does" a claim in a comment
+    /// rather than something the code could not get wrong.
+    /// </remarks>
+    /// <param name="width">How wide to make it.</param>
+    private void MakeItThisWide(double width)
+    {
+        double wide = Math.Max(SmallestWorthHaving, width);
+
+        Width = wide;
+        Height = wide * _shape;
+    }
+
+    /// <summary>
     /// Drags the whole overlay by its bar.
     /// </summary>
     ///
@@ -204,11 +303,47 @@ public partial class GameOverlayWindow : Window
     /// <param name="e">The press.</param>
     private void MoveTheOverlay(object sender, MouseButtonEventArgs e)
     {
-        if (e.LeftButton == MouseButtonState.Pressed)
+        if (e.LeftButton != MouseButtonState.Pressed)
         {
-            DragMove();
+            return;
         }
+
+        DragMove();
+
+        // After it returns, not during. DragMove runs its own message loop and
+        // comes back when the button does, so this is the end of one gesture
+        // rather than every position the overlay passed through on the way.
+        Settled();
     }
+
+    /// <summary>
+    /// Notices that the overlay has come to rest somewhere.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The corner is taken from the window rather than tracked through the
+    /// gesture, so what gets remembered is where Windows actually put it. It is
+    /// kept as well as announced, because the next showing has to leave it here
+    /// instead of snapping it back to wherever the last run said.
+    /// </remarks>
+    private void Settled()
+    {
+        _putAt = Position;
+
+        MovedOrResized?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Notices the end of a pull on the grip.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Separate from <see cref="ResizeTheOverlay"/>, which fires per pixel of
+    /// the drag. This one fires once, when the button comes up.
+    /// </remarks>
+    /// <param name="sender">The grip.</param>
+    /// <param name="e">Where the drag ended.</param>
+    private void SettleTheSize(object sender, DragCompletedEventArgs e) => Settled();
 
     /// <summary>
     /// Scales the overlay by its grip, keeping its shape.
@@ -229,13 +364,8 @@ public partial class GameOverlayWindow : Window
     /// </remarks>
     /// <param name="sender">The grip.</param>
     /// <param name="e">How far it moved.</param>
-    private void ResizeTheOverlay(object sender, DragDeltaEventArgs e)
-    {
-        double width = Math.Max(SmallestWorthHaving, ActualWidth + e.HorizontalChange);
-
-        Width = width;
-        Height = width * _shape;
-    }
+    private void ResizeTheOverlay(object sender, DragDeltaEventArgs e) =>
+        MakeItThisWide(ActualWidth + e.HorizontalChange);
 
     /// <summary>
     /// Shows the overlay above the game.
@@ -261,7 +391,7 @@ public partial class GameOverlayWindow : Window
             return;
         }
 
-        PlaceOver(game);
+        PutItWhereItGoes();
         Show();
     }
 
@@ -281,10 +411,7 @@ public partial class GameOverlayWindow : Window
     {
         base.OnSourceInitialized(e);
 
-        if (_game is { } game)
-        {
-            PlaceOver(game);
-        }
+        PutItWhereItGoes();
 
         // Whatever was decided before there was a handle to decide it on.
         ApplyPassingThrough();
@@ -311,31 +438,79 @@ public partial class GameOverlayWindow : Window
     }
 
     /// <summary>
-    /// Puts the window's corner on the game's corner.
+    /// Puts the window's corner where it was left, or on the game's corner if
+    /// it has never been put anywhere.
     /// </summary>
     ///
     /// <remarks>
+    /// <para>
+    /// The game's corner is the fallback and not the answer. It used to be the
+    /// answer, applied on every showing, which is a perfectly good way to open
+    /// an overlay exactly once and a guarantee that it will never stay
+    /// anywhere.
+    /// </para>
+    /// <para>
     /// In physical pixels, which is what the game's bounds are read in and what
     /// <c>SetWindowPos</c> speaks. Going through WPF's <c>Left</c> and
     /// <c>Top</c> would mean converting to device-independent units and back
     /// for no gain — the only thing being decided here is a corner.
+    /// </para>
     /// </remarks>
-    /// <param name="game">The game to sit over.</param>
-    private void PlaceOver(EliteWindow game) =>
+    private void PutItWhereItGoes()
+    {
+        if (WhereItGoes() is not { } corner)
+        {
+            return;
+        }
+
         SetWindowPos(
             new WindowInteropHelper(this).Handle,
             TheTopmostBand,
-            (int)game.Bounds.X,
-            (int)game.Bounds.Y,
+            (int)corner.X,
+            (int)corner.Y,
             0,
             0,
             KeepTheSize | LeaveTheFocusAlone);
+    }
+
+    /// <summary>
+    /// The corner to use: where it was left, else the game's, else nowhere —
+    /// which is a window that has never been placed and has no game to be over,
+    /// and is left wherever Windows chose to put it.
+    /// </summary>
+    private Point? WhereItGoes() =>
+        _putAt ?? (_game is { } game ? new Point(game.Bounds.X, game.Bounds.Y) : null);
+
+    /// <summary>
+    /// A Win32 <c>RECT</c>, which is two corners where WPF's
+    /// <see cref="Rect"/> is a corner and a size.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The second one in this assembly, and deliberately not shared with
+    /// <see cref="EliteWindow"/>'s. Sharing them means a third type that exists
+    /// only to be shared by two adapters, which is how a junk drawer starts;
+    /// four ints declared where they are used is the cheaper of the two.
+    /// </remarks>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Box
+    {
+        internal int Left;
+        internal int Top;
+        internal int Right;
+        internal int Bottom;
+    }
 
     // System32 rather than the default probing order: user32 is an operating
     // system library, and naming where it comes from is what stops a DLL of the
     // same name beside the executable being loaded instead.
     // The Ptr forms, not the plain ones. On 64-bit Windows an extended style is
     // a pointer-sized value, and the 32-bit calls silently truncate it.
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr window, out Box box);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowLongPtrW")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);

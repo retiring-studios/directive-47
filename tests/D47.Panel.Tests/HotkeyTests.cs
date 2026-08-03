@@ -10,7 +10,8 @@ using Xunit;
 namespace D47.Panel.Tests;
 
 /// <summary>
-/// A real system-wide hotkey, claimed and then actually pressed.
+/// A real system-wide hotkey, claimed, actually pressed, and changed while the
+/// application is running.
 ///
 /// <para>
 /// Tier 1, not Tier 2. Registering a combination and synthesizing the keystroke
@@ -21,7 +22,11 @@ namespace D47.Panel.Tests;
 /// </para>
 ///
 /// <para>
-/// A desktop test, because it presses real keys into whatever is in front.
+/// A desktop test, because it presses real keys into whatever is in front, and
+/// because a claimed combination is machine-wide state that two tests cannot
+/// hold at once. Which combination is <em>chosen</em> is a different question,
+/// answered by reading a file — it needs none of this and is asserted in
+/// <see cref="ChosenHotkeyTests"/>.
 /// </para>
 /// </summary>
 public class HotkeyTests : DesktopTest
@@ -46,7 +51,19 @@ public class HotkeyTests : DesktopTest
     /// </summary>
     private const ModifierKeys Held = ModifierKeys.Control | ModifierKeys.Shift;
     private const Key Tapped = Key.D;
-    private const string Combination = "Ctrl+Shift+D";
+    private const string Spelled = "Ctrl+Shift+D";
+
+    /// <summary>
+    /// A second combination, for the tests that change one. Also an ordinary
+    /// letter, and for the same reason.
+    /// </summary>
+    private const Key AlsoTapped = Key.B;
+    private const string AlsoSpelled = "Ctrl+Shift+B";
+
+    /// <summary>
+    /// What the store calls the combination that toggles the overlay.
+    /// </summary>
+    private const string WhatItIsCalled = "overlay hotkey";
 
     private static readonly TimeSpan LongEnoughToArrive = TimeSpan.FromSeconds(5);
 
@@ -62,9 +79,9 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         using var arrived = new ManualResetEventSlim();
 
-        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, arrived.Set).Or(_recorded.Add))
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), arrived.Set).Or(_recorded.Add))
             ?? throw new InvalidOperationException(
-                $"{Combination} is already owned on this machine, so this test cannot run.");
+                $"{Spelled} is already owned on this machine, so this test cannot run.");
 
         try
         {
@@ -93,10 +110,10 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         int fired = 0;
 
-        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => Interlocked.Increment(ref fired))
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), () => Interlocked.Increment(ref fired))
                 .Or(_recorded.Add))
             ?? throw new InvalidOperationException(
-                $"{Combination} is already owned on this machine, so this test cannot run.");
+                $"{Spelled} is already owned on this machine, so this test cannot run.");
 
         try
         {
@@ -131,14 +148,14 @@ public class HotkeyTests : DesktopTest
         // silent is the line written to the log, not the process dying.
         using var pump = new MessagePump();
 
-        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(Held, Tapped, () => { }).Or(_recorded.Add))
+        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), () => { }).Or(_recorded.Add))
             ?? throw new InvalidOperationException(
-                $"{Combination} is already owned on this machine, so this test cannot run.");
+                $"{Spelled} is already owned on this machine, so this test cannot run.");
 
         try
         {
             Perhaps<Hotkey> refused = pump.Invoke(
-                () => Hotkey.TryRegister(Held, Tapped, () => { }));
+                () => Hotkey.TryRegister(new Combination(Held, Tapped), () => { }));
 
             refused.Or(_recorded.Add).ShouldBeNull(
                 "the second claim on a combination should come back empty");
@@ -149,11 +166,249 @@ public class HotkeyTests : DesktopTest
             // and free to disagree with what was actually attempted. This test
             // asks for Ctrl+Shift+D, so a sentence naming anything else is that
             // bug.
-            _recorded.ShouldHaveSingleItem().ShouldContain(Combination);
+            _recorded.ShouldHaveSingleItem().ShouldContain(Spelled);
         }
         finally
         {
             pump.Invoke(owner.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenChanged_TakesEffectWithoutARestart()
+    {
+        // The criterion this story exists for. A combination that only works
+        // after the application is restarted is not a setting, it is a startup
+        // argument spelled differently.
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+        using var arrived = new ManualResetEventSlim();
+
+        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, arrived.Set));
+
+        try
+        {
+            pump.Invoke(() => chosen.Rebind(new Combination(Held, Tapped)))
+                .Or(_recorded.Add)
+                .ShouldNotBeNull("the combination was free, so claiming it should have worked");
+
+            Input.Press(Held, Tapped);
+
+            arrived.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
+                $"{Spelled} should be toggling the overlay from the moment it was chosen");
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenChanged_LetsGoOfTheOneItHad()
+    {
+        // The other half, and the one a rebind written as "claim the new one"
+        // gets wrong. A combination nobody gave back is one no other application
+        // can have, and the Commander who changed away from it has no way left
+        // to find that out.
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+
+        try
+        {
+            pump.Invoke(() => chosen.Rebind(new Combination(Held, Tapped))).Or(_recorded.Add)
+                .ShouldNotBeNull();
+
+            // Somebody else can now have the old one, which is only true if it
+            // was actually released.
+            Hotkey after = pump.Invoke(
+                    () => Hotkey.TryRegister(new Combination(Held, AlsoTapped), () => { }).Or(_recorded.Add))
+                ?? throw new ShouldAssertException(
+                    $"{AlsoSpelled} should have been given back when the hotkey changed away "
+                    + "from it, and something is still holding it.");
+
+            pump.Invoke(after.Dispose);
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenChanged_IsRememberedForNextTime()
+    {
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+
+        try
+        {
+            pump.Invoke(() => chosen.Rebind(new Combination(Held, Tapped))).Or(_recorded.Add)
+                .ShouldNotBeNull();
+
+            // A second open is the next run.
+            remembered.Open().Read(WhatItIsCalled).ShouldBe(Spelled);
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenTheChosenCombinationIsRefused_TellsWhoeverAskedForIt()
+    {
+        // The open question this story had to answer. Startup writes a refusal
+        // to a log because there is nobody to tell; a Commander who has just
+        // chosen a combination is somebody to tell, and telling them means
+        // handing the reason back rather than only filing it.
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+
+        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), () => { }).Or(_recorded.Add))
+            ?? throw new InvalidOperationException(
+                $"{Spelled} is already owned on this machine, so this test cannot run.");
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+
+        List<string> toldTheCommander = [];
+
+        try
+        {
+            Perhaps<Combination> refused = pump.Invoke(
+                () => chosen.Rebind(new Combination(Held, Tapped)));
+
+            refused.Or(toldTheCommander.Add).ShouldBeNull(
+                "a combination another application owns cannot be chosen");
+
+            toldTheCommander.ShouldHaveSingleItem().ShouldContain(
+                Spelled,
+                customMessage: "the Commander should be told which combination was refused");
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+            pump.Invoke(owner.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenTheChosenCombinationIsRefused_KeepsTheOneItHad()
+    {
+        // Trying something and being told no should not cost the Commander the
+        // key that was working a moment ago.
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+        using var arrived = new ManualResetEventSlim();
+
+        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+
+        Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), () => { }).Or(_recorded.Add))
+            ?? throw new InvalidOperationException(
+                $"{Spelled} is already owned on this machine, so this test cannot run.");
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, arrived.Set));
+
+        try
+        {
+            pump.Invoke(() => chosen.Rebind(new Combination(Held, Tapped))).Or(_ => { });
+
+            Input.Press(Held, AlsoTapped);
+
+            arrived.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
+                $"{AlsoSpelled} should still work after a refused attempt to change it");
+
+            remembered.Open().Read(WhatItIsCalled).ShouldBe(
+                AlsoSpelled, "a combination that was never claimed is not worth remembering");
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+            pump.Invoke(owner.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenChosenAgain_IsNotRefusedByItsOwnRegistration()
+    {
+        // Claiming the new one before releasing the old is what keeps a refusal
+        // from costing the working key, and it puts the application in the way
+        // of its own request when nothing actually changed. A Commander
+        // confirming the combination they already have should not be told
+        // somebody else owns it.
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+
+        remembered.Open().Write(WhatItIsCalled, Spelled);
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+
+        try
+        {
+            pump.Invoke(() => chosen.Rebind(new Combination(Held, Tapped)))
+                .Or(_recorded.Add)
+                .ShouldNotBeNull("choosing the combination already in force changes nothing");
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+        }
+    }
+
+    [Fact]
+    public void OverlayHotkey_WhenTheRememberedOneIsAlreadyOwned_CanStillBeChanged()
+    {
+        // The whole reason this story exists. #103 left a Commander whose
+        // combination was taken by another application with a line in a log and
+        // no way to get a hotkey back at all.
+        using var pump = new MessagePump();
+        using var remembered = new TemporaryStore();
+        using var arrived = new ManualResetEventSlim();
+
+        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+
+        Hotkey squatter = pump.Invoke(
+                () => Hotkey.TryRegister(new Combination(Held, AlsoTapped), () => { }).Or(_recorded.Add))
+            ?? throw new InvalidOperationException(
+                $"{AlsoSpelled} is already owned on this machine, so this test cannot run.");
+
+        using ChosenHotkey chosen = pump.Invoke(
+            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, arrived.Set));
+
+        try
+        {
+            _recorded.ShouldHaveSingleItem().ShouldContain(
+                AlsoSpelled, customMessage: "starting without a hotkey still has to be recorded");
+
+            pump.Invoke(() => chosen.Rebind(new Combination(Held, Tapped))).Or(_recorded.Add)
+                .ShouldNotBeNull();
+
+            Input.Press(Held, Tapped);
+
+            arrived.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
+                "a Commander who started with no hotkey should be able to choose one that works");
+        }
+        finally
+        {
+            pump.Invoke(chosen.Dispose);
+            pump.Invoke(squatter.Dispose);
         }
     }
 }

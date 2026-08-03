@@ -47,7 +47,7 @@ internal sealed class RunningOverlay : IDisposable
             "Marshalling a failure back to the calling thread is the whole job. Rethrowing "
             + "inside the catch would tear down the process instead of failing the test, and "
             + "narrowing the type would swallow whatever it did not name.")]
-    private RunningOverlay(EliteWindow game, Answer answer)
+    private RunningOverlay(EliteWindow game, Answer answer, (Point Corner, double Scale)? left)
     {
         using var ready = new ManualResetEventSlim();
         Exception? failure = null;
@@ -58,6 +58,15 @@ internal sealed class RunningOverlay : IDisposable
             {
                 _dispatcher = Dispatcher.CurrentDispatcher;
                 _window = new GameOverlayWindow(answer);
+
+                // Before it is shown, which is the only moment a remembered
+                // place is any use — the composition root does the same thing
+                // for the same reason, and an overlay placed afterwards is one
+                // the Commander watches walk across the screen.
+                if (left is { } place)
+                {
+                    _window.PlaceAt(place.Corner, place.Scale);
+                }
 
                 // Waited for rather than assumed. A shown window is not a drawn
                 // one, and every question this class answers is about what is
@@ -119,7 +128,20 @@ internal sealed class RunningOverlay : IDisposable
     /// <param name="answer">What the overlay should render.</param>
     /// <returns>The overlay, which the caller owns and must dispose.</returns>
     internal static RunningOverlay ShownOver(EliteWindow game, Answer answer) =>
-        new(game, answer);
+        new(game, answer, null);
+
+    /// <summary>
+    /// Shows the overlay where a previous run left it, rather than over the
+    /// game, and waits until it has drawn.
+    /// </summary>
+    /// <param name="game">The running game the overlay would otherwise sit on.</param>
+    /// <param name="answer">What the overlay should render.</param>
+    /// <param name="corner">Its top-left corner, in physical screen pixels.</param>
+    /// <param name="scale">How much bigger than the render's own size to be.</param>
+    /// <returns>The overlay, which the caller owns and must dispose.</returns>
+    internal static RunningOverlay PlacedAt(
+        EliteWindow game, Answer answer, Point corner, double scale) =>
+        new(game, answer, (corner, scale));
 
     /// <summary>
     /// Turns click-through on or off, on the thread that owns the window.
@@ -139,6 +161,20 @@ internal sealed class RunningOverlay : IDisposable
     /// The size the overlay laid its render out at.
     /// </summary>
     internal Size NaturalSize() => OnItsOwnThread(window => window.NaturalSize);
+
+    /// <summary>
+    /// How big the window actually is, in the device-independent units it was
+    /// laid out in.
+    ///
+    /// <para>
+    /// Not <see cref="Bounds"/>, which is physical pixels. Comparing this
+    /// against <see cref="NaturalSize"/> is comparing two numbers in the same
+    /// units, so the ratio between them is a scale and not a scale multiplied
+    /// by whatever this monitor is set to.
+    /// </para>
+    /// </summary>
+    internal Size WindowSize() =>
+        OnItsOwnThread(window => new Size(window.ActualWidth, window.ActualHeight));
 
     /// <summary>
     /// What the render actually wants, worked out independently of the overlay.

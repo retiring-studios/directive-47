@@ -4,7 +4,6 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Resources;
 using System.Windows.Threading;
@@ -101,7 +100,7 @@ internal sealed partial class App : Application, IDisposable
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
     private Overlay? _overlay;
-    private Hotkey? _hotkey;
+    private ChosenHotkey? _hotkey;
     private ForegroundWatcher? _foreground;
 
     /// <summary>
@@ -165,12 +164,16 @@ internal sealed partial class App : Application, IDisposable
         MainWindow = new MainWindow(answer);
         MainWindow.Show();
 
-        _overlay = Overlay.From(
-            new GameOverlayFactory(), answer, Store.Open(_log.Warning), _log.Warning);
+        // One store, opened once and shared. Two would be two copies of the
+        // same file in memory, and the moment either of them writes, the other
+        // is holding what the file used to say.
+        var remembered = Store.Open(_log.Warning);
+
+        _overlay = Overlay.From(new GameOverlayFactory(), answer, remembered, _log.Warning);
         _overlay.Show();
 
         FollowTheForeground();
-        ClaimTheHotkey();
+        ClaimTheHotkey(remembered);
     }
 
     /// <summary>
@@ -189,32 +192,33 @@ internal sealed partial class App : Application, IDisposable
     }
 
     /// <summary>
-    /// Claims <c>Ctrl</c>+<c>Alt</c>+<c>D</c>, and carries on without it if
-    /// something else already has it.
+    /// Claims whichever combination the Commander chose, and carries on without
+    /// it if something else already has it.
     /// </summary>
     ///
     /// <remarks>
     /// <para>
-    /// Hard-coded, because choosing it is a settings question and settings are
-    /// not built. Losing the combination is not worth refusing to start over —
-    /// the overlay is still shown at startup, the panel still works, and voice
-    /// will eventually toggle it too. But it is recorded, because an absence
-    /// nobody wrote down is indistinguishable from a defect, and the Commander
-    /// pressing a key that does nothing has no other way to find out why.
+    /// No combination appears here any more. Which one it is comes out of the
+    /// store, defaulting to the <c>Ctrl</c>+<c>Alt</c>+<c>D</c> the application
+    /// has always used, and changing it is
+    /// <see cref="ChosenHotkey.Rebind"/> rather than a restart.
     /// </para>
     /// <para>
-    /// There is no longer an <c>if</c> here saying so. The claim hands back the
-    /// reason with the absence, and unwrapping it is what writes it down — so
-    /// the sentence names whatever combination was actually asked for, and this
-    /// method could not skip recording if it tried.
+    /// Losing the combination is still not worth refusing to start over — the
+    /// overlay is shown at startup, the panel works, and voice will eventually
+    /// toggle it too. It is recorded, because an absence nobody wrote down is
+    /// indistinguishable from a defect, and a Commander pressing a key that
+    /// does nothing has no other way to find out why.
+    /// </para>
+    /// <para>
+    /// On the UI thread, which is where the message loop that dispatches
+    /// <c>WM_HOTKEY</c> is. A registration belongs to the thread that made it,
+    /// so everything done to it afterwards has to come back here.
     /// </para>
     /// </remarks>
-    private void ClaimTheHotkey() =>
-        _hotkey = Hotkey.TryRegister(
-                ModifierKeys.Control | ModifierKeys.Alt,
-                Key.D,
-                () => _overlay?.Toggle())
-            .Or(_log.Warning);
+    /// <param name="remembered">What the last run left behind.</param>
+    private void ClaimTheHotkey(Store remembered) =>
+        _hotkey = ChosenHotkey.From(remembered, _log.Warning, () => _overlay?.Toggle());
 
     /// <summary>
     /// What every surface shows.

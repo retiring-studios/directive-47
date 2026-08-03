@@ -34,6 +34,7 @@ namespace D47.Panel.Tests;
 /// subject.
 /// </para>
 /// </summary>
+[Collection(CompiledXaml.Collection)]
 public class PanelBackgroundTests
 {
     private const string NoneOfItsOwn = "no background of its own";

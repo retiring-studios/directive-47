@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 
 namespace D47.GameOverlay;
 
@@ -60,6 +61,28 @@ public sealed class EliteOverlay : IGameOverlay
         get => _window.Opacity;
         set => _window.Opacity = value;
     }
+
+    /// <inheritdoc />
+    public Point Position => _window.Position;
+
+    /// <inheritdoc />
+    public double Scale => _window.Scale;
+
+    /// <inheritdoc />
+    ///
+    /// <remarks>
+    /// Forwarded rather than re-raised. A wrapper that raised its own event
+    /// would be a second list of subscribers to keep in step with the first,
+    /// and nothing here has anything to add to what the window already says.
+    /// </remarks>
+    public event EventHandler MovedOrResized
+    {
+        add => _window.MovedOrResized += value;
+        remove => _window.MovedOrResized -= value;
+    }
+
+    /// <inheritdoc />
+    public void PlaceAt(Point corner, double scale) => _window.PlaceAt(corner, scale);
 
     /// <inheritdoc />
     public void Show()
