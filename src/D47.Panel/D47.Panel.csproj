@@ -27,6 +27,24 @@
     </PropertyGroup>
 
     <!--
+        The mark, everywhere Windows draws it rather than everywhere we do.
+
+        This one property covers the executable in Explorer, the title bar, the
+        taskbar button and alt-tab: it compiles the .ico into the executable's
+        icon resource, and a WPF window with no Icon of its own falls back to
+        the executable's. MainWindow therefore sets no Icon deliberately — one
+        that did would be a second place to change the mark and a chance for the
+        title bar to disagree with the taskbar.
+
+        A different job from the Resource below, on the same file. This is what
+        Windows reads with nothing running; that is what the application reads
+        at runtime to put an icon in the notification area.
+    -->
+    <PropertyGroup>
+        <ApplicationIcon>..\..\assets\directive-47.ico</ApplicationIcon>
+    </PropertyGroup>
+
+    <!--
         Linked, because assets/ is shared repository content rather than this
         project's own. The Link is what puts it at a stable resource path
         instead of one built out of "..\..\".
