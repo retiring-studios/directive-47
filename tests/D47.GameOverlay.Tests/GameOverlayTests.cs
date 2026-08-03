@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 
 using D47.Capabilities;
@@ -86,6 +87,35 @@ public class GameOverlayTests : GameTest
         Screen.OwnerOf(x, y).ShouldBe(
             overlay.Handle,
             "and it should switch back, on the same window, without being recreated");
+    }
+
+    [Fact]
+    public void GameOverlay_WhenEliteLosesFocus_ShowsItsChromeForMovingAndResizing()
+    {
+        // The window half. That the application asks for chrome at the right
+        // moment is logic and lives in CI; that asking produces furniture on a
+        // real transparent, topmost window is this.
+        using var overlay = RunningOverlay.ShownOver(Game, HelpsAnswer());
+
+        IntPtr before = overlay.Handle;
+
+        overlay.ChromeOnScreen().ShouldBeEmpty(
+            "the overlay starts with the game in front, so nothing should be covering it");
+
+        overlay.ShowChrome(true);
+
+        overlay.ChromeOnScreen().ShouldBe(
+            ["DragBar", "Grip"],
+            ignoreOrder: true,
+            customMessage: "with the game away there should be a bar to drag and a grip to pull");
+
+        overlay.ShowChrome(false);
+
+        overlay.ChromeOnScreen().ShouldBeEmpty("and it should go away again");
+
+        overlay.Handle.ShouldBe(
+            before,
+            "showing and hiding chrome must not recreate the window");
     }
 
     // There is deliberately no test here for the overlay leaving the foreground

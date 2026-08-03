@@ -91,7 +91,10 @@ internal sealed class Overlay
             return;
         }
 
-        overlay.PassesInputThrough = _isTheGame(window);
+        bool theGameIsInFront = _isTheGame(window);
+
+        overlay.PassesInputThrough = theGameIsInFront;
+        overlay.ShowsChrome = !theGameIsInFront;
     }
 
     /// <summary>

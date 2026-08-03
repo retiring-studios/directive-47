@@ -32,6 +32,19 @@ public interface IGameOverlay
     bool PassesInputThrough { get; set; }
 
     /// <summary>
+    /// Whether the furniture for moving and resizing is on show.
+    ///
+    /// <para>
+    /// The other half of the same fact as
+    /// <see cref="PassesInputThrough"/> — the game being in front means no
+    /// chrome and a mouse that goes straight past; the game being away means
+    /// chrome and a mouse that lands. Two properties rather than one flag,
+    /// because each says what it controls and a test can hold them apart.
+    /// </para>
+    /// </summary>
+    bool ShowsChrome { get; set; }
+
+    /// <summary>
     /// Puts the overlay over the game.
     ///
     /// <para>

@@ -11,26 +11,89 @@
         ShowInTaskbar="False"
         ShowActivated="False"
         Topmost="True"
-        WindowStartupLocation="Manual"
-        SizeToContent="WidthAndHeight">
+        WindowStartupLocation="Manual">
 
     <!--
         WindowStyle="None" is not a style choice. AllowsTransparency throws with
         any other window style, so a per-pixel-alpha overlay cannot also carry an
-        OS caption — which is why moving and resizing will need chrome we draw
-        ourselves, and why that has a spike in front of it.
+        OS caption — which is why the furniture for moving and resizing has to be
+        drawn here rather than asked for from Windows.
 
         ShowActivated="False" so that appearing over Elite does not take the
-        foreground from it. Passing pointer input through is a later story; not
-        stealing focus in the first place is this one's business, because an
-        overlay that alt-tabs the Commander out of the cockpit has broken the
-        one promise the product makes.
+        foreground from it.
 
-        SizeToContent because the render is the only thing here with an opinion
-        about how big it should be. The overlay's real size is the panel's,
-        scaled and aspect-locked, and that arrives with the story about
-        scaling — inventing a design resolution now would be guessing at it.
+        There is deliberately no SizeToContent. It and the Viewbox below fight
+        by nature — one sizes the window to its content, the other stretches
+        content to fill the window — and under SizeToContent the available space
+        is the whole monitor, so the Viewbox grows to fill it and the window
+        follows. Measured, not reasoned about: that produced a 4843x2186 overlay
+        on a 3840x2160 screen. The window is given the render's natural size in
+        the constructor instead.
     -->
-    <render:CapabilityView x:Name="View" />
+    <Grid>
+
+        <!--
+            The Viewbox is the whole of "scales rather than reflows": the render
+            is laid out once at its natural size and then drawn larger or
+            smaller, so nothing is ever rearranged. It arrived a story early
+            because a grip that resized without it would stretch and clip the
+            contents, and shipping a control that visibly misbehaves is worse
+            than moving two lines forward.
+        -->
+        <Viewbox Stretch="Uniform">
+            <render:CapabilityView x:Name="View" />
+        </Viewbox>
+
+        <!--
+            Drawn over the render rather than added above it. Chrome that added
+            to the window's height would make the overlay grow every time Elite
+            lost the foreground and shrink when it came back, with the contents
+            shifting underneath on every alt-tab. Covering the top band of the
+            render while the Commander is looking away from the game is the
+            cheaper of the two.
+        -->
+        <Grid x:Name="Chrome"
+              Visibility="Collapsed">
+
+            <Border x:Name="DragBar"
+                    VerticalAlignment="Top"
+                    Height="28"
+                    Background="#CC1B2129"
+                    Cursor="SizeAll"
+                    MouseLeftButtonDown="MoveTheOverlay">
+                <TextBlock Text="Directive 47"
+                           Foreground="#FFEDF2F7"
+                           FontSize="14"
+                           Margin="10,5,0,0" />
+            </Border>
+
+            <!--
+                One grip, bottom right. The overlay scales uniformly and keeps
+                its shape, so a resize has exactly one degree of freedom —
+                eight handles would be furniture expressing one number. Bottom
+                right because growing down and to the right leaves the top-left
+                corner where the Commander put it, so resizing never turns into
+                an unasked-for move.
+            -->
+            <Thumb x:Name="Grip"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Bottom"
+                   Width="18"
+                   Height="18"
+                   Cursor="SizeNWSE"
+                   DragDelta="ResizeTheOverlay">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Path Data="M 18,0 L 18,18 L 0,18 Z"
+                              Fill="#CC1B2129"
+                              Stroke="#FFEDF2F7"
+                              StrokeThickness="1" />
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
+
+        </Grid>
+
+    </Grid>
 
 </Window>

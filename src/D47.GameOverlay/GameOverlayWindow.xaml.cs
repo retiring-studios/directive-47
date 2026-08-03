@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 
 using D47.Render;
@@ -48,8 +50,15 @@ public partial class GameOverlayWindow : Window
     /// </summary>
     private const long PassesThrough = 0x00000020;
 
+    /// <summary>
+    /// Small enough to be a glance and large enough to still be grabbed. Below
+    /// this the grip is most of what is left.
+    /// </summary>
+    private const double SmallestWorthHaving = 120;
+
     private EliteWindow? _game;
     private bool _passesInputThrough;
+    private double _shape;
 
     /// <summary>
     /// Creates the overlay around an answer to show.
@@ -59,6 +68,29 @@ public partial class GameOverlayWindow : Window
     {
         InitializeComponent();
         View.DataContext = answer;
+
+        FitTheRender();
+    }
+
+    /// <summary>
+    /// Gives the window the render's own size to start at.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Asked of the render rather than declared anywhere: the controls decide
+    /// how big the render is, and every surface is that size. From here the
+    /// <c>Viewbox</c> scales whatever the window becomes, so this is the size at
+    /// which the scale is exactly one.
+    /// </remarks>
+    private void FitTheRender()
+    {
+        View.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        Size natural = View.DesiredSize;
+
+        Width = natural.Width;
+        Height = natural.Height;
+        _shape = natural.Height / natural.Width;
     }
 
     /// <summary>
@@ -86,6 +118,62 @@ public partial class GameOverlayWindow : Window
             _passesInputThrough = value;
             ApplyPassingThrough();
         }
+    }
+
+    /// <summary>
+    /// Whether the furniture for moving and resizing is on show.
+    /// </summary>
+    public bool ShowsChrome
+    {
+        get => Chrome.Visibility == Visibility.Visible;
+        set => Chrome.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Drags the whole overlay by its bar.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <c>DragMove</c> throws if the left button is not actually down by the
+    /// time it is called, which can happen when the press and the release race
+    /// each other. Guarded rather than caught, because the guard says what is
+    /// true and a catch would only say that something went wrong.
+    /// </remarks>
+    /// <param name="sender">The bar.</param>
+    /// <param name="e">The press.</param>
+    private void MoveTheOverlay(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
+    /// <summary>
+    /// Scales the overlay by its grip, keeping its shape.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// One dimension is dragged and the other follows, because the overlay's
+    /// shape is the render's and a resize is only ever a scale. The horizontal
+    /// change leads for no better reason than that a corner drag reads as a
+    /// width to most people.
+    /// </para>
+    /// <para>
+    /// The shape came from the render at construction, so it is the render's
+    /// proportions being preserved rather than whatever the window happened to
+    /// be when somebody first grabbed the grip.
+    /// </para>
+    /// </remarks>
+    /// <param name="sender">The grip.</param>
+    /// <param name="e">How far it moved.</param>
+    private void ResizeTheOverlay(object sender, DragDeltaEventArgs e)
+    {
+        double width = Math.Max(SmallestWorthHaving, ActualWidth + e.HorizontalChange);
+
+        Width = width;
+        Height = width * _shape;
     }
 
     /// <summary>
