@@ -158,16 +158,21 @@ internal sealed partial class App : Application, IDisposable
 
         Answer answer = Compose();
 
-        // Explicitly, rather than through StartupUri, because the window now
-        // takes what it shows as an argument and StartupUri can only call a
-        // parameterless constructor.
-        MainWindow = new MainWindow(answer);
-        MainWindow.Show();
-
         // One store, opened once and shared. Two would be two copies of the
         // same file in memory, and the moment either of them writes, the other
         // is holding what the file used to say.
+        //
+        // Before the panel rather than after it, which it used to be. The panel
+        // opens at the size it was last left drawing at, so the zoom has to have
+        // been read before there is a window to apply it to — a window built
+        // first would open at life size and jump.
         var remembered = Store.Open(_log.Warning);
+
+        // Explicitly, rather than through StartupUri, because the window now
+        // takes what it shows as an argument and StartupUri can only call a
+        // parameterless constructor.
+        MainWindow = new MainWindow(answer, new Zoom(remembered, _log.Warning));
+        MainWindow.Show();
 
         _overlay = Overlay.From(new GameOverlayFactory(), answer, remembered, _log.Warning);
         _overlay.Show();

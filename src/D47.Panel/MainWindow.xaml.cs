@@ -29,19 +29,57 @@ internal partial class MainWindow : Window
     private readonly Size _controls;
 
     /// <summary>
-    /// Creates the window around an answer to show.
+    /// How big the panel is drawing what it is showing.
+    /// </summary>
+    private readonly Zoom _zoom;
+
+    /// <summary>
+    /// Creates the window around an answer to show, at the size it was last left
+    /// drawing things.
     /// </summary>
     /// <param name="answer">What to render.</param>
-    public MainWindow(Answer answer)
+    /// <param name="zoom">How big to draw it.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="zoom"/> is null.</exception>
+    public MainWindow(Answer answer, Zoom zoom)
     {
+        ArgumentNullException.ThrowIfNull(zoom);
+
         InitializeComponent();
 
         View.DataContext = answer;
 
+        _zoom = zoom;
         _controls = WhatTheControlsWant(answer);
+
+        DrawAtTheZoom();
+        _zoom.Changed += (_, _) => DrawAtTheZoom();
 
         Closing += HideInsteadOfClosing;
     }
+
+    /// <summary>
+    /// Puts the current zoom onto the render.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A <c>LayoutTransform</c>, which is the whole of "the way a browser does".
+    /// The render is laid out again at the new size and then reflows into the
+    /// window it is already in — wrapping across, running on down, and scrolling
+    /// once there is more of it than the window holds.
+    /// </para>
+    /// <para>
+    /// Deliberately not a <c>RenderTransform</c>, and the difference is
+    /// invisible until it matters. That one scales the drawing after the layout
+    /// is settled, so the type is just as big and nothing above it knows: the
+    /// scrolling region still believes the render fits, and everything past the
+    /// window's edge is gone rather than somewhere to scroll to. It is also what
+    /// the overlay wants and has — a <c>Viewbox</c>, scaling a fixed layout —
+    /// which is the same mechanism pointed at the opposite behaviour.
+    /// </para>
+    /// </remarks>
+    private void DrawAtTheZoom() =>
+        View.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
 
     /// <summary>
     /// How big the controls want to be, asked of an instance that belongs to
@@ -113,8 +151,15 @@ internal partial class MainWindow : Window
         DpiScale scale = VisualTreeHelper.GetDpi(this);
         Size frame = TheFrameWindowsDraws();
 
-        Width = (WholePixels(_controls.Width, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
-        Height = (WholePixels(_controls.Height, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
+        // At the zoom, not at life size. A panel reopening at the size it was
+        // last left drawing at is a panel that fits what is actually in it,
+        // which is what #96 asked for — fitting it to a render nobody is being
+        // shown would open every zoomed panel scrolling.
+        double across = _controls.Width * _zoom.Factor;
+        double down = _controls.Height * _zoom.Factor;
+
+        Width = (WholePixels(across, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
+        Height = (WholePixels(down, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
     }
 
     /// <summary>
