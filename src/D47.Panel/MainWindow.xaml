@@ -94,7 +94,15 @@
 
         </Border>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
+        <!--
+            An AutomationId so that what the panel is showing can be told from
+            what the panel says about itself. The strip is furniture and the
+            render is the answer, and a test asking whether the answer reached
+            the screen has to be able to draw that line. An id rather than a
+            name: a name is read aloud, and this is not for reading.
+        -->
+        <ScrollViewer AutomationProperties.AutomationId="TheRender"
+                      VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <render:CapabilityView x:Name="View" />
         </ScrollViewer>
