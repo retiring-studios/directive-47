@@ -24,9 +24,8 @@ disk. Every path in it exists.
 ## Building
 
 `dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI runs — every
-project that does not need real hardware. `hardware.slnf` will select the
-dev-PC-only projects; it arrives with the first Tier 2 project, because a filter
-naming no projects warns on every build.
+project that does not need real hardware. `hardware.slnf` selects the dev-PC-only
+projects, currently `D47.GameOverlay` and its tests.
 
 **CI is Windows only.** Directive 47 is a Windows product, so a Linux job was
 proving a portability claim nothing depends on, and Windows is what lets WPF
@@ -51,6 +50,44 @@ The backlog lives in GitHub — `https://github.com/retiring-studios/directive-4
 A bare number costs a search every single time it is mentioned. This applies to
 prose, tables, and lists alike — anywhere the maintainer might want to click
 through.
+
+## Working on stories
+
+**Three stories run at a time, one worktree each.** One story at a time makes
+thinking time into wall-clock time on a 24-core machine that is otherwise idle.
+
+```powershell
+git worktree add -b 125-a-short-slug C:\dev\d47-125 origin/main
+```
+
+Branch off `origin/main`, never off another story's branch — a worktree that
+inherits unmerged work turns one review into two. After the pull request merges,
+`git worktree remove C:\dev\d47-125`.
+
+**Which three can run at once.** Stories in different `D47.*` projects are safe.
+Two stories in the same project is the common trap: they will reach for the same
+file, and the second one to merge pays for it.
+
+A story that touches any of this **runs alone**, because every other worktree is
+built on it:
+
+| Shared surface | Why |
+|---|---|
+| `Directory.Build.props`, `Directory.Packages.props` | Versions and analyzer settings for every project |
+| `D47.slnx`, `ci.slnf`, `hardware.slnf` | Anything that adds or moves a project touches all three |
+| `global.json`, `.editorconfig`, `.gitattributes` | SDK band and formatting, repo-wide |
+| `tests/D47.TestSupport` | Every test project references it |
+| `docs/decisions.md`, `CLAUDE.md` | Append-heavy, so concurrent edits conflict at the same lines |
+
+**The desktop is still one machine, and that is unchanged.** Three worktrees
+running `dotnet test` do not contend for it, because desktop tests skip unless
+`D47_DESKTOP_TESTS=1` says otherwise. The opt-in is the claim, so the existing
+rule below still holds — ask before taking it, say when it is free. What is new
+is that the answer is no more often, and that asking means naming **which
+worktree** wants it.
+
+**Nothing else about a story changes.** Red, green, refactor; the `Refactor`
+section; `needs-manual-test`. This is how many run at once, not what a story is.
 
 ## Working agreement
 
