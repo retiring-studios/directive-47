@@ -118,8 +118,31 @@ internal partial class MainWindow : Window
     /// which is the same mechanism pointed at the opposite behaviour.
     /// </para>
     /// </remarks>
-    private void DrawAtTheZoom() =>
+    private void DrawAtTheZoom()
+    {
         View.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
+
+        // The strip says where the zoom is and stops offering the direction it
+        // cannot go. A control that stays enabled at the end of the range does
+        // nothing when it is pressed, which nobody can tell from broken.
+        Reading.Text = _zoom.AsSaid;
+        Bigger.IsEnabled = _zoom.CanGoIn;
+        Smaller.IsEnabled = _zoom.CanGoOut;
+    }
+
+    /// <summary>
+    /// The strip's own way in.
+    /// </summary>
+    /// <param name="sender">The control.</param>
+    /// <param name="e">The click.</param>
+    private void ZoomIn(object sender, RoutedEventArgs e) => _zoom.In();
+
+    /// <summary>
+    /// The strip's own way out.
+    /// </summary>
+    /// <param name="sender">The control.</param>
+    /// <param name="e">The click.</param>
+    private void ZoomOut(object sender, RoutedEventArgs e) => _zoom.Out();
 
     /// <summary>
     /// How big the controls want to be, asked of an instance that belongs to
@@ -196,7 +219,14 @@ internal partial class MainWindow : Window
         // which is what #96 asked for — fitting it to a render nobody is being
         // shown would open every zoomed panel scrolling.
         double across = _controls.Width * _zoom.Factor;
-        double down = _controls.Height * _zoom.Factor;
+
+        // Plus the strip, which is one of the controls in the window and so is
+        // one of the things it is the size of. Measured rather than declared:
+        // its height is a button's, which is the theme's business and not this
+        // window's to predict.
+        ZoomStrip.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        double down = (_controls.Height * _zoom.Factor) + ZoomStrip.DesiredSize.Height;
 
         Width = (WholePixels(across, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
         Height = (WholePixels(down, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;

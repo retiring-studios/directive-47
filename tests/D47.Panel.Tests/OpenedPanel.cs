@@ -87,9 +87,16 @@ internal static class OpenedPanel
     /// <returns>The size the first line covers, in the window's own coordinates.</returns>
     internal static Size LineOnTheWindow(MainWindow panel)
     {
-        TextBlock line = Descendant<TextBlock>(panel)
+        // Inside the render, not inside the window. The zoom strip along the
+        // bottom has a label of its own and is declared first, so a walk from
+        // the window measures the strip saying "100%" and reports that the zoom
+        // did nothing.
+        CapabilityView render = Descendant<CapabilityView>(panel)
+            ?? throw new InvalidOperationException("The panel is showing no render.");
+
+        TextBlock line = Descendant<TextBlock>(render)
             ?? throw new InvalidOperationException(
-                "The panel is showing no text, so there is nothing to have scaled.");
+                "The render is showing no text, so there is nothing to have scaled.");
 
         return line
             .TransformToAncestor(panel)
