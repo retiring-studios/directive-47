@@ -4,16 +4,47 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:render="clr-namespace:D47.Render;assembly=D47.Render"
         Title="Directive 47"
-        AutomationProperties.Name="Directive 47"
-        Height="720"
-        Width="960">
+        AutomationProperties.Name="Directive 47">
 
     <!--
+        Deliberately no Height or Width. The controls decide how big the render
+        is and the window opens around them, which is a number nobody can type
+        here — it is worked out in MainWindow.xaml.cs, once, as the window is
+        being created. What used to be here was 960x720, chosen before there was
+        anything in the window to disagree with it.
+
+        Deliberately no SizeToContent either, which is the WPF way to say the
+        same thing and says too much of it. It fits the window to its content
+        every time the content changes, so the size stops being the Commander's
+        the moment a view is switched. It was tried anyway, on the theory that it
+        could be turned off again once it had fitted the window once, and there
+        is no event that fires between the two: the layout pass that applies the
+        fit reports itself finished before the new size is on the window, so
+        turning it off there froze the panel at the smallest size Windows will
+        draw.
+
         Deliberately no Background. There is one render, it fills the window, and
         the background is a property of what that render draws — see
         D47.Render/Palette.cs. This window naming one of its own is how it came
         to disagree with the render in the first place.
     -->
-    <render:CapabilityView x:Name="View" />
+
+    <!--
+        Below what fits, it scrolls. The fitted size is where the window opens
+        and the size at which everything is visible at once, not a floor the
+        Commander is held to — so a window dragged smaller than its controls
+        moves them rather than shrinking them.
+
+        Vertically only, and that is the reflow rule rather than a shortcut.
+        Content that runs out of width wraps and goes down the window; content
+        that runs out of height has nowhere left to go, which is where scrolling
+        starts. Horizontal scrolling would take the wrapping away — a child
+        measured against infinite width never wraps at all — and put a second
+        scrollbar in place of it.
+    -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <render:CapabilityView x:Name="View" />
+    </ScrollViewer>
 
 </Window>
