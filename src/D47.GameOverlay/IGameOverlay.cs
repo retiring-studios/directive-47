@@ -1,15 +1,25 @@
+using System;
+using System.Windows;
+
 namespace D47.GameOverlay;
 
 /// <summary>
-/// The overlay, as the application deals with it: on screen or not, and two
-/// ways to change that.
+/// The overlay, as the application deals with it: on screen or not, two ways to
+/// change that, and where on the screen it is.
 ///
 /// <para>
-/// Deliberately says nothing about Elite, about windows, or about where the
-/// thing goes. Finding the game and placing a window over it is interacting
-/// with an external system, which is the adapter's job; deciding when to show
-/// and when to hide is logic, and logic is asserted in CI against a stand-in
-/// that is nothing but a boolean.
+/// Deliberately says nothing about Elite or about windows. Finding the game and
+/// moving a window is interacting with an external system, which is the
+/// adapter's job; deciding when to show, when to hide, and where it ought to go
+/// is logic, and logic is asserted in CI against a stand-in that is nothing but
+/// a few fields.
+/// </para>
+///
+/// <para>
+/// It does now say where the overlay is, which is the one thing the interface
+/// used to withhold. Nothing outside could ask, so nothing outside could write
+/// it down — and an overlay that forgets where it was put is one more thing to
+/// set up before every session.
 /// </para>
 /// </summary>
 public interface IGameOverlay
@@ -63,7 +73,61 @@ public interface IGameOverlay
     double Opacity { get; set; }
 
     /// <summary>
-    /// Puts the overlay over the game.
+    /// Where the overlay's top-left corner is, in physical screen pixels.
+    ///
+    /// <para>
+    /// Physical rather than the device-independent units WPF places windows
+    /// with, because every other coordinate this feature touches is physical —
+    /// where Windows says the game is, where Windows says the overlay is, and
+    /// how far the screens reach. One set of units end to end means no
+    /// conversion anywhere, and a number in <c>remembered.json</c> that means
+    /// the same thing as the one any other tool on the machine would report.
+    /// </para>
+    /// </summary>
+    Point Position { get; }
+
+    /// <summary>
+    /// How much bigger than the render's own size the overlay has been made. 1
+    /// is the size at which the render is drawn exactly as it was laid out.
+    ///
+    /// <para>
+    /// A ratio rather than a width, so it survives the render changing size.
+    /// The overlay has one degree of freedom — it keeps the render's shape at
+    /// every size — so one number is the whole of how big it is.
+    /// </para>
+    /// </summary>
+    double Scale { get; }
+
+    /// <summary>
+    /// Puts the overlay at a given corner and size, instead of over the game.
+    ///
+    /// <para>
+    /// One call rather than two settable properties, because a position applied
+    /// separately from a size is a frame of the overlay in a place it was never
+    /// asked to be. Called before the overlay is ever shown, so there is
+    /// nothing to see move.
+    /// </para>
+    /// </summary>
+    /// <param name="corner">Its top-left corner, in physical screen pixels.</param>
+    /// <param name="scale">How much bigger than the render's own size to be.</param>
+    void PlaceAt(Point corner, double scale);
+
+    /// <summary>
+    /// Raised when the Commander has finished dragging the overlay somewhere
+    /// else or pulling it to a different size.
+    ///
+    /// <para>
+    /// At the end of the gesture rather than throughout it. A drag is hundreds
+    /// of positions and one intent, and something that wrote each of them down
+    /// would be a file rewritten per mouse move to record a place the overlay
+    /// was passing through.
+    /// </para>
+    /// </summary>
+    event EventHandler MovedOrResized;
+
+    /// <summary>
+    /// Puts the overlay on screen — where it was left, or over the game if it
+    /// has never been put anywhere.
     ///
     /// <para>
     /// Does nothing when there is no game to be over. The game is looked for

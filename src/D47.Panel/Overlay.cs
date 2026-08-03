@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Windows;
 
 using D47.GameOverlay;
 using D47.Render;
@@ -48,6 +49,24 @@ internal sealed class Overlay
     /// </para>
     /// </summary>
     private const string HowSeeThrough = "game overlay opacity";
+
+    /// <summary>
+    /// What the store calls where the overlay was left, and how big.
+    ///
+    /// <para>
+    /// Three plain numbers under three names rather than one line holding all
+    /// of them, for the same reason the file is indented: somebody correcting a
+    /// position by hand should be able to change the one they mean. Spelled the
+    /// way they would be said out loud, like everything else in there.
+    /// </para>
+    /// </summary>
+    private const string HowFarAcross = "game overlay left";
+
+    /// <inheritdoc cref="HowFarAcross"/>
+    private const string HowFarDown = "game overlay top";
+
+    /// <inheritdoc cref="HowFarAcross"/>
+    private const string HowBig = "game overlay scale";
 
     /// <summary>
     /// Where it starts on a machine that has never been told otherwise.
@@ -99,6 +118,11 @@ internal sealed class Overlay
     /// Whether a given window belongs to Elite. Defaults to asking the real
     /// game.
     /// </param>
+    /// <param name="whereTheScreensAre">
+    /// How far this machine's screens reach between them, for deciding whether
+    /// a remembered place is still somewhere the Commander could see it.
+    /// Defaults to asking the real desktop.
+    /// </param>
     /// <returns>The overlay, or one that will quietly do nothing.</returns>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="overlays"/> or <paramref name="remembered"/> is null.
@@ -108,7 +132,8 @@ internal sealed class Overlay
         Answer answer,
         Store remembered,
         Action<string> record,
-        Func<IntPtr, bool>? isTheGame = null)
+        Func<IntPtr, bool>? isTheGame = null,
+        Func<Rect>? whereTheScreensAre = null)
     {
         ArgumentNullException.ThrowIfNull(overlays);
         ArgumentNullException.ThrowIfNull(remembered);
@@ -127,14 +152,29 @@ internal sealed class Overlay
 
         IGameOverlay? theOverlay = made.Or(record);
 
-        // Before it is ever shown. Setting it afterwards would be a solid
-        // rectangle over the cockpit for as long as the first frame lasts,
-        // which is the thing this is for.
-        //
-        // Nothing is read on a machine with no overlay, which is what the
-        // conditional buys over an if: an unusable opacity is only worth
-        // reporting to somebody who has a surface it would have applied to.
-        theOverlay?.Opacity = HowSeeThroughToBe(remembered, record);
+        // Nothing at all is read on a machine with no overlay, which is what
+        // the conditional buys: an unusable setting is only worth reporting to
+        // somebody who has a surface it would have been applied to.
+        if (theOverlay is { } surface)
+        {
+            // Before it is ever shown. Setting either of these afterwards would
+            // be a solid rectangle at the game's corner for as long as the first
+            // frame lasts, which is the thing they are both for.
+            surface.Opacity = HowSeeThroughToBe(remembered, record);
+
+            if (WhereItWasLeft(remembered, record, whereTheScreensAre ?? Desktop.Everything)
+                is { } place)
+            {
+                surface.PlaceAt(place.Corner, place.Scale);
+            }
+
+            // Written down as the Commander lets go, rather than on the way
+            // out. There is no way out to hook that reaches this — the panel's
+            // close hides it and the deliberate exit is on the tray menu — and
+            // a place that only survives a clean shutdown is one that does not
+            // survive a crash.
+            surface.MovedOrResized += (_, _) => WriteDownWhereItIs(surface, remembered);
+        }
 
         return new Overlay(theOverlay, isTheGame ?? EliteWindow.IsTheGame);
     }
@@ -146,10 +186,8 @@ internal sealed class Overlay
     ///
     /// <remarks>
     /// <para>
-    /// Read in the invariant culture, because <c>remembered.json</c> has to mean
-    /// the same thing on every machine that opens it — a value written as
-    /// <c>0,4</c> is a different number in half the world and no number in the
-    /// other half.
+    /// Read through <see cref="AsNumber"/>, which is where this file's one
+    /// opinion about how numbers are spelled lives.
     /// </para>
     /// <para>
     /// A value outside 0 to 1 is not an opacity, and neither is a word. Both are
@@ -169,12 +207,7 @@ internal sealed class Overlay
             return SeeThroughEnough;
         }
 
-        if (double.TryParse(
-                written,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out double opacity)
-            && opacity is >= 0 and <= 1)
+        if (AsNumber(written) is { } opacity && opacity is >= 0 and <= 1)
         {
             return opacity;
         }
@@ -182,6 +215,127 @@ internal sealed class Overlay
         record(CouldNotUse(written));
         return SeeThroughEnough;
     }
+
+    /// <summary>
+    /// Where the overlay should go and how big it should be: wherever it was
+    /// left, or nothing at all — which leaves the overlay to put itself over the
+    /// game, the way a first run does.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Three values or none. A file with one of them in it is somebody's
+    /// half-finished edit rather than a place, and picking the two that did
+    /// parse would put the overlay somewhere nobody asked for. Nothing written
+    /// down at all is the ordinary first run and is not an event; anything else
+    /// is said out loud, because a setting that was quietly ignored looks
+    /// exactly like an overlay that failed to come back.
+    /// </para>
+    /// <para>
+    /// The same trade as the opacity above, and for the same reason. This is a
+    /// file the Commander opens and edits, so refusing to start over a
+    /// hand-typed number would be a worse answer than starting where a first
+    /// run would have started.
+    /// </para>
+    /// </remarks>
+    /// <param name="remembered">What the last run left behind.</param>
+    /// <param name="record">Where to note a place that could not be used.</param>
+    /// <param name="screens">How far this machine's screens reach.</param>
+    /// <returns>The place to use, or null for none.</returns>
+    private static (Point Corner, double Scale)? WhereItWasLeft(
+        Store remembered, Action<string> record, Func<Rect> screens)
+    {
+        string? across = remembered.Read(HowFarAcross);
+        string? down = remembered.Read(HowFarDown);
+        string? size = remembered.Read(HowBig);
+
+        if (across is null && down is null && size is null)
+        {
+            return null;
+        }
+
+        // A scale of zero or less parses perfectly and is not a size. Nothing
+        // caps it from above: too big is a mistake somebody can see and drag
+        // back, where too small is an overlay with no grip to grab.
+        if (AsNumber(across) is not { } x
+            || AsNumber(down) is not { } y
+            || AsNumber(size) is not { } scale
+            || scale <= 0)
+        {
+            record(CouldNotUsePlace(across, down, size));
+            return null;
+        }
+
+        var corner = new Point(x, y);
+        Rect desktop = screens();
+
+        // The monitor that is not there any more. The numbers are fine and the
+        // place is nowhere, and an overlay restored onto it is one the Commander
+        // can neither see nor grab — a failure with no symptom except that the
+        // overlay did not come back.
+        if (!desktop.Contains(corner))
+        {
+            record(NoLongerOnAnyScreen(corner, desktop));
+            return null;
+        }
+
+        return (corner, scale);
+    }
+
+    /// <summary>
+    /// A number as <c>remembered.json</c> spells them, or null for anything
+    /// that is not one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The invariant culture, because <c>remembered.json</c> has to mean the
+    /// same thing on every machine that opens it — a value written as
+    /// <c>0,4</c> is a different number in half the world and no number in the
+    /// other half. Every number this file reads comes through here, so that is
+    /// decided once rather than per setting.
+    /// </para>
+    /// <para>
+    /// Infinities parse and are neither places nor sizes, which is what the
+    /// finiteness check is for. A NaN would fail every comparison it was put
+    /// through afterwards anyway, and is excluded here rather than left to
+    /// that.
+    /// </para>
+    /// </remarks>
+    private static double? AsNumber(string? written) =>
+        double.TryParse(written, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+        && double.IsFinite(value)
+            ? value
+            : null;
+
+    /// <summary>
+    /// Writes down where the overlay has ended up.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Three writes and so three saves, because the store has no way to put
+    /// several values down at once and inventing one for this would be a change
+    /// to something every other stored value goes through. The file holds a
+    /// handful of short strings, and this happens once per gesture rather than
+    /// once per mouse move.
+    /// </remarks>
+    /// <param name="overlay">The overlay that has just been let go of.</param>
+    /// <param name="remembered">Where to write it down.</param>
+    private static void WriteDownWhereItIs(IGameOverlay overlay, Store remembered)
+    {
+        Point corner = overlay.Position;
+
+        remembered.Write(HowFarAcross, AsWritten(corner.X));
+        remembered.Write(HowFarDown, AsWritten(corner.Y));
+        remembered.Write(HowBig, AsWritten(overlay.Scale));
+    }
+
+    /// <summary>
+    /// A number the way it goes into the file — invariant, so it reads back the
+    /// same on any machine.
+    /// </summary>
+    private static string AsWritten(double value) =>
+        value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
     /// What to say about a remembered opacity that is not one. Quotes what was
@@ -194,6 +348,31 @@ internal sealed class Overlay
             $"The game overlay's opacity was remembered as \"{written}\", which is not a number "
             + $"from 0 to 1. Directive 47 has started at {SeeThroughEnough} instead, and will keep "
             + $"using that until \"{HowSeeThrough}\" says something it can read.");
+
+    /// <summary>
+    /// What to say about a remembered place that is not one. Names all three
+    /// values, because which of them is wrong is exactly what somebody about to
+    /// edit the file needs to know.
+    /// </summary>
+    private static string CouldNotUsePlace(string? across, string? down, string? size) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"The game overlay was remembered at \"{HowFarAcross}\": \"{across}\", "
+            + $"\"{HowFarDown}\": \"{down}\", \"{HowBig}\": \"{size}\" — which is not two numbers "
+            + $"and a size above zero. Directive 47 has put the overlay over the game instead, and "
+            + $"will remember a new place as soon as one is moved there.");
+
+    /// <summary>
+    /// What to say about a place that has stopped existing. Names the screens
+    /// as well as the position, because the position on its own looks perfectly
+    /// reasonable and the whole point is that the desktop changed under it.
+    /// </summary>
+    private static string NoLongerOnAnyScreen(Point corner, Rect screens) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"The game overlay was left at {corner.X},{corner.Y}, which is not on any screen this "
+            + $"machine has now — they reach {screens}. Directive 47 has put the overlay over the "
+            + $"game instead, and will remember a new place as soon as one is moved there.");
 
     /// <summary>
     /// Takes the mouse out of the way when the game comes forward, and takes it

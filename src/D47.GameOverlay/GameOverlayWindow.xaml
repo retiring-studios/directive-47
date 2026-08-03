@@ -81,7 +81,8 @@
                    Width="18"
                    Height="18"
                    Cursor="SizeNWSE"
-                   DragDelta="ResizeTheOverlay">
+                   DragDelta="ResizeTheOverlay"
+                   DragCompleted="SettleTheSize">
                 <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
                         <Path Data="M 18,0 L 18,18 L 0,18 Z"

@@ -214,6 +214,48 @@ public class GameOverlayTests : GameTest
                 + $"where doubling uniformly would have made it {drawn.Height * Factor}");
     }
 
+    [Fact]
+    public void GameOverlay_WhenPlacedWhereItWasLeft_OpensThereRatherThanAtTheGamesCorner()
+    {
+        // The on-screen half of #148. Reading a remembered place, judging
+        // whether it is still usable and handing it over is logic, asserted in
+        // CI against a stand-in; that handing one over actually puts a real
+        // window there is this, and there is no stand-in for a desktop.
+        //
+        // What it goes red against is the code this story replaced, which put
+        // the overlay on the game's corner on every showing — the one line that
+        // makes an overlay impossible to leave anywhere.
+        Answer answer = Fixtures.HelpsAnswer();
+
+        // Offset from the game's own corner, far enough that being there cannot
+        // be mistaken for the old behavior, and inside the game's rectangle so
+        // that nothing is being asked to open off the edge of the desktop.
+        var corner = new Point(Game.Bounds.X + 220, Game.Bounds.Y + 160);
+        const double Bigger = 1.5;
+
+        using var overlay = RunningOverlay.PlacedAt(Game, answer, corner, Bigger);
+
+        _output.WriteLine(Screen.DescribeStack());
+
+        overlay.Bounds.TopLeft.ShouldBe(
+            corner,
+            $"the overlay should open where it was left, not at the game's corner "
+            + $"{Game.Bounds.TopLeft}");
+
+        // And at the size it was left, which is the other half of the criterion
+        // and the half a placement that only moved the window would miss. Both
+        // sizes are in the window's own units, so their ratio is the scale
+        // rather than the scale times whatever this monitor is set to.
+        Size natural = overlay.NaturalSize();
+
+        overlay.WindowSize().Width.ShouldBe(
+            natural.Width * Bigger,
+            tolerance: 0.5,
+            customMessage: "the overlay should open at the size it was left, not its own");
+
+        overlay.WindowSize().Height.ShouldBe(natural.Height * Bigger, tolerance: 0.5);
+    }
+
     // There is deliberately no test here for the overlay leaving the foreground
     // alone. One was written and deleted: it passed with ShowActivated="False"
     // and passed just as happily with it set to "True", which makes it a test
