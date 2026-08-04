@@ -460,3 +460,8 @@ ggml-*.bin
 
 # Local build output collected for a manual test pass.
 /artifacts/
+
+# What vpk writes: the installer, the package an installed copy updates itself
+# from, and the release feed beside them. Built from publish/, which is already
+# ignored above, and rebuilt from scratch every time.
+/installer/

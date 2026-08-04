@@ -54,6 +54,14 @@ jobs:
             - name: Restore
               run: dotnet restore ci.slnf
 
+            # vpk, pinned in .config/dotnet-tools.json to the same version as
+            # the Velopack package the application references. A tool and a
+            # library that disagree about the package format fail at install
+            # time on somebody else's machine, which is the worst place to find
+            # out.
+            - name: Restore the tools
+              run: dotnet tool restore
+
             - name: Build
               run: dotnet build ci.slnf --no-restore --configuration Release
 
@@ -70,18 +78,20 @@ jobs:
                   "version=$version" >> $env:GITHUB_OUTPUT
                   Write-Host "Publishing version $version"
 
-            # Self-contained on purpose: the artifact is what a manual pass
-            # installs and runs, and it has to work on a machine with no .NET
-            # on it. Single file for the same reason. Not trimmed — trimming
-            # and WPF's reflection over XAML do not get along.
+            # Self-contained on purpose: what a manual pass installs has to work
+            # on a machine with no .NET on it. Not trimmed — trimming and WPF's
+            # reflection over XAML do not get along.
+            #
+            # A folder, not a single file. That is what taking Velopack costs
+            # and what buys per-file patches: an update ships the assemblies
+            # that changed rather than 173MB of unchanged WPF and runtime every
+            # time. docs/decisions.md settles the exchange.
             - name: Publish the panel
               run: >
                   dotnet publish src/D47.Panel/D47.Panel.csproj
                   --configuration Release
                   --runtime win-x64
                   --self-contained true
-                  -p:PublishSingleFile=true
-                  -p:IncludeNativeLibrariesForSelfExtract=true
                   --output publish
 
             # The done-when says the artifact's version matches the property.
@@ -99,19 +109,51 @@ jobs:
                       throw "The published exe reports $actual, not $expected."
                   }
 
+            # The installer, from the folder that was just published and
+            # version-checked. packId is the application's identity to the
+            # updater — the per-user install folder is named from it — so it is
+            # fixed here and must not drift: change it and an existing install
+            # stops recognising its own updates.
+            - name: Build the installer
+              run: >
+                  dotnet vpk pack
+                  --packId Directive47
+                  --packVersion ${{ steps.version.outputs.version }}
+                  --packDir publish
+                  --mainExe D47.Panel.exe
+                  --packTitle "Directive 47"
+                  --packAuthors "Retiring Studios"
+                  --outputDir installer
+
+            # vpk fails the step if it cannot build the bundle, so this is not
+            # about the happy path. It is the claim the story makes: what a
+            # Commander downloads is one installer, and it is here.
+            - name: Check the installer is there
+              run: |
+                  $setup = Get-Item installer/Directive47-win-Setup.exe
+                  Write-Host "Installer is $([math]::Round($setup.Length / 1MB, 1)) MB"
+
             # if-no-files-found: error is the third done-when. Without it a
             # publish that produced nothing uploads nothing and passes, which
             # reads as a green build with an artifact and is neither.
-            - name: Attach the exe to the pull request
+            #
+            # The setup and the .nupkg together, because they are one thing: the
+            # installer is what a person runs and the package is what an
+            # installed copy updates itself from. The portable zip vpk also
+            # writes is left behind — there is no channel that offers it, and
+            # it is another 75MB of the same bytes.
+            - name: Attach the installer to the pull request
               uses: actions/upload-artifact@v7
               with:
-                  name: D47.Panel-${{ steps.version.outputs.version }}
-                  path: publish/D47.Panel.exe
+                  name: Directive47-${{ steps.version.outputs.version }}
+                  path: |
+                      installer/*
+                      !installer/*Portable.zip
                   if-no-files-found: error
-                  # A self-contained WPF exe is about 165MB. Ninety days of
-                  # those, one per pull request, is a lot of storage for
-                  # something whose whole purpose is to be downloaded once and
-                  # tried. The release channels are what keep a build for good.
+                  # Ninety days of these, one per pull request, is a lot of
+                  # storage for something whose whole purpose is to be
+                  # downloaded once and tried. The release channels are what
+                  # keep a build for good.
                   retention-days: 14
 
     # The stable channel, and only on a tag.
@@ -137,10 +179,10 @@ jobs:
             contents: write
 
         steps:
-            - name: Take the exe the build already made
+            - name: Take the installer the build already made
               uses: actions/download-artifact@v7
               with:
-                  name: D47.Panel-${{ needs.build.outputs.version }}
+                  name: Directive47-${{ needs.build.outputs.version }}
                   path: release
 
             # The version is asserted against the exe in the build job and
@@ -180,7 +222,11 @@ jobs:
                       Write-Host "$version is before 1.0.0, so this is a prerelease."
                   }
 
+                  # Everything the build attached, not just the installer. The
+                  # .nupkg and the release feed beside it are what an installed
+                  # copy reads to find out there is a newer version — a release
+                  # carrying only the setup is one nobody can update from.
                   gh release create "${{ github.ref_name }}" `
-                      release/D47.Panel.exe `
+                      (Get-ChildItem release -File | ForEach-Object { $_.FullName }) `
                       --title "Directive 47 $version" `
                       --generate-notes @flags

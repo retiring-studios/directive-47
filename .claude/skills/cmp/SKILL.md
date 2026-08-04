@@ -126,11 +126,12 @@ to infer from what changed.
 
 ### I — Install latest release
 
-There is no installer yet — that is
-[#142](https://github.com/retiring-studios/directive-47/issues/142), and Velopack
-is still only a candidate in `docs/decisions.md`. What a release carries is a
-self-contained single-file exe that needs no .NET on the machine, so installing
-it means fetching it and keeping it somewhere.
+There is an installer since
+[#142](https://github.com/retiring-studios/directive-47/issues/142). A release
+carries `Directive47-win-Setup.exe` — self-contained, needing no .NET on the
+machine — beside the `.nupkg` and release feed an installed copy updates itself
+from. So `I` now means download the setup and run it, rather than keep an exe
+somewhere.
 
 **Ask for the tag explicitly.** Everything before `1.0.0` is a prerelease, and
 `gh release download` with no tag resolves "latest" the way the API does, which
@@ -142,30 +143,43 @@ $tag = gh release list --repo retiring-studios/directive-47 --limit 1 --json tag
 ```
 
 ```powershell
-gh release download $tag --repo retiring-studios/directive-47 --pattern D47.Panel.exe --dir "$env:USERPROFILE\Downloads\d47-$tag" --clobber
+gh release download $tag --repo retiring-studios/directive-47 --pattern Directive47-win-Setup.exe --dir "$env:USERPROFILE\Downloads\d47-$tag" --clobber
+```
+
+```powershell
+& "$env:USERPROFILE\Downloads\d47-$tag\Directive47-win-Setup.exe"
 ```
 
 `$env:USERPROFILE\Downloads\d47-<tag>` matches what pull requests already tell
-the maintainer to type for a per-pull-request artifact, so an installed release
+the maintainer to type for a per-pull-request artifact, so a downloaded release
 and a build under manual test sit beside each other and neither overwrites the
 other.
 
-Report the path and the size. It is about 173MB and grows with every project
-added.
+The setup is about 80MB. It installs per-user under `%LOCALAPPDATA%\Directive47`
+with no administrator prompt, and puts Directive 47 on the desktop and in the
+Start menu. It is unsigned, so SmartScreen has something to say the first time —
+More info, then Run anyway. Report where it landed.
 
 ### L — Launch
 
-Run the exe that `I` downloaded:
+Find the installed exe rather than assuming a path. Velopack keeps the app in a
+`current` directory beside an updater, and which of the two exes to run is the
+sort of thing that is easier to look up than to remember:
 
 ```powershell
-& "$env:USERPROFILE\Downloads\d47-$tag\D47.Panel.exe"
+Get-ChildItem "$env:LOCALAPPDATA\Directive47" -Filter D47.Panel.exe -Recurse | Select-Object -ExpandProperty FullName
 ```
 
-Launch the *installed* build, never `dotnet run` — the point is to exercise what
-a user would actually have.
+```powershell
+& "$env:LOCALAPPDATA\Directive47\current\D47.Panel.exe"
+```
 
-If `L` is given without `I` in the same code, launch the most recent
-`d47-*` directory rather than assuming one was just fetched.
+Launch the *installed* build, never `dotnet run` and never the publish folder —
+the point is to exercise what a user would actually have.
+
+If `L` is given without `I` in the same code, launch whatever is already
+installed rather than assuming something was just fetched. If nothing is
+installed, say so rather than quietly falling back to a build.
 
 ### B[N] — Beep
 
