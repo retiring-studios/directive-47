@@ -108,6 +108,12 @@ internal sealed partial class App : Application, IDisposable
     /// <summary>
     /// Claims the right to be the running copy, and then puts the icon in the
     /// notification area, before any window is shown.
+    ///
+    /// <para>
+    /// Not the first thing that runs any more. <see cref="Program"/> is, and the
+    /// updater's own errands are handled and exited there — before there is an
+    /// application to be the only copy of.
+    /// </para>
     /// </summary>
     /// <param name="e">The startup arguments.</param>
     [SuppressMessage(

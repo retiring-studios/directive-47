@@ -65,6 +65,14 @@ jobs:
             - name: Restore
               run: dotnet restore ci.slnf
 
+            # vpk, pinned in .config/dotnet-tools.json to the same version as
+            # the Velopack package the application references. A tool and a
+            # library that disagree about the package format fail at install
+            # time on somebody else's machine, which is the worst place to find
+            # out.
+            - name: Restore the tools
+              run: dotnet tool restore
+
             - name: Build
               run: dotnet build ci.slnf --no-restore --configuration Release
 
@@ -81,18 +89,20 @@ jobs:
                   "version=$version" >> $env:GITHUB_OUTPUT
                   Write-Host "Publishing version $version"
 
-            # Self-contained on purpose: the artifact is what a manual pass
-            # installs and runs, and it has to work on a machine with no .NET
-            # on it. Single file for the same reason. Not trimmed — trimming
-            # and WPF's reflection over XAML do not get along.
+            # Self-contained on purpose: what a manual pass installs has to work
+            # on a machine with no .NET on it. Not trimmed — trimming and WPF's
+            # reflection over XAML do not get along.
+            #
+            # A folder, not a single file. That is what taking Velopack costs
+            # and what buys per-file patches: an update ships the assemblies
+            # that changed rather than 173MB of unchanged WPF and runtime every
+            # time. docs/decisions.md settles the exchange.
             - name: Publish the panel
               run: >
                   dotnet publish src/D47.Panel/D47.Panel.csproj
                   --configuration Release
                   --runtime win-x64
                   --self-contained true
-                  -p:PublishSingleFile=true
-                  -p:IncludeNativeLibrariesForSelfExtract=true
                   --output publish
 
             # The done-when says the artifact's version matches the property.
@@ -110,19 +120,181 @@ jobs:
                       throw "The published exe reports $actual, not $expected."
                   }
 
+            # "No prerequisites" is a claim about a machine nobody here has: a
+            # hosted runner comes with .NET installed and the maintainer has no
+            # spare box without it, so the absence itself cannot be staged.
+            #
+            # This asserts the property that makes the absence survivable, which
+            # can be staged. A framework-dependent publish asks the machine for a
+            # runtime and names it under "framework"; a self-contained one brings
+            # its own and lists them under "includedFrameworks", with the host
+            # that loads them sitting in the folder rather than in Program Files.
+            # An app that asks for nothing cannot be failed by a machine that has
+            # nothing.
+            - name: Check it brings its own runtime
+              run: |
+                  $config = Get-Content publish/D47.Panel.runtimeconfig.json -Raw | ConvertFrom-Json
+
+                  if ($config.runtimeOptions.PSObject.Properties.Name -contains "framework") {
+                      throw "The publish asks the machine for $($config.runtimeOptions.framework.name), so it needs .NET installed first."
+                  }
+
+                  $carried = $config.runtimeOptions.includedFrameworks
+                  if (-not $carried) {
+                      throw "The publish names no included frameworks, so it is not self-contained."
+                  }
+
+                  if (-not (Test-Path publish/hostfxr.dll)) {
+                      throw "hostfxr.dll is not beside the exe, so the runtime host is the machine's rather than ours."
+                  }
+
+                  $carried | ForEach-Object { Write-Host "Carries $($_.name) $($_.version)" }
+
+            # The installer, from the folder that was just published and
+            # version-checked. packId is the application's identity to the
+            # updater — the per-user install folder is named from it — so it is
+            # fixed here and must not drift: change it and an existing install
+            # stops recognising its own updates.
+            - name: Build the installer
+              run: >
+                  dotnet vpk pack
+                  --packId Directive47
+                  --packVersion ${{ steps.version.outputs.version }}
+                  --packDir publish
+                  --mainExe D47.Panel.exe
+                  --packTitle "Directive 47"
+                  --packAuthors "Retiring Studios"
+                  --outputDir installer
+
+            # vpk fails the step if it cannot build the bundle, so this is not
+            # about the happy path. It is the claim the story makes: what a
+            # Commander downloads is one installer, and it is here.
+            - name: Check the installer is there
+              run: |
+                  $setup = Get-Item installer/Directive47-win-Setup.exe
+                  Write-Host "Installer is $([math]::Round($setup.Length / 1MB, 1)) MB"
+
+            # Then actually run it, because an installer nobody has run is a file
+            # rather than an installer. The runner is a throwaway machine, which
+            # is the one thing it is better at than the dev PC.
+            #
+            # Silently: there is nobody to click through it, and a setup waiting
+            # on a dialog would hang the job rather than fail it.
+            #
+            # What this settles is the layout — where it puts itself and what the
+            # exe in there reports — which is otherwise something every caller
+            # would be guessing at, the cmp skill included. What it cannot settle
+            # is elevation: the runner's user is an administrator, so nothing
+            # here can tell a per-user install from one that would have prompted.
+            # That part is on the maintainer's own machine.
+            - name: Install it, and see where it went
+              run: |
+                  $setup = "installer/Directive47-win-Setup.exe"
+                  $installed = Start-Process $setup -ArgumentList "--silent" -Wait -PassThru
+
+                  if ($installed.ExitCode -ne 0) {
+                      throw "The installer exited $($installed.ExitCode)."
+                  }
+
+                  $root = Join-Path $env:LOCALAPPDATA "Directive47"
+
+                  if (-not (Test-Path $root)) {
+                      throw "Nothing was installed to $root."
+                  }
+
+                  # ${root} rather than $root, because a colon straight after a
+                  # variable name is how PowerShell spells a drive qualifier.
+                  Write-Host "Installed under ${root}:"
+                  Get-ChildItem $root -Recurse -Filter D47.Panel.exe |
+                      ForEach-Object {
+                          Write-Host "  $($_.FullName) reports $($_.VersionInfo.ProductVersion)"
+                      }
+
+                  # The installed copy, not the published folder. A build that
+                  # publishes correctly and installs something that will not
+                  # start is exactly what this story is about, and only the
+                  # installed one can fail that way.
+                  #
+                  # There are two of them, and the difference cost a CI run. The
+                  # one under current\ is the application; the one at the root is
+                  # a stub that starts it and exits, which is what the shortcuts
+                  # point at and what a Commander therefore runs. Take the first
+                  # D47.Panel.exe a recursive search finds and it is the stub —
+                  # which starts, hands over, and exits 0 within a second, and
+                  # reads exactly like an application that will not run.
+                  $app = Join-Path $root "current/D47.Panel.exe"
+                  $stub = Join-Path $root "D47.Panel.exe"
+
+                  foreach ($needed in $app, $stub) {
+                      if (-not (Test-Path $needed)) { throw "$needed is not there." }
+                  }
+
+                  $expected = "${{ steps.version.outputs.version }}"
+                  $reported = (Get-Item $app).VersionInfo.ProductVersion
+
+                  if (-not $reported.StartsWith($expected)) {
+                      throw "The installed application reports $reported, not $expected."
+                  }
+
+            # Started, given a moment, and asked whether it is still there. A
+            # missing dependency does not announce itself — the process simply
+            # goes away — so "it exited on its own" is the failure being looked
+            # for, and the only version of this question that can catch it is
+            # one that waits.
+            #
+            # Started through the stub, because that is what the shortcuts point
+            # at and so what a Commander actually runs. Which means the process
+            # that comes back from Start-Process is not the one to watch — it
+            # hands over and exits — so what is asked afterwards is whether any
+            # Directive 47 is alive, not whether that one is.
+            #
+            # A second copy exits cleanly on purpose (#107), so anything of ours
+            # already running would make this pass for the wrong reason. Hence
+            # the check before, not just after.
+            - name: See whether the installed copy actually runs
+              run: |
+                  $root = Join-Path $env:LOCALAPPDATA "Directive47"
+
+                  if (Get-Process D47.Panel -ErrorAction SilentlyContinue) {
+                      throw "Something of ours is already running, so this would measure the single-instance guard rather than the install."
+                  }
+
+                  Start-Process (Join-Path $root "D47.Panel.exe")
+                  Start-Sleep -Seconds 20
+
+                  $alive = Get-Process D47.Panel -ErrorAction SilentlyContinue
+
+                  if (-not $alive) {
+                      throw "Twenty seconds after the stub was run, no Directive 47 is running."
+                  }
+
+                  $alive | ForEach-Object {
+                      Write-Host "Running: pid $($_.Id), $($_.Path)"
+                  }
+
+                  $alive | Stop-Process -Force
+
             # if-no-files-found: error is the third done-when. Without it a
             # publish that produced nothing uploads nothing and passes, which
             # reads as a green build with an artifact and is neither.
-            - name: Attach the exe to the pull request
+            #
+            # The setup and the .nupkg together, because they are one thing: the
+            # installer is what a person runs and the package is what an
+            # installed copy updates itself from. The portable zip vpk also
+            # writes is left behind — there is no channel that offers it, and
+            # it is another 75MB of the same bytes.
+            - name: Attach the installer to the pull request
               uses: actions/upload-artifact@v7
               with:
-                  name: D47.Panel-${{ steps.version.outputs.version }}
-                  path: publish/D47.Panel.exe
+                  name: Directive47-${{ steps.version.outputs.version }}
+                  path: |
+                      installer/*
+                      !installer/*Portable.zip
                   if-no-files-found: error
-                  # A self-contained WPF exe is about 165MB. Ninety days of
-                  # those, one per pull request, is a lot of storage for
-                  # something whose whole purpose is to be downloaded once and
-                  # tried. The release channels are what keep a build for good.
+                  # Ninety days of these, one per pull request, is a lot of
+                  # storage for something whose whole purpose is to be
+                  # downloaded once and tried. The release channels are what
+                  # keep a build for good.
                   retention-days: 14
 
     # The stable channel, and only on a tag.
@@ -148,10 +320,10 @@ jobs:
             contents: write
 
         steps:
-            - name: Take the exe the build already made
+            - name: Take the installer the build already made
               uses: actions/download-artifact@v7
               with:
-                  name: D47.Panel-${{ needs.build.outputs.version }}
+                  name: Directive47-${{ needs.build.outputs.version }}
                   path: release
 
             # The version is asserted against the exe in the build job and
@@ -191,7 +363,11 @@ jobs:
                       Write-Host "$version is before 1.0.0, so this is a prerelease."
                   }
 
+                  # Everything the build attached, not just the installer. The
+                  # .nupkg and the release feed beside it are what an installed
+                  # copy reads to find out there is a newer version — a release
+                  # carrying only the setup is one nobody can update from.
                   gh release create "${{ github.ref_name }}" `
-                      release/D47.Panel.exe `
+                      (Get-ChildItem release -File | ForEach-Object { $_.FullName }) `
                       --title "Directive 47 $version" `
                       --generate-notes @flags
