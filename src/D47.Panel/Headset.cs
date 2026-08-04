@@ -41,11 +41,18 @@ internal sealed class Headset : IDisposable
 
     private readonly IHeadsetOverlay? _overlay;
 
+    /// <summary>
+    /// What the quad is currently carrying, so that a new answer can be
+    /// compared with it rather than drawn over it.
+    /// </summary>
+    private Answer _showing;
+
     private bool _disposed;
 
-    private Headset(IHeadsetOverlay? overlay)
+    private Headset(IHeadsetOverlay? overlay, Answer showing)
     {
         _overlay = overlay;
+        _showing = showing;
     }
 
     /// <summary>
@@ -80,7 +87,44 @@ internal sealed class Headset : IDisposable
             ? Perhaps<IHeadsetOverlay>.Of(overlay)
             : Perhaps<IHeadsetOverlay>.Absent(NoHeadsetOverlay);
 
-        return new Headset(made.Or(record));
+        return new Headset(made.Or(record), answer);
+    }
+
+    /// <summary>
+    /// Shows a new answer, if it is a different one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Both halves of one decision. An overlay showing a stale frame is
+    /// confidently wrong about what the Commander is looking at; an overlay
+    /// repainting a texture nothing has changed spends a headset's frame budget
+    /// on nothing, and the headset is where that budget is scarcest.
+    /// </para>
+    /// <para>
+    /// Driven by the change rather than by a clock, which is what makes the
+    /// second half true at all — a timer would repaint an unchanged answer
+    /// forever and no test could tell it was wrong.
+    /// </para>
+    /// <para>
+    /// Comparing answers only became possible when they started comparing as
+    /// values ([#200](https://github.com/retiring-studios/directive-47/issues/200)).
+    /// Before that a record holding a list compared it by identity, so two
+    /// answers with the same content were different and this would have
+    /// repainted on every turn.
+    /// </para>
+    /// </remarks>
+    /// <param name="answer">What to show.</param>
+    internal void Showing(Answer answer)
+    {
+        if (_showing == answer)
+        {
+            return;
+        }
+
+        _showing = answer;
+
+        _overlay?.Paint(answer);
     }
 
     /// <summary>

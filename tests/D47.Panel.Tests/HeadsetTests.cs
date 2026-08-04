@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 
+using D47.Capabilities;
 using D47.Render;
 using D47.TestSupport;
 using D47.VrOverlay;
@@ -127,6 +128,88 @@ public class HeadsetTests
         inTheHeadset.WasGivenBack.ShouldBeTrue("the quad should have gone back to the compositor");
     }
 
+    [Fact]
+    public void HeadsetOverlay_WhenTheAnswerChanges_RepaintsTheTexture()
+    {
+        // An overlay showing a stale frame is worse than one that is not there.
+        // It is confidently wrong about what the Commander is looking at.
+        var inTheHeadset = new HeadsetOverlayThatRemembers();
+
+        using var headset = Headset.From(
+            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+
+        Answer somethingElse = Fixtures.HelpsAnswer() with
+        {
+            Result = new ListResult { CapabilityId = "help", Items = ["a different answer"] },
+        };
+
+        headset.Showing(somethingElse);
+
+        inTheHeadset.Paints.ShouldBe(1, "a changed answer should have reached the headset");
+        inTheHeadset.Showing.ShouldBe(somethingElse);
+    }
+
+    [Fact]
+    public void HeadsetOverlay_WhenTheAnswerIsUnchanged_DoesNotRepaint()
+    {
+        // The other half of the same decision. Repainting a texture nothing has
+        // changed spends a headset's frame budget on nothing, and the headset is
+        // where that budget is scarcest.
+        //
+        // A separately built answer with identical content, not the same object
+        // — which only tells the two apart because answers now compare as
+        // values. Handing back the very same instance would prove nothing but
+        // reference equality.
+        var inTheHeadset = new HeadsetOverlayThatRemembers();
+
+        using var headset = Headset.From(
+            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+
+        headset.Showing(Fixtures.HelpsAnswer());
+
+        inTheHeadset.Paints.ShouldBe(
+            0, "the answer was the same one, so nothing needed drawing again");
+    }
+
+    [Fact]
+    public void HeadsetOverlay_WhenTheAnswerChangesTwice_RepaintsEachTime()
+    {
+        // Because "does not repaint" must not be implemented as "repaints once
+        // and then never again", which passes both facts above.
+        var inTheHeadset = new HeadsetOverlayThatRemembers();
+
+        using var headset = Headset.From(
+            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+
+        headset.Showing(Answering("first"));
+        headset.Showing(Answering("second"));
+
+        inTheHeadset.Paints.ShouldBe(2);
+    }
+
+    [Fact]
+    public void HeadsetOverlay_WithNoOverlayAtAll_TakesANewAnswerQuietly()
+    {
+        // On a machine with no SteamVR there is nothing to repaint, and a new
+        // answer arriving is not an error to report.
+        using var headset = Headset.From(
+            new HeadsetFactoryThatRefuses(), Fixtures.HelpsAnswer(), _recorded.Add);
+
+        Should.NotThrow(() => headset.Showing(Answering("something new")));
+    }
+
+    /// <summary>
+    /// Help's answer with different lines in it, so two answers can differ by
+    /// content rather than by identity.
+    /// </summary>
+    /// <param name="line">What the answer should say.</param>
+    /// <returns>An answer saying that.</returns>
+    private static Answer Answering(string line) =>
+        Fixtures.HelpsAnswer() with
+        {
+            Result = new ListResult { CapabilityId = "help", Items = [line] },
+        };
+
     /// <summary>
     /// A machine with no SteamVR, without needing one to be absent.
     /// </summary>
@@ -163,8 +246,9 @@ public class HeadsetTests
     }
 
     /// <summary>
-    /// An overlay that is nothing but whether it is up, which is as much as
-    /// <see cref="IHeadsetOverlay"/> promises anybody outside the adapter.
+    /// An overlay that is nothing but whether it is up and what it was last
+    /// asked to show — which is as much as <see cref="IHeadsetOverlay"/>
+    /// promises anybody outside the adapter.
     /// </summary>
     private sealed class HeadsetOverlayThatRemembers : IHeadsetOverlay
     {
@@ -172,9 +256,24 @@ public class HeadsetTests
 
         internal bool WasGivenBack { get; private set; }
 
+        /// <summary>
+        /// How many times it was asked to paint. Counted rather than flagged,
+        /// because "did not repaint" and "repainted twice" are both failures and
+        /// a boolean can only tell you about one of them.
+        /// </summary>
+        internal int Paints { get; private set; }
+
+        internal Answer? Showing { get; private set; }
+
         public void Show() => IsVisible = true;
 
         public void Hide() => IsVisible = false;
+
+        public void Paint(Answer answer)
+        {
+            Paints++;
+            Showing = answer;
+        }
 
         public void Dispose()
         {
