@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Numerics;
 using System.Runtime.InteropServices;
 
 using D47.Placement;
@@ -34,29 +33,6 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// </para>
     /// </summary>
     private const float AboutAHandSpan = 0.5f;
-
-    /// <summary>
-    /// Where the quad sits until something tells it otherwise: a metre and a
-    /// half in front of the seated origin, square to the view.
-    ///
-    /// <para>
-    /// A <c>Pose</c> rather than a matrix, and that is the whole of this story.
-    /// It used to be twelve frozen floats in OpenVR's own layout — written when
-    /// <c>D47.Placement</c> was an empty scaffold, and honest then — which made
-    /// this adapter the thing deciding where the overlay went, contrary to what
-    /// its own project file says about it.
-    /// </para>
-    /// <para>
-    /// Still a value the adapter holds, because nothing supplies one yet.
-    /// Remembering it across a restart is
-    /// [#141](https://github.com/retiring-studios/directive-47/issues/141), and
-    /// putting it somewhere by voice is
-    /// [#140](https://github.com/retiring-studios/directive-47/issues/140). A
-    /// parameter with no caller would be a seam built for nobody.
-    /// </para>
-    /// </summary>
-    private static readonly Pose InFrontOfTheCommander =
-        new(new Vector3(0, 0, -1.5f), Quaternion.Identity);
 
     private readonly ulong _handle;
     private bool _disposed;
@@ -101,7 +77,7 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
                 OpenVR.Overlay.SetOverlayWidthInMeters(handle, AboutAHandSpan),
                 "size the overlay");
 
-            HmdMatrix34_t where = Quad.At(InFrontOfTheCommander);
+            HmdMatrix34_t where = Quad.At(Resting.Place);
 
             Insist(
                 OpenVR.Overlay.SetOverlayTransformAbsolute(
@@ -161,7 +137,7 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     ///
     /// <remarks>
     /// The render happens here rather than arriving already done, because an
-    /// presented is what the rest of the application holds and pixels are what
+    /// a presentation is what the rest of the application holds and pixels are what
     /// SteamVR wants — and being the place those two meet is most of what this
     /// project is for.
     /// </remarks>
@@ -209,9 +185,9 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// alternative was every call site growing three lines of the same
     /// <c>if</c>, which is how the interesting line stops being visible.
     /// </remarks>
-    private static void Insist(EVROverlayError presented, string what)
+    private static void Insist(EVROverlayError answer, string what)
     {
-        if (presented == EVROverlayError.None)
+        if (answer == EVROverlayError.None)
         {
             return;
         }
@@ -219,6 +195,6 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
         throw new InvalidOperationException(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"SteamVR would not {what}: {presented}."));
+                $"SteamVR would not {what}: {answer}."));
     }
 }

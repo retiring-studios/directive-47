@@ -65,7 +65,7 @@ public interface IHeadsetOverlay : IDisposable
     /// </para>
     /// <para>
     /// Unconditional: it paints whatever it is given, every time it is asked.
-    /// Whether an presented is worth painting is a decision, decisions live outside
+    /// Whether an answer is worth painting is a decision, decisions live outside
     /// the adapter, and an overlay that quietly declined would be one nothing in
     /// CI could catch declining wrongly.
     /// </para>

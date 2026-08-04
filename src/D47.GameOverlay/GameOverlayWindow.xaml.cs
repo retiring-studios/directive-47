@@ -66,7 +66,7 @@ public partial class GameOverlayWindow : Window
     ///
     /// <para>
     /// Null is the whole of "never been placed", and it is what makes the
-    /// game's corner a fallback rather than the presented. It fills in from two
+    /// game's corner a fallback rather than the answer. It fills in from two
     /// directions — <see cref="PlaceAt"/> on the way up, from whatever the last
     /// run wrote down, and the end of every drag after that.
     /// </para>
@@ -74,7 +74,7 @@ public partial class GameOverlayWindow : Window
     private Point? _putAt;
 
     /// <summary>
-    /// Creates the overlay around an presented to show.
+    /// Creates the overlay around what it is to show.
     /// </summary>
     /// <param name="presented">What to render.</param>
     public GameOverlayWindow(Presentation presented)
@@ -178,7 +178,7 @@ public partial class GameOverlayWindow : Window
     /// Those are device-independent, so turning them into pixels means applying
     /// a scale factor that is itself per-monitor — arithmetic that is wrong in
     /// exactly the case this feature has to survive, which is a window on the
-    /// second screen. Before there is a window to ask, the presented is wherever
+    /// second screen. Before there is a window to ask, the answer is wherever
     /// it has been told to go.
     /// </remarks>
     public Point Position =>
@@ -410,7 +410,7 @@ public partial class GameOverlayWindow : Window
     ///
     /// <remarks>
     /// <para>
-    /// The game's corner is the fallback and not the presented. It used to be the
+    /// The game's corner is the fallback and not the answer. It used to be the
     /// presented, applied on every showing, which is a perfectly good way to open
     /// an overlay exactly once and a guarantee that it will never stay
     /// anywhere.
