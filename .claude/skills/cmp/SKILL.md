@@ -155,24 +155,25 @@ the maintainer to type for a per-pull-request artifact, so a downloaded release
 and a build under manual test sit beside each other and neither overwrites the
 other.
 
-The setup is about 80MB. It installs per-user under `%LOCALAPPDATA%\Directive47`
-with no administrator prompt, and puts Directive 47 on the desktop and in the
-Start menu. It is unsigned, so SmartScreen has something to say the first time —
-More info, then Run anyway. Report where it landed.
+The setup is about 80MB and installs to `%LOCALAPPDATA%\Directive47` — a stub and
+an updater at the root, the application under `current\` — putting Directive 47
+on the desktop and in the Start menu. It is unsigned, so SmartScreen has
+something to say the first time: More info, then Run anyway. Report where it
+landed.
 
 ### L — Launch
 
-Find the installed exe rather than assuming a path. Velopack keeps the app in a
-`current` directory beside an updater, and which of the two exes to run is the
-sort of thing that is easier to look up than to remember:
+Run the stub, which is what the shortcuts point at and so what a Commander runs:
 
 ```powershell
-Get-ChildItem "$env:LOCALAPPDATA\Directive47" -Filter D47.Panel.exe -Recurse | Select-Object -ExpandProperty FullName
+& "$env:LOCALAPPDATA\Directive47\D47.Panel.exe"
 ```
 
-```powershell
-& "$env:LOCALAPPDATA\Directive47\current\D47.Panel.exe"
-```
+**There are two `D47.Panel.exe` and the stub is the right one.** The application
+is the one under `current\`; the stub at the root starts it and exits
+immediately. So do not wait on the stub or check whether it is still running —
+it will not be, and that is not a failure. Ask for `Get-Process D47.Panel` if you
+need to know something is up, and expect its path to be the `current\` one.
 
 Launch the *installed* build, never `dotnet run` and never the publish folder —
 the point is to exercise what a user would actually have.
