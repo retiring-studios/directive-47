@@ -12,6 +12,7 @@ using D47.Capabilities;
 using D47.GameOverlay;
 using D47.Help;
 using D47.Render;
+using D47.VrOverlay;
 
 using Forms = System.Windows.Forms;
 
@@ -100,6 +101,7 @@ internal sealed partial class App : Application, IDisposable
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
     private Overlay? _overlay;
+    private Headset? _headset;
     private ChosenHotkey? _hotkey;
     private ForegroundWatcher? _foreground;
 
@@ -176,6 +178,19 @@ internal sealed partial class App : Application, IDisposable
 
         _overlay = Overlay.From(new GameOverlayFactory(), answer, remembered, _log.Warning);
         _overlay.Show();
+
+        // Asked on every machine, most of which have no SteamVR. Whether there
+        // is a runtime to put a quad in has nothing to do with whether the game
+        // or the desktop can host the other surfaces, so it is asked here beside
+        // them rather than behind a condition — and a machine without one writes
+        // down that it had none and carries on.
+        //
+        // On this thread, which is the one WPF gave us and is single-threaded
+        // apartment. Building the render to get pixels out of it needs that, and
+        // a factory called from anywhere else would fail for a reason nothing
+        // here would explain.
+        _headset = Headset.From(new HeadsetOverlayFactory(), answer, _log.Warning);
+        _headset.Show();
 
         FollowTheForeground();
         ClaimTheHotkey(remembered);
@@ -407,6 +422,12 @@ internal sealed partial class App : Application, IDisposable
         // past our own lifetime is how a shutdown turns into a crash.
         _foreground?.Dispose();
         _foreground = null;
+
+        // The quad is the compositor's, and it outlives us unless it is given
+        // back — a rectangle left floating in somebody's cockpit with nothing
+        // running to close it, and a slot held in SteamVR's list of applications.
+        _headset?.Dispose();
+        _headset = null;
 
         // Last, so that nothing another copy would collide with is still up
         // when the name becomes claimable again.

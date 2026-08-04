@@ -68,6 +68,7 @@
         <ProjectReference Include="..\D47.GameOverlay\D47.GameOverlay.csproj" />
         <ProjectReference Include="..\D47.Help\D47.Help.csproj" />
         <ProjectReference Include="..\D47.Render\D47.Render.csproj" />
+        <ProjectReference Include="..\D47.VrOverlay\D47.VrOverlay.csproj" />
     </ItemGroup>
 
 </Project>
