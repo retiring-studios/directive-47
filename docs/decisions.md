@@ -114,8 +114,8 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   as `NearestName`. Two packages were priced first and both were fine on the
   licence allowlist — `Fastenshtein` (MIT, no dependencies, built for `net10.0`)
   and `FuzzySharp` (MIT, no dependencies, newest target `netstandard2.1`) — but
-  neither earns a redistributed dependency inside a single-file exe for a
-  textbook function that reads in one screen. The real pull toward a package is
+  neither earns a redistributed dependency in what we ship for a textbook
+  function that reads in one screen. The real pull toward a package is
   Search machinery
   ([#22](https://github.com/retiring-studios/directive-47/issues/22)), which
   needs the same thing over a far larger and more hostile vocabulary. Revisit
@@ -211,8 +211,8 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   same icon in the same place through the same shell API; what differs is what
   the *menu* will be made of, and that question belongs to
   [#70](https://github.com/retiring-studios/directive-47/issues/70). Of the
-  three only the in-box one adds nothing to a redistributed single-file exe and
-  nothing to the licence allowlist, and it costs one `UseWindowsForms` line
+  three only the in-box one adds nothing to what we redistribute and nothing to
+  the licence allowlist, and it costs one `UseWindowsForms` line
   beside `UseWPF`. A WPF application referencing WinForms reads oddly until you
   know why, which is what that line's comment is for. Revisit trigger: #70, if
   WinForms menus turn out to fight the panel's look — swapping is contained,
@@ -240,7 +240,7 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   voice capability, built on this rather than beside it.
 - **The log is hand-rolled and has one level.** `Microsoft.Extensions.Logging`
   has no in-box file provider, so the framework that looks free costs a package
-  in a redistributed single-file exe. It rolls once at a megabyte and keeps two
+  in what we redistribute. It rolls once at a megabyte and keeps two
   files, and it swallows its own failures — a logger that can take the
   application down is worse than no log. Callers take it as an `Action<string>`
   rather than as a type, so nothing is coupled to it having been a logger.
@@ -433,10 +433,17 @@ The tiers drive the project layout, not just test selection.
   those binaries are, once, when it is added. That is where the predecessor's
   GPL exposure came from — an MIT package three levels above an FFmpeg build
   carrying GPL codecs — and it is a glance, not an audit.
-- **Redistribution is why this matters at all.** CI publishes a single-file exe,
-  so everything inside it is redistributed. Using a library and shipping it are
-  different acts with different obligations, and a single-file publish also
-  makes LGPL's relink obligation awkward to satisfy.
+- **Redistribution is why this matters at all.** CI publishes an installer
+  carrying a self-contained folder, so everything in it is redistributed. Using
+  a library and shipping it are different acts with different obligations.
+
+  **The relink argument was about the single file and no longer applies as
+  written.** It said a single-file publish makes LGPL's relink obligation
+  awkward to satisfy, which was true of that shape and is not true of a folder
+  of loose assemblies. Nothing about the allowlist changes here: what LGPL is
+  now worth is a decision, it has not been made, and no package has asked for
+  it. Recorded so the reasoning is not quietly inherited by a shape it was never
+  about.
 - **Standing rejection: FluentAssertions v8**, which moved to a paid commercial
   license under Xceed in early 2025. Shouldly is used instead.
 - **SteamVR is reached through Valve's own bindings, vendored, not packaged.**
@@ -586,8 +593,8 @@ capability to save nothing.
   is the automated hardware tier's job; the human pass is for new behavior and
   judgment calls. A manual test that keeps recurring is a hole in automation —
   promote it, do not list it.
-- CI publishes a single-file exe on every PR, so manual passes test an installed
-  build rather than `dotnet run`. Built at
+- CI publishes an installer on every PR, so manual passes install and test what
+  ships rather than running `dotnet run`. Built at
   [#63](https://github.com/retiring-studios/directive-47/issues/63): the
   artifact is attached to every pull request and kept for fourteen days.
 - **If something requires manual testing, it gets tested manually before
