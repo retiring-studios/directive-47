@@ -22,6 +22,8 @@
       "PowerShell(gh pr checks*)",
       "PowerShell(gh issue view*)",
       "PowerShell(gh issue list*)",
+      "PowerShell(gh issue close*)",
+      "PowerShell(gh issue comment*)",
       "PowerShell(Get-ChildItem*)",
       "PowerShell(Test-Path*)",
       "Edit(src/**)",

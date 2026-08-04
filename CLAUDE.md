@@ -161,6 +161,4 @@ looks like, and what would be a defect. A step that keeps reappearing is a hole
 in automation — promote it rather than listing it again. A step that cannot be
 written that concretely is usually not a check at all.
 
-**Never apply `verified` yourself.** That one is his.
-
 Reasoning behind the decisions already made: `docs/decisions.md`.
