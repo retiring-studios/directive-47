@@ -12,13 +12,13 @@ public sealed class GameOverlayFactory : IGameOverlayFactory
     /// <summary>
     /// Creates the overlay, or reports that this machine cannot have one.
     /// </summary>
-    /// <param name="answer">What the overlay should render.</param>
+    /// <param name="presented">What the overlay should render.</param>
     /// <returns>
     /// The overlay, or <see langword="null"/> when the desktop is not being
     /// composited.
     /// </returns>
-    public IGameOverlay? Create(Answer answer) =>
-        DesktopIsComposited() ? new EliteOverlay(new GameOverlayWindow(answer)) : null;
+    public IGameOverlay? Create(Presentation presented) =>
+        DesktopIsComposited() ? new EliteOverlay(new GameOverlayWindow(presented)) : null;
 
     /// <summary>
     /// Whether Windows is compositing the desktop.
@@ -38,7 +38,7 @@ public sealed class GameOverlayFactory : IGameOverlayFactory
     /// every version of Windows this product supports — so in practice this
     /// answers yes. Where it answers no is the case worth having: a remote
     /// session, or a machine whose compositor has been turned off. If the call
-    /// itself fails, the answer is no, because a machine that cannot say
+    /// itself fails, the presented is no, because a machine that cannot say
     /// whether it composites is not one to hand a transparent window.
     /// </para>
     /// </remarks>

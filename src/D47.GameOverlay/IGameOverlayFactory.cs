@@ -17,7 +17,7 @@ public interface IGameOverlayFactory
     /// <summary>
     /// Creates the overlay.
     /// </summary>
-    /// <param name="answer">What the overlay should render.</param>
+    /// <param name="presented">What the overlay should render.</param>
     /// <returns>
     /// The overlay, or <see langword="null"/> when this machine cannot host
     /// one.
@@ -29,5 +29,5 @@ public interface IGameOverlayFactory
     /// ever finds.
     /// </para>
     /// </returns>
-    IGameOverlay? Create(Answer answer);
+    IGameOverlay? Create(Presentation presented);
 }

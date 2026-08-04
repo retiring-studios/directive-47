@@ -11,15 +11,14 @@ using D47.Render;
 namespace D47.Panel;
 
 /// <summary>
-/// The panel window. It hosts one <see cref="CapabilityView"/> and hands it the
-/// answer to show; it does not know what is in that answer, and it no longer
-/// decides what the answer is.
+/// The panel window. It hosts one <see cref="CapabilityView"/> and hands it what
+/// to show; it does not know what is in that, and it does not decide it.
 ///
 /// <para>
-/// Composing that answer moved to <see cref="App"/> when the game overlay
-/// arrived. Two surfaces showing the same answer means one object shown twice,
-/// and a window that builds its own is a window that can disagree with the
-/// overlay about what the Commander asked.
+/// Composing what every surface shows moved to <see cref="App"/> when the game
+/// overlay arrived. Two surfaces composing their own means two that can
+/// disagree about what the Commander asked and about whether there is a newer
+/// version.
 /// </para>
 /// </summary>
 internal partial class MainWindow : Window
@@ -52,22 +51,42 @@ internal partial class MainWindow : Window
     private readonly Zoom _zoom;
 
     /// <summary>
-    /// Creates the window around an answer to show, at the size it was last left
+    /// What to tell when the Commander answers the notice.
+    /// </summary>
+    private readonly Updates _updates;
+
+    /// <summary>
+    /// Creates the window around what it is to show, at the size it was last left
     /// drawing things.
     /// </summary>
-    /// <param name="answer">What to render.</param>
+    /// <param name="presented">What to render.</param>
     /// <param name="zoom">How big to draw it.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="zoom"/> is null.</exception>
-    public MainWindow(Answer answer, Zoom zoom)
+    /// <param name="updates">What to tell about an answered update.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="zoom"/> or <paramref name="updates"/> is null.
+    /// </exception>
+    public MainWindow(Presentation presented, Zoom zoom, Updates updates)
     {
+        ArgumentNullException.ThrowIfNull(presented);
         ArgumentNullException.ThrowIfNull(zoom);
+        ArgumentNullException.ThrowIfNull(updates);
 
         InitializeComponent();
 
-        View.DataContext = answer;
+        View.DataContext = presented;
 
         _zoom = zoom;
-        _controls = CapabilityView.LaidOutFor(answer).DesiredSize;
+        _updates = updates;
+        _controls = CapabilityView.LaidOutFor(presented).DesiredSize;
+
+        // Offered only when there is something to answer. The notice itself is
+        // the render's and reaches every surface; these two are the panel's, and
+        // a pair of buttons about an update nobody has is furniture that means
+        // nothing.
+        if (presented.UpdateWaiting is not null)
+        {
+            AboutTheUpdate.Visibility = Visibility.Visible;
+        }
 
         DrawAtTheZoom();
         _zoom.Changed += (_, _) => DrawAtTheZoom();
@@ -160,6 +179,42 @@ internal partial class MainWindow : Window
     /// <param name="sender">The control.</param>
     /// <param name="e">The click.</param>
     private void ZoomOut(object sender, RoutedEventArgs e) => _zoom.Out();
+
+    /// <summary>
+    /// Takes the update, which installs it when Directive 47 is closed.
+    /// </summary>
+    /// <param name="sender">The control.</param>
+    /// <param name="e">The click.</param>
+    private void AcceptTheUpdate(object sender, RoutedEventArgs e)
+    {
+        _updates.Accept();
+
+        Answered();
+    }
+
+    /// <summary>
+    /// Leaves the update alone.
+    /// </summary>
+    /// <param name="sender">The control.</param>
+    /// <param name="e">The click.</param>
+    private void DeclineTheUpdate(object sender, RoutedEventArgs e)
+    {
+        _updates.Decline();
+
+        Answered();
+    }
+
+    /// <summary>
+    /// Puts the two controls away once one of them has been pressed.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Both of them, whichever was pressed. A question that stays on screen
+    /// after it has been answered is one the Commander cannot tell they
+    /// answered — and the strip is chrome, so anything left in it is competing
+    /// with the render for a reason that has gone away.
+    /// </remarks>
+    private void Answered() => AboutTheUpdate.Visibility = Visibility.Collapsed;
 
     /// <summary>
     /// Opens the window around its controls, at the moment it has a handle and
@@ -273,7 +328,7 @@ internal partial class MainWindow : Window
     ///
     /// <remarks>
     /// <para>
-    /// Asked of the window rather than of the system, and the system's answer was
+    /// Asked of the window rather than of the system, and the system's presented was
     /// written first. <c>SystemParameters.WindowNonClientFrameThickness</c> is
     /// short by 8 device-independent pixels in each direction on Windows 11,
     /// which draws a resize border it does not count. Measured, not reasoned

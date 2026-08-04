@@ -18,7 +18,7 @@ public interface IHeadsetOverlayFactory
     /// <summary>
     /// Creates the overlay.
     /// </summary>
-    /// <param name="answer">What the overlay should render.</param>
+    /// <param name="presented">What the overlay should render.</param>
     /// <returns>
     /// The overlay, which the caller owns and must dispose, or
     /// <see langword="null"/> when this machine cannot host one.
@@ -28,9 +28,9 @@ public interface IHeadsetOverlayFactory
     /// one that is not running. Every other failure is thrown, because a defect
     /// of ours reported as an unsupported machine is a defect nobody ever finds.
     /// This is the same contract <c>IGameOverlayFactory</c> already has, and
-    /// deliberately so: two adapters that answer "cannot" in two different ways
+    /// deliberately so: two adapters that presented "cannot" in two different ways
     /// would need two decisions outside them.
     /// </para>
     /// </returns>
-    IHeadsetOverlay? Create(Answer answer);
+    IHeadsetOverlay? Create(Presentation presented);
 }

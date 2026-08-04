@@ -183,7 +183,23 @@ internal sealed partial class App : Application, IDisposable
             }
         };
 
-        Answer answer = Compose();
+        // Before the surfaces, because what they show includes whether there is
+        // a newer version and a surface built without one would have to be told
+        // afterwards. Three surfaces being told afterwards is three chances for
+        // one of them to miss it.
+        //
+        // Which means the check happens before the panel appears. It is a
+        // network call, so on an installed copy that is however long GitHub
+        // takes — see the pull request; making it not block startup is real work
+        // and is not this story.
+        _updates = Updates.From(new VelopackUpdates(Releases, Prereleases), _log.Warning);
+        _updates.Look();
+
+        var presented = new Presentation
+        {
+            Answer = Compose(),
+            UpdateWaiting = _updates.Waiting,
+        };
 
         // One store, opened once and shared. Two would be two copies of the
         // same file in memory, and the moment either of them writes, the other
@@ -198,10 +214,10 @@ internal sealed partial class App : Application, IDisposable
         // Explicitly, rather than through StartupUri, because the window now
         // takes what it shows as an argument and StartupUri can only call a
         // parameterless constructor.
-        MainWindow = new MainWindow(answer, new Zoom(remembered, _log.Warning));
+        MainWindow = new MainWindow(presented, new Zoom(remembered, _log.Warning), _updates);
         MainWindow.Show();
 
-        _overlay = Overlay.From(new GameOverlayFactory(), answer, remembered, _log.Warning);
+        _overlay = Overlay.From(new GameOverlayFactory(), presented, remembered, _log.Warning);
         _overlay.Show();
 
         // Asked on every machine, most of which have no SteamVR. Whether there
@@ -214,25 +230,12 @@ internal sealed partial class App : Application, IDisposable
         // apartment. Building the render to get pixels out of it needs that, and
         // a factory called from anywhere else would fail for a reason nothing
         // here would explain.
-        _headset = Headset.From(new HeadsetOverlayFactory(), answer, _log.Warning);
+        _headset = Headset.From(new HeadsetOverlayFactory(), presented, _log.Warning);
         _headset.Show();
 
         FollowTheForeground();
         ClaimTheHotkey(remembered);
 
-        // Asked once, at startup, and nothing is shown about it yet. Putting the
-        // answer on the panel and the overlay is
-        // [#143](https://github.com/retiring-studios/directive-47/issues/143);
-        // what is here is the half that has to exist before there is anything to
-        // put anywhere, and the exit hook that makes accepting mean something.
-        //
-        // Asked at all only since
-        // [#145](https://github.com/retiring-studios/directive-47/issues/145).
-        // Until then a check on a machine that is merely offline would have
-        // thrown out of here and taken startup with it, which is why building
-        // one and asking it were separated in the first place.
-        _updates = Updates.From(new VelopackUpdates(Releases, Prereleases), _log.Warning);
-        _updates.Look();
     }
 
     /// <summary>

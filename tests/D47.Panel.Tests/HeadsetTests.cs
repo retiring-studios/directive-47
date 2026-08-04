@@ -42,7 +42,7 @@ public class HeadsetTests
         var machineThatCannot = new HeadsetFactoryThatRefuses();
 
         Headset headset = Should.NotThrow(
-            () => Headset.From(machineThatCannot, Fixtures.HelpsAnswer(), _recorded.Add));
+            () => Headset.From(machineThatCannot, Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no SteamVR, for a reason that has nothing to do with
@@ -64,7 +64,7 @@ public class HeadsetTests
         // machine with no headset that is every single run, so the one line
         // saying why is the only evidence there will ever be.
         using var headset = Headset.From(
-            new HeadsetFactoryThatRefuses(), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryThatRefuses(), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
         _recorded.ShouldHaveSingleItem().ShouldContain(
             "SteamVR",
@@ -78,7 +78,7 @@ public class HeadsetTests
         // written on every ordinary startup is a line nobody looks at twice.
         using var headset = Headset.From(
             new HeadsetFactoryReturning(new HeadsetOverlayThatRemembers()),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             _recorded.Add);
 
         _recorded.ShouldBeEmpty("nothing was carried on without");
@@ -92,7 +92,7 @@ public class HeadsetTests
         // machine without a headset, and this is what stops that being written.
         Should.Throw<StandInFailure>(
             () => Headset.From(
-                new HeadsetFactoryThatIsBroken(), Fixtures.HelpsAnswer(), _recorded.Add));
+                new HeadsetFactoryThatIsBroken(), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add));
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class HeadsetTests
         var inTheHeadset = new HeadsetOverlayThatRemembers();
 
         using var headset = Headset.From(
-            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryReturning(inTheHeadset), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
         headset.Show();
 
@@ -121,7 +121,7 @@ public class HeadsetTests
         var inTheHeadset = new HeadsetOverlayThatRemembers();
 
         var headset = Headset.From(
-            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryReturning(inTheHeadset), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
         headset.Dispose();
 
@@ -136,12 +136,12 @@ public class HeadsetTests
         var inTheHeadset = new HeadsetOverlayThatRemembers();
 
         using var headset = Headset.From(
-            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryReturning(inTheHeadset), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
-        Answer somethingElse = Fixtures.HelpsAnswer() with
+        var somethingElse = Presentation.Of(Fixtures.HelpsAnswer() with
         {
             Result = new ListResult { CapabilityId = "help", Items = ["a different answer"] },
-        };
+        });
 
         headset.Showing(somethingElse);
 
@@ -163,9 +163,9 @@ public class HeadsetTests
         var inTheHeadset = new HeadsetOverlayThatRemembers();
 
         using var headset = Headset.From(
-            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryReturning(inTheHeadset), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
-        headset.Showing(Fixtures.HelpsAnswer());
+        headset.Showing(Presentation.Of(Fixtures.HelpsAnswer()));
 
         inTheHeadset.Paints.ShouldBe(
             0, "the answer was the same one, so nothing needed drawing again");
@@ -179,10 +179,10 @@ public class HeadsetTests
         var inTheHeadset = new HeadsetOverlayThatRemembers();
 
         using var headset = Headset.From(
-            new HeadsetFactoryReturning(inTheHeadset), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryReturning(inTheHeadset), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
-        headset.Showing(Answering("first"));
-        headset.Showing(Answering("second"));
+        headset.Showing(Presentation.Of(Answering("first")));
+        headset.Showing(Presentation.Of(Answering("second")));
 
         inTheHeadset.Paints.ShouldBe(2);
     }
@@ -193,9 +193,9 @@ public class HeadsetTests
         // On a machine with no SteamVR there is nothing to repaint, and a new
         // answer arriving is not an error to report.
         using var headset = Headset.From(
-            new HeadsetFactoryThatRefuses(), Fixtures.HelpsAnswer(), _recorded.Add);
+            new HeadsetFactoryThatRefuses(), Presentation.Of(Fixtures.HelpsAnswer()), _recorded.Add);
 
-        Should.NotThrow(() => headset.Showing(Answering("something new")));
+        Should.NotThrow(() => headset.Showing(Presentation.Of(Answering("something new"))));
     }
 
     /// <summary>
@@ -217,7 +217,7 @@ public class HeadsetTests
     {
         internal bool WasAsked { get; private set; }
 
-        public IHeadsetOverlay? Create(Answer answer)
+        public IHeadsetOverlay? Create(Presentation presented)
         {
             WasAsked = true;
             return null;
@@ -230,7 +230,7 @@ public class HeadsetTests
     /// </summary>
     private sealed class HeadsetFactoryThatIsBroken : IHeadsetOverlayFactory
     {
-        public IHeadsetOverlay? Create(Answer answer) => throw new StandInFailure();
+        public IHeadsetOverlay? Create(Presentation presented) => throw new StandInFailure();
     }
 
     private sealed class HeadsetFactoryReturning : IHeadsetOverlayFactory
@@ -242,7 +242,7 @@ public class HeadsetTests
             _overlay = overlay;
         }
 
-        public IHeadsetOverlay? Create(Answer answer) => _overlay;
+        public IHeadsetOverlay? Create(Presentation presented) => _overlay;
     }
 
     /// <summary>
@@ -263,16 +263,16 @@ public class HeadsetTests
         /// </summary>
         internal int Paints { get; private set; }
 
-        internal Answer? Showing { get; private set; }
+        internal Presentation? Showing { get; private set; }
 
         public void Show() => IsVisible = true;
 
         public void Hide() => IsVisible = false;
 
-        public void Paint(Answer answer)
+        public void Paint(Presentation presented)
         {
             Paints++;
-            Showing = answer;
+            Showing = presented;
         }
 
         public void Dispose()

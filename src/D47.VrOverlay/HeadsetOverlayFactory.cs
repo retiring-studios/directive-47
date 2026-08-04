@@ -50,18 +50,18 @@ public sealed class HeadsetOverlayFactory : IHeadsetOverlayFactory
     /// reason <see cref="SteamVrOverlay.Dispose"/> gives.
     /// </para>
     /// </remarks>
-    /// <param name="answer">What the overlay should render.</param>
+    /// <param name="presented">What the overlay should render.</param>
     /// <returns>
     /// The overlay, or <see langword="null"/> when SteamVR is not there.
     /// </returns>
-    public IHeadsetOverlay? Create(Answer answer)
+    public IHeadsetOverlay? Create(Presentation presented)
     {
         if (!Joined())
         {
             return null;
         }
 
-        (byte[] pixels, int width, int height) = PanelRender.Take(answer);
+        (byte[] pixels, int width, int height) = PanelRender.Take(presented);
 
         return SteamVrOverlay.Showing(Key, Name, pixels, width, height);
     }

@@ -41,6 +41,14 @@
     <UserControl.Resources>
         <local:DisplayModelTemplateSelector x:Key="ByDisplayModel" />
 
+        <!--
+            WPF's own, which is why there is no converter class in this project.
+            Named for the question it answers rather than for what it converts,
+            because the call site reads as a sentence and "BooleanToVisibility"
+            does not.
+        -->
+        <BooleanToVisibilityConverter x:Key="WhenThereIsSomethingToSay" />
+
         <DataTemplate x:Key="ListDisplay">
             <ItemsControl ItemsSource="{Binding Result.Items}"
                           Focusable="False">
@@ -72,7 +80,41 @@
         CapabilityViewTests asks the peers rather than the elements, which is
         the only version of the question that can fail this way.
     -->
-    <ContentControl Content="{Binding}"
-                    ContentTemplateSelector="{StaticResource ByDisplayModel}" />
+    <StackPanel>
+
+        <!--
+            Above the answer, and only when there is one. The answer is what was
+            asked for and this is not, so it goes where it is read first and then
+            got out of the way of.
+
+            Collapsed rather than hidden when there is nothing to say, so it
+            takes no room at all. The game overlay and the headset are both sized
+            to what the render wants, and a blank line held open for a notice
+            nobody has would cost every surface the space forever.
+
+            The wording lives here rather than arriving finished from a caller.
+            What the notice says is the render's to word, and prose composed
+            outside it would be a second place for the panel and the headset to
+            disagree about what it says.
+        -->
+        <StackPanel Visibility="{Binding HasNotice,
+                                Converter={StaticResource WhenThereIsSomethingToSay}}">
+
+            <TextBlock Text="{Binding UpdateWaiting, StringFormat=Update available — {0}}"
+                       FontSize="24"
+                       Foreground="{x:Static local:Palette.BodyText}"
+                       TextWrapping="Wrap" />
+
+            <Border BorderBrush="{x:Static local:Palette.BodyText}"
+                    BorderThickness="0,1,0,0"
+                    Opacity="0.35"
+                    Margin="0,12,0,24" />
+
+        </StackPanel>
+
+        <ContentControl Content="{Binding Answer}"
+                        ContentTemplateSelector="{StaticResource ByDisplayModel}" />
+
+    </StackPanel>
 
 </UserControl>
