@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
 using System.Windows.Automation;
+
+using D47.TestSupport;
 
 namespace D47.GameOverlay.Tests;
 
@@ -40,13 +40,6 @@ internal sealed class RunningApplication : IDisposable
     private const string OverlayWindow = "Directive 47 overlay";
 
     /// <summary>
-    /// What the application is called on disk, which is both the process to
-    /// look for and — with an extension — the file to start. One spelling, so
-    /// that renaming it cannot leave this half-right.
-    /// </summary>
-    private const string Application = "D47.Panel";
-
-    /// <summary>
     /// Long enough for a self-contained WPF application to start on a machine
     /// that is also running a game.
     /// </summary>
@@ -58,14 +51,6 @@ internal sealed class RunningApplication : IDisposable
     /// on the next few lines.
     /// </summary>
     private static readonly TimeSpan LongEnoughForTheOverlay = TimeSpan.FromSeconds(10);
-
-    private static readonly TimeSpan LongEnoughToDie = TimeSpan.FromSeconds(5);
-
-    /// <summary>
-    /// How often to look again while waiting. Short enough not to dominate the
-    /// test's running time, long enough not to hammer the automation tree.
-    /// </summary>
-    private static readonly TimeSpan BetweenLooks = TimeSpan.FromMilliseconds(250);
 
     private readonly Process _process;
     private bool _disposed;
@@ -94,11 +79,7 @@ internal sealed class RunningApplication : IDisposable
     {
         RefuseIfAlreadyRunning();
 
-        Process process = Process.Start(
-                new ProcessStartInfo(Executable()) { UseShellExecute = false })
-            ?? throw new InvalidOperationException("Directive 47 did not start.");
-
-        var running = new RunningApplication(process);
+        var running = new RunningApplication(TheApplication.Start());
 
         try
         {
@@ -181,14 +162,7 @@ internal sealed class RunningApplication : IDisposable
 
         _disposed = true;
 
-        _process.Refresh();
-
-        if (!_process.HasExited)
-        {
-            _process.Kill(entireProcessTree: true);
-            _process.WaitForExit((int)LongEnoughToDie.TotalMilliseconds);
-        }
-
+        TheApplication.Kill(_process);
         _process.Dispose();
     }
 
@@ -197,7 +171,7 @@ internal sealed class RunningApplication : IDisposable
     /// </summary>
     private static void RefuseIfAlreadyRunning()
     {
-        Process[] already = Process.GetProcessesByName(Application);
+        Process[] already = Process.GetProcessesByName(TheApplication.Name);
 
         try
         {
@@ -219,71 +193,22 @@ internal sealed class RunningApplication : IDisposable
     }
 
     /// <summary>
-    /// Where the application under test is, checked before anything tries to
-    /// start it. A missing executable reported as "it did not start" sends the
-    /// reader looking at the application.
-    /// </summary>
-    private static string Executable()
-    {
-        string exe = Path.Combine(AppContext.BaseDirectory, Application + ".exe");
-
-        if (!File.Exists(exe))
-        {
-            throw new InvalidOperationException(
-                $"Directive 47 should sit beside these tests, at {exe}.");
-        }
-
-        return exe;
-    }
-
-    /// <summary>
-    /// Waits for one of the application's windows to reach the desktop.
+    /// Waits for one of the application's windows to reach the desktop, and
+    /// takes its handle.
     /// </summary>
     ///
     /// <remarks>
-    /// By name <em>and</em> by process id. Matching on name alone was a latent
-    /// bug in this repo's other automation harness until two test classes ran at
-    /// once — and here it would also match the Commander's own copy, which is
-    /// the thing the launch refuses to run alongside.
+    /// Handles rather than automation elements, because what this project asks
+    /// of a window is where it is in the stack and whether Windows considers it
+    /// foreground — questions for the operating system rather than for the
+    /// automation tree. The one thing read through automation, the text on a
+    /// surface, starts from the handle again.
     /// </remarks>
     /// <param name="name">What the window is called.</param>
     /// <param name="within">How long to wait.</param>
     /// <returns>The window's handle.</returns>
     /// <exception cref="InvalidOperationException">It never appeared.</exception>
-    private IntPtr WaitForWindow(string name, TimeSpan within)
-    {
-        AutomationElement root = AutomationElement.RootElement
-            ?? throw new InvalidOperationException(
-                "UI Automation has no root element. This machine has no interactive desktop.");
-
-        var condition = new AndCondition(
-            new PropertyCondition(AutomationElement.NameProperty, name),
-            new PropertyCondition(AutomationElement.ProcessIdProperty, _process.Id));
-
-        DateTime deadline = DateTime.UtcNow + within;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            if (root.FindFirst(TreeScope.Children, condition) is { } window)
-            {
-                return new IntPtr(window.Current.NativeWindowHandle);
-            }
-
-            _process.Refresh();
-
-            if (_process.HasExited)
-            {
-                throw new InvalidOperationException(
-                    $"Directive 47 exited with code {_process.ExitCode} before presenting a "
-                    + $"window named \"{name}\".");
-            }
-
-            Thread.Sleep(BetweenLooks);
-        }
-
-        throw new InvalidOperationException(
-            $"No window named \"{name}\" appeared within {within.TotalSeconds:0} seconds."
-            + Environment.NewLine
-            + Screen.DescribeStack());
-    }
+    private IntPtr WaitForWindow(string name, TimeSpan within) =>
+        new(TheApplication.WaitForWindow(_process, name, within, Screen.DescribeStack)
+            .Current.NativeWindowHandle);
 }

@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Text;
 using System.Windows.Automation;
 
+using D47.TestSupport;
+
 namespace D47.Panel.Tests;
 
 /// <summary>
@@ -56,14 +58,7 @@ internal sealed class SecondInstance : IDisposable
     /// </summary>
     /// <returns>The second copy, which the caller owns and must dispose.</returns>
     /// <exception cref="InvalidOperationException">It did not start at all.</exception>
-    internal static SecondInstance Launch()
-    {
-        Process process = Process.Start(
-                new ProcessStartInfo(RunningPanel.Executable()) { UseShellExecute = false })
-            ?? throw new InvalidOperationException("The second copy did not start.");
-
-        return new SecondInstance(process);
-    }
+    internal static SecondInstance Launch() => new(TheApplication.Start());
 
     /// <summary>
     /// Waits until the second copy has said something.
