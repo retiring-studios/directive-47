@@ -25,6 +25,23 @@ namespace D47.Panel;
 internal partial class MainWindow : Window
 {
     /// <summary>
+    /// The window's own styles, as opposed to its extended ones.
+    /// </summary>
+    private const int ItsOwnStyles = -16;
+
+    /// <summary>
+    /// <c>WS_MAXIMIZEBOX</c>: whether this window can be thrown to full screen.
+    ///
+    /// <para>
+    /// One bit for three gestures. The caption button is the visible one, and
+    /// double-clicking the title bar and Win+Up maximize a window without going
+    /// anywhere near it — so this is the thing to clear, and hiding the button
+    /// alone would leave two ways in.
+    /// </para>
+    /// </summary>
+    private const long CanBeMaximized = 0x00010000;
+
+    /// <summary>
     /// How big the controls in it want to be, worked out once and applied once.
     /// </summary>
     private readonly Size _controls;
@@ -171,6 +188,8 @@ internal partial class MainWindow : Window
     {
         base.OnSourceInitialized(e);
 
+        TakeAwayMaximize();
+
         DpiScale scale = VisualTreeHelper.GetDpi(this);
         Size frame = TheFrameWindowsDraws();
 
@@ -190,6 +209,39 @@ internal partial class MainWindow : Window
 
         Width = (WholePixels(across, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
         Height = (WholePixels(down, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
+    }
+
+    /// <summary>
+    /// Takes full screen off the window, leaving drag-resize alone.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A style bit rather than <c>ResizeMode</c>, because <c>ResizeMode</c>
+    /// cannot say this. Its four values pair drag-resize and maximize together —
+    /// <c>CanResize</c> and <c>CanResizeWithGrip</c> give both, <c>NoResize</c>
+    /// and <c>CanMinimize</c> give neither — and what is wanted here is one
+    /// without the other. Drag-resize has to stay: it is how the Commander
+    /// chooses the panel's size, and
+    /// [#96](https://github.com/retiring-studios/directive-47/issues/96) shipped
+    /// scrolling underneath it.
+    /// </para>
+    /// <para>
+    /// Here rather than after <c>Show</c>, and the timing is the whole reason
+    /// there is no frame-changed call beside it. Windows works out which caption
+    /// buttons to draw when it first calculates the frame, which has not happened
+    /// yet at this point — so the bit is simply true by the time anything reads
+    /// it. Clearing it on a window already on screen would need the frame
+    /// recalculated to catch up, and would leave a button that draws and does
+    /// nothing until it did.
+    /// </para>
+    /// </remarks>
+    private void TakeAwayMaximize()
+    {
+        IntPtr handle = new WindowInteropHelper(this).Handle;
+        long style = GetWindowLongPtr(handle, ItsOwnStyles).ToInt64();
+
+        SetWindowLongPtr(handle, ItsOwnStyles, new IntPtr(style & ~CanBeMaximized));
     }
 
     /// <summary>
@@ -293,4 +345,14 @@ internal partial class MainWindow : Window
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetClientRect(IntPtr window, out Rectangle bounds);
+
+    // The Ptr forms, not the plain ones. On 64-bit Windows a style is a
+    // pointer-sized value, and the 32-bit calls silently truncate it.
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowLongPtrW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SetWindowLongPtrW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr SetWindowLongPtr(IntPtr window, int index, IntPtr value);
 }
