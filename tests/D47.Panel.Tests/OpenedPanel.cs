@@ -44,7 +44,13 @@ internal static class OpenedPanel
         return StaThread.Run(() =>
         {
             var zoom = new Zoom(Store.OpenAt(file, Ignored), Ignored);
-            var panel = new MainWindow(Fixtures.HelpsAnswer(), zoom) { ShowActivated = false };
+            var panel = new MainWindow(
+                    Presentation.Of(Fixtures.HelpsAnswer()),
+                    zoom,
+                    Updates.From(new UpdateSources.Offering(), Ignored))
+                {
+                    ShowActivated = false,
+                };
 
             try
             {

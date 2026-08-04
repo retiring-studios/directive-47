@@ -45,14 +45,22 @@ internal static class Rendering
     /// line of text the result actually put on screen, top to bottom.
     /// </summary>
     internal static IReadOnlyList<string> LinesFor(Answer answer) =>
-        OnAWpfThread(() => VisualTree.TextIn(LaidOut(answer)));
+        LinesFor(Presentation.Of(answer));
+
+    /// <summary>
+    /// The same, for a presentation carrying more than an answer. Most facts
+    /// here are about an answer and say so by passing one; the notice has its
+    /// own file, and this is what it asks through.
+    /// </summary>
+    internal static IReadOnlyList<string> LinesFor(Presentation presented) =>
+        OnAWpfThread(() => VisualTree.TextIn(LaidOut(presented)));
 
     /// <summary>
     /// The face every line of the rendered answer is actually set in, top to
     /// bottom, as the render itself asked for it.
     /// </summary>
     internal static IReadOnlyList<Face> FacesFor(Answer answer) =>
-        OnAWpfThread(() => LabelsIn(LaidOut(answer))
+        OnAWpfThread(() => LabelsIn(LaidOut(Presentation.Of(answer)))
             .Select(label => Face.Of(
                 new Typeface(label.FontFamily, label.FontStyle, label.FontWeight, label.FontStretch)))
             .ToList());
@@ -61,14 +69,14 @@ internal static class Rendering
     /// The color the render actually filled its surface with.
     /// </summary>
     internal static Color? BackgroundOf(Answer answer) =>
-        OnAWpfThread(() => ColorOf(LaidOut(answer).Background));
+        OnAWpfThread(() => ColorOf(LaidOut(Presentation.Of(answer)).Background));
 
     /// <summary>
     /// The color every line of the rendered answer is actually written in, top
     /// to bottom, as the render itself resolved it.
     /// </summary>
     internal static IReadOnlyList<Color?> ForegroundsFor(Answer answer) =>
-        OnAWpfThread(() => LabelsIn(LaidOut(answer))
+        OnAWpfThread(() => LabelsIn(LaidOut(Presentation.Of(answer)))
             .Select(label => ColorOf(label.Foreground))
             .ToList());
 
@@ -87,7 +95,7 @@ internal static class Rendering
     /// render announced an object dump to everything else on the machine.
     /// </remarks>
     internal static IReadOnlyList<string> AccessibleNamesFor(Answer answer) =>
-        OnAWpfThread(() => AutomationTree.NamesIn(LaidOut(answer)));
+        OnAWpfThread(() => AutomationTree.NamesIn(LaidOut(Presentation.Of(answer))));
 
     /// <summary>
     /// The face the rendered answer's own font family resolves to at some other
@@ -96,7 +104,7 @@ internal static class Rendering
     internal static Face FaceAt(Answer answer, FontWeight weight) =>
         OnAWpfThread(() =>
         {
-            TextBlock label = LabelsIn(LaidOut(answer))[0];
+            TextBlock label = LabelsIn(LaidOut(Presentation.Of(answer)))[0];
 
             return Face.Of(
                 new Typeface(label.FontFamily, label.FontStyle, weight, label.FontStretch));
@@ -129,9 +137,9 @@ internal static class Rendering
     /// it back. A control cannot outlive the thread that built it, so nothing
     /// here hands one out.
     /// </summary>
-    private static CapabilityView LaidOut(Answer answer)
+    private static CapabilityView LaidOut(Presentation presented)
     {
-        var view = new CapabilityView { DataContext = answer };
+        var view = new CapabilityView { DataContext = presented };
 
         view.Measure(Surface);
         view.Arrange(new Rect(Surface));

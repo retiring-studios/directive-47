@@ -16,7 +16,7 @@ namespace D47.GameOverlay;
 /// <para>
 /// It instantiates <see cref="CapabilityView"/> rather than sharing the panel's
 /// instance, because WPF cannot put one element in two windows. "The same
-/// render" is one definition and one answer, not one object.
+/// render" is one definition and one presented, not one object.
 /// </para>
 /// </summary>
 public partial class GameOverlayWindow : Window
@@ -66,7 +66,7 @@ public partial class GameOverlayWindow : Window
     ///
     /// <para>
     /// Null is the whole of "never been placed", and it is what makes the
-    /// game's corner a fallback rather than the answer. It fills in from two
+    /// game's corner a fallback rather than the presented. It fills in from two
     /// directions — <see cref="PlaceAt"/> on the way up, from whatever the last
     /// run wrote down, and the end of every drag after that.
     /// </para>
@@ -74,15 +74,15 @@ public partial class GameOverlayWindow : Window
     private Point? _putAt;
 
     /// <summary>
-    /// Creates the overlay around an answer to show.
+    /// Creates the overlay around an presented to show.
     /// </summary>
-    /// <param name="answer">What to render.</param>
-    public GameOverlayWindow(Answer answer)
+    /// <param name="presented">What to render.</param>
+    public GameOverlayWindow(Presentation presented)
     {
         InitializeComponent();
-        View.DataContext = answer;
+        View.DataContext = presented;
 
-        FitTheRender(answer);
+        FitTheRender(presented);
     }
 
     /// <summary>
@@ -107,10 +107,10 @@ public partial class GameOverlayWindow : Window
     /// which could not be made to fail by removing the pin.
     /// </para>
     /// </remarks>
-    /// <param name="answer">What the render will be showing.</param>
-    private void FitTheRender(Answer answer)
+    /// <param name="presented">What the render will be showing.</param>
+    private void FitTheRender(Presentation presented)
     {
-        Size natural = CapabilityView.LaidOutFor(answer).DesiredSize;
+        Size natural = CapabilityView.LaidOutFor(presented).DesiredSize;
 
         View.Width = natural.Width;
         View.Height = natural.Height;
@@ -178,7 +178,7 @@ public partial class GameOverlayWindow : Window
     /// Those are device-independent, so turning them into pixels means applying
     /// a scale factor that is itself per-monitor — arithmetic that is wrong in
     /// exactly the case this feature has to survive, which is a window on the
-    /// second screen. Before there is a window to ask, the answer is wherever
+    /// second screen. Before there is a window to ask, the presented is wherever
     /// it has been told to go.
     /// </remarks>
     public Point Position =>
@@ -410,8 +410,8 @@ public partial class GameOverlayWindow : Window
     ///
     /// <remarks>
     /// <para>
-    /// The game's corner is the fallback and not the answer. It used to be the
-    /// answer, applied on every showing, which is a perfectly good way to open
+    /// The game's corner is the fallback and not the presented. It used to be the
+    /// presented, applied on every showing, which is a perfectly good way to open
     /// an overlay exactly once and a guarantee that it will never stay
     /// anywhere.
     /// </para>

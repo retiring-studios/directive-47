@@ -54,22 +54,22 @@ public interface IHeadsetOverlay : IDisposable
     void Hide();
 
     /// <summary>
-    /// Puts a different answer on the quad.
+    /// Puts a different presented on the quad.
     /// </summary>
     ///
     /// <remarks>
     /// <para>
-    /// An answer rather than pixels, so this interface still says nothing about
+    /// An presented rather than pixels, so this interface still says nothing about
     /// textures. Turning one into the other is the adapter's job and most of the
     /// reason the adapter exists.
     /// </para>
     /// <para>
     /// Unconditional: it paints whatever it is given, every time it is asked.
-    /// Whether an answer is worth painting is a decision, decisions live outside
+    /// Whether an presented is worth painting is a decision, decisions live outside
     /// the adapter, and an overlay that quietly declined would be one nothing in
     /// CI could catch declining wrongly.
     /// </para>
     /// </remarks>
-    /// <param name="answer">What to show.</param>
-    void Paint(Answer answer);
+    /// <param name="presented">What to show.</param>
+    void Paint(Presentation presented);
 }

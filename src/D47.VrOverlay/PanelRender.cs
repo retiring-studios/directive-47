@@ -14,7 +14,7 @@ namespace D47.VrOverlay;
 /// One renderer, two sinks: the panel puts <see cref="CapabilityView"/> in a
 /// window and the headset puts the same control's pixels on a quad. WPF cannot
 /// put one element in two windows, so "the same render" is one definition and
-/// one answer rather than one object — which is what makes parity hold by
+/// one presented rather than one object — which is what makes parity hold by
 /// construction instead of by discipline.
 /// </para>
 ///
@@ -42,14 +42,14 @@ public static class PanelRender
     /// Must be called on a thread WPF will talk to. Building a visual tree
     /// anywhere but a single-threaded apartment throws.
     /// </remarks>
-    /// <param name="answer">What is being rendered.</param>
+    /// <param name="presented">What is being rendered.</param>
     /// <returns>The render's natural size, in whole pixels.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="answer"/> is null.</exception>
-    public static (int Width, int Height) Measure(Answer answer)
+    /// <exception cref="ArgumentNullException"><paramref name="presented"/> is null.</exception>
+    public static (int Width, int Height) Measure(Presentation presented)
     {
-        ArgumentNullException.ThrowIfNull(answer);
+        ArgumentNullException.ThrowIfNull(presented);
 
-        return SizeOf(LaidOutForATexture(answer));
+        return SizeOf(LaidOutForATexture(presented));
     }
 
     /// <summary>
@@ -68,14 +68,14 @@ public static class PanelRender
     /// the alpha last.
     /// </para>
     /// </remarks>
-    /// <param name="answer">What to render.</param>
+    /// <param name="presented">What to render.</param>
     /// <returns>The pixels, and how wide and tall they are.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="answer"/> is null.</exception>
-    public static (byte[] Pixels, int Width, int Height) Take(Answer answer)
+    /// <exception cref="ArgumentNullException"><paramref name="presented"/> is null.</exception>
+    public static (byte[] Pixels, int Width, int Height) Take(Presentation presented)
     {
-        ArgumentNullException.ThrowIfNull(answer);
+        ArgumentNullException.ThrowIfNull(presented);
 
-        CapabilityView view = LaidOutForATexture(answer);
+        CapabilityView view = LaidOutForATexture(presented);
         (int width, int height) = SizeOf(view);
 
         var drawn = new RenderTargetBitmap(
@@ -105,9 +105,9 @@ public static class PanelRender
     /// is. What is left here is the part only a texture needs — and the reason
     /// this asks for the control rather than the size.
     /// </remarks>
-    private static CapabilityView LaidOutForATexture(Answer answer)
+    private static CapabilityView LaidOutForATexture(Presentation presented)
     {
-        var view = CapabilityView.LaidOutFor(answer);
+        var view = CapabilityView.LaidOutFor(presented);
 
         // Then arranged again, at the whole-pixel size the texture will be. A
         // bitmap is whole pixels and rounds up, so a control left at 221.6 wide
@@ -119,7 +119,7 @@ public static class PanelRender
         // On a desktop that column is a hairline nobody sees. On a half-metre
         // quad in a headset it is a visible soft edge, and it is also what
         // would drag OpenVR's premultiplied-or-straight alpha question into a
-        // render that otherwise never has to answer it.
+        // render that otherwise never has to presented it.
         view.Arrange(new Rect(Whole(view.DesiredSize)));
 
         return view;

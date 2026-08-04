@@ -73,7 +73,9 @@ public class RenderSizeTests
         // So what comes back has to belong to nobody. A control handed out with
         // a parent is one somebody will measure in place without noticing.
         object? parent = Rendering.OnAWpfThread(
-            () => CapabilityView.LaidOutFor(Answering("Main tank: 24 tonnes.")).Parent);
+            () => CapabilityView
+                .LaidOutFor(Presentation.Of(Answering("Main tank: 24 tonnes.")))
+                .Parent);
 
         parent.ShouldBeNull(
             "the render is asked how big it wants to be, which only an instance "
@@ -85,7 +87,8 @@ public class RenderSizeTests
     /// it. A control cannot outlive its thread, so only the size comes back.
     /// </summary>
     private static Size SizeOf(Answer answer) =>
-        Rendering.OnAWpfThread(() => CapabilityView.LaidOutFor(answer).DesiredSize);
+        Rendering.OnAWpfThread(
+            () => CapabilityView.LaidOutFor(Presentation.Of(answer)).DesiredSize);
 
     private static Answer Answering(params string[] lines) => new()
     {

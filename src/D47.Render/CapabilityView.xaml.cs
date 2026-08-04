@@ -20,7 +20,7 @@ public partial class CapabilityView : UserControl
 {
     /// <summary>
     /// Creates the view. Set <see cref="System.Windows.FrameworkElement.DataContext"/>
-    /// to an <see cref="Answer"/> to render it.
+    /// to a <see cref="Presentation"/> to render it.
     /// </summary>
     public CapabilityView()
     {
@@ -71,14 +71,14 @@ public partial class CapabilityView : UserControl
     /// steps again, which is the duplication this exists to remove.
     /// </para>
     /// </remarks>
-    /// <param name="answer">What the render would be showing.</param>
+    /// <param name="presented">What the render would be showing.</param>
     /// <returns>The view, measured and arranged at its natural size.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="answer"/> is null.</exception>
-    public static CapabilityView LaidOutFor(Answer answer)
+    /// <exception cref="ArgumentNullException"><paramref name="presented"/> is null.</exception>
+    public static CapabilityView LaidOutFor(Presentation presented)
     {
-        ArgumentNullException.ThrowIfNull(answer);
+        ArgumentNullException.ThrowIfNull(presented);
 
-        var asking = new CapabilityView { DataContext = answer };
+        var asking = new CapabilityView { DataContext = presented };
 
         asking.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         asking.Arrange(new Rect(asking.DesiredSize));

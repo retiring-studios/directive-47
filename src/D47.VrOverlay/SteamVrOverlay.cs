@@ -161,13 +161,13 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     ///
     /// <remarks>
     /// The render happens here rather than arriving already done, because an
-    /// answer is what the rest of the application holds and pixels are what
+    /// presented is what the rest of the application holds and pixels are what
     /// SteamVR wants — and being the place those two meet is most of what this
     /// project is for.
     /// </remarks>
-    public void Paint(Answer answer)
+    public void Paint(Presentation presented)
     {
-        (byte[] pixels, int width, int height) = PanelRender.Take(answer);
+        (byte[] pixels, int width, int height) = PanelRender.Take(presented);
 
         Paint(pixels, width, height);
     }
@@ -209,9 +209,9 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// alternative was every call site growing three lines of the same
     /// <c>if</c>, which is how the interesting line stops being visible.
     /// </remarks>
-    private static void Insist(EVROverlayError answer, string what)
+    private static void Insist(EVROverlayError presented, string what)
     {
-        if (answer == EVROverlayError.None)
+        if (presented == EVROverlayError.None)
         {
             return;
         }
@@ -219,6 +219,6 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
         throw new InvalidOperationException(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"SteamVR would not {what}: {answer}."));
+                $"SteamVR would not {what}: {presented}."));
     }
 }

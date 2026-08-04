@@ -67,8 +67,42 @@
                 Background="{x:Static render:Palette.Background}"
                 Padding="8,4">
 
+            <DockPanel LastChildFill="False">
+
+            <!--
+                What to do about an update, on the surface that has a pointer.
+                The notice itself is drawn by the render, so all three surfaces
+                say the same thing; these two are panel chrome, like the zoom
+                controls beside them, because Elite captures the cursor and the
+                motion controllers belong to the game. Answering in the headset
+                is voice, and arrives with the loop.
+
+                Collapsed until there is something to answer, and collapsed
+                again once it has been answered.
+            -->
+            <StackPanel x:Name="AboutTheUpdate"
+                        Orientation="Horizontal"
+                        DockPanel.Dock="Left"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+
+                <Button x:Name="TakeIt"
+                        Content="Install on exit"
+                        Click="AcceptTheUpdate"
+                        Padding="10,1"
+                        AutomationProperties.Name="Install on exit" />
+
+                <Button x:Name="LeaveIt"
+                        Content="Not now"
+                        Click="DeclineTheUpdate"
+                        Margin="6,0,0,0"
+                        Padding="10,1"
+                        AutomationProperties.Name="Not now" />
+
+            </StackPanel>
+
             <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right">
+                        DockPanel.Dock="Right">
 
                 <Button x:Name="Smaller"
                         Content="&#8722;"
@@ -91,6 +125,8 @@
                         AutomationProperties.Name="Zoom in" />
 
             </StackPanel>
+
+            </DockPanel>
 
         </Border>
 

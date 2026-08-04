@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
+using D47.Render;
 using D47.TestSupport;
 
 using Shouldly;
@@ -49,7 +50,10 @@ public class PanelBackgroundTests
         {
             var zoom = new Zoom(Store.OpenAt(file, _ => { }), _ => { });
 
-            object background = new MainWindow(Fixtures.HelpsAnswer(), zoom)
+            object background = new MainWindow(
+                Presentation.Of(Fixtures.HelpsAnswer()),
+                zoom,
+                Updates.From(new UpdateSources.Offering(), _ => { }))
                 .ReadLocalValue(Control.BackgroundProperty);
 
             return background == DependencyProperty.UnsetValue

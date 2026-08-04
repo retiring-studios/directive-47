@@ -90,7 +90,7 @@ internal sealed class Overlay
     }
 
     /// <summary>
-    /// Asks for an overlay, and accepts the answer either way.
+    /// Asks for an overlay, and accepts the presented either way.
     /// </summary>
     ///
     /// <remarks>
@@ -108,7 +108,7 @@ internal sealed class Overlay
     /// </para>
     /// </remarks>
     /// <param name="overlays">Where an overlay comes from.</param>
-    /// <param name="answer">What it should render.</param>
+    /// <param name="presented">What it should render.</param>
     /// <param name="remembered">
     /// What the last run left behind — how see-through the overlay should be,
     /// and eventually where it was put and what size it was left.
@@ -129,7 +129,7 @@ internal sealed class Overlay
     /// </exception>
     internal static Overlay From(
         IGameOverlayFactory overlays,
-        Answer answer,
+        Presentation presented,
         Store remembered,
         Action<string> record,
         Func<IntPtr, bool>? isTheGame = null,
@@ -146,7 +146,7 @@ internal sealed class Overlay
         // Perhaps out of an adapter's public contract, where it would need a
         // home both projects can see and would be a project decision taken for
         // one type.
-        Perhaps<IGameOverlay> made = overlays.Create(answer) is { } overlay
+        Perhaps<IGameOverlay> made = overlays.Create(presented) is { } overlay
             ? Perhaps<IGameOverlay>.Of(overlay)
             : Perhaps<IGameOverlay>.Absent(NoOverlay);
 
@@ -234,7 +234,7 @@ internal sealed class Overlay
     /// <para>
     /// The same trade as the opacity above, and for the same reason. This is a
     /// file the Commander opens and edits, so refusing to start over a
-    /// hand-typed number would be a worse answer than starting where a first
+    /// hand-typed number would be a worse presented than starting where a first
     /// run would have started.
     /// </para>
     /// </remarks>

@@ -51,8 +51,8 @@ public class PanelRenderTests
         // Commander nothing at all.
         Answer answer = Fixtures.HelpsAnswer();
 
-        (int wide, int tall) = StaThread.Run(() => PanelRender.Measure(answer));
-        (byte[] pixels, int width, int height) = StaThread.Run(() => PanelRender.Take(answer));
+        (int wide, int tall) = StaThread.Run(() => PanelRender.Measure(Presentation.Of(answer)));
+        (byte[] pixels, int width, int height) = StaThread.Run(() => PanelRender.Take(Presentation.Of(answer)));
 
         width.ShouldBe(wide, "drawing it should not change how big it decided to be");
         height.ShouldBe(tall);
@@ -93,7 +93,7 @@ public class PanelRenderTests
         // it decides the matter on its own.
         Answer answer = Fixtures.HelpsAnswer();
 
-        (byte[] pixels, int width, int height) = StaThread.Run(() => PanelRender.Take(answer));
+        (byte[] pixels, int width, int height) = StaThread.Run(() => PanelRender.Take(Presentation.Of(answer)));
 
         int redder = 0;
         int bluer = 0;
@@ -142,7 +142,7 @@ public class PanelRenderTests
         // wants.
         Answer answer = Fixtures.HelpsAnswer();
 
-        (byte[] pixels, int width, int height) = StaThread.Run(() => PanelRender.Take(answer));
+        (byte[] pixels, int width, int height) = StaThread.Run(() => PanelRender.Take(Presentation.Of(answer)));
 
         int onTheEdge = 0;
         int inside = 0;

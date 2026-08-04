@@ -42,14 +42,14 @@ internal sealed class Headset : IDisposable
     private readonly IHeadsetOverlay? _overlay;
 
     /// <summary>
-    /// What the quad is currently carrying, so that a new answer can be
+    /// What the quad is currently carrying, so that a new presented can be
     /// compared with it rather than drawn over it.
     /// </summary>
-    private Answer _showing;
+    private Presentation _showing;
 
     private bool _disposed;
 
-    private Headset(IHeadsetOverlay? overlay, Answer showing)
+    private Headset(IHeadsetOverlay? overlay, Presentation showing)
     {
         _overlay = overlay;
         _showing = showing;
@@ -74,24 +74,24 @@ internal sealed class Headset : IDisposable
     /// </para>
     /// </remarks>
     /// <param name="overlays">Where a headset overlay comes from.</param>
-    /// <param name="answer">What it should render.</param>
+    /// <param name="presented">What it should render.</param>
     /// <param name="record">Where to note that there is no overlay, and why.</param>
     /// <returns>The overlay, or one that will quietly do nothing.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="overlays"/> is null.</exception>
     internal static Headset From(
-        IHeadsetOverlayFactory overlays, Answer answer, Action<string> record)
+        IHeadsetOverlayFactory overlays, Presentation presented, Action<string> record)
     {
         ArgumentNullException.ThrowIfNull(overlays);
 
-        Perhaps<IHeadsetOverlay> made = overlays.Create(answer) is { } overlay
+        Perhaps<IHeadsetOverlay> made = overlays.Create(presented) is { } overlay
             ? Perhaps<IHeadsetOverlay>.Of(overlay)
             : Perhaps<IHeadsetOverlay>.Absent(NoHeadsetOverlay);
 
-        return new Headset(made.Or(record), answer);
+        return new Headset(made.Or(record), presented);
     }
 
     /// <summary>
-    /// Shows a new answer, if it is a different one.
+    /// Shows a new presented, if it is a different one.
     /// </summary>
     ///
     /// <remarks>
@@ -103,7 +103,7 @@ internal sealed class Headset : IDisposable
     /// </para>
     /// <para>
     /// Driven by the change rather than by a clock, which is what makes the
-    /// second half true at all — a timer would repaint an unchanged answer
+    /// second half true at all — a timer would repaint an unchanged presented
     /// forever and no test could tell it was wrong.
     /// </para>
     /// <para>
@@ -114,17 +114,17 @@ internal sealed class Headset : IDisposable
     /// repainted on every turn.
     /// </para>
     /// </remarks>
-    /// <param name="answer">What to show.</param>
-    internal void Showing(Answer answer)
+    /// <param name="presented">What to show.</param>
+    internal void Showing(Presentation presented)
     {
-        if (_showing == answer)
+        if (_showing == presented)
         {
             return;
         }
 
-        _showing = answer;
+        _showing = presented;
 
-        _overlay?.Paint(answer);
+        _overlay?.Paint(presented);
     }
 
     /// <summary>

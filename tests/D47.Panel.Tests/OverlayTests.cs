@@ -41,7 +41,7 @@ public class OverlayTests
 
         Overlay overlay = Should.NotThrow(
             () => Overlay.From(
-                machineThatCannot, Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add));
+                machineThatCannot, Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no game running, for a reason that has nothing to do
@@ -65,7 +65,7 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
 
         Overlay.From(
-            new FactoryThatRefuses(), Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add);
+            new FactoryThatRefuses(), Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add);
 
         _recorded.ShouldHaveSingleItem().ShouldContain(
             "cannot host an overlay",
@@ -81,7 +81,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(new OverlayThatRemembers()),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -98,7 +98,7 @@ public class OverlayTests
         var broken = new FactoryThatIsBroken();
 
         Should.Throw<StandInFailure>(
-            () => Overlay.From(broken, Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add));
+            () => Overlay.From(broken, Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add));
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var toggling = Overlay.From(
-            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add);
+            new FactoryReturning(overlay), Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add);
 
         toggling.Toggle();
         overlay.IsVisible.ShouldBeTrue("the first press should put it on screen");
@@ -130,7 +130,7 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var toggling = Overlay.From(
-            new FactoryReturning(overlay), Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add);
+            new FactoryReturning(overlay), Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add);
 
         toggling.Show();
         overlay.IsVisible.ShouldBeTrue();
@@ -147,7 +147,7 @@ public class OverlayTests
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add,
             IsTheGame);
@@ -167,7 +167,7 @@ public class OverlayTests
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add,
             IsTheGame);
@@ -186,7 +186,7 @@ public class OverlayTests
         var overlay = new OverlayThatRemembers();
         var following = Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add,
             IsTheGame);
@@ -211,7 +211,7 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
         var machineThatCannot = new FactoryThatRefuses();
         var following = Overlay.From(
-            machineThatCannot, Fixtures.HelpsAnswer(), remembered.Open(), _recorded.Add, IsTheGame);
+            machineThatCannot, Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add, IsTheGame);
 
         Should.NotThrow(() => following.ForegroundIsNow(TheGame));
     }
@@ -228,7 +228,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -248,7 +248,7 @@ public class OverlayTests
         // survives one.
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -278,7 +278,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -300,7 +300,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(new OverlayThatRemembers()),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -321,7 +321,7 @@ public class OverlayTests
         Should.NotThrow(
             () => Overlay.From(
                 new FactoryThatRefuses(),
-                Fixtures.HelpsAnswer(),
+                Presentation.Of(Fixtures.HelpsAnswer()),
                 remembered.Open(),
                 _recorded.Add));
 
@@ -340,7 +340,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(moved),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add,
             whereTheScreensAre: Screens);
@@ -354,7 +354,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(restarted),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add,
             whereTheScreensAre: Screens);
@@ -377,7 +377,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -419,7 +419,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -445,7 +445,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add);
 
@@ -472,7 +472,7 @@ public class OverlayTests
 
         Overlay.From(
             new FactoryReturning(overlay),
-            Fixtures.HelpsAnswer(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
             _recorded.Add,
             whereTheScreensAre: Screens);
@@ -504,7 +504,7 @@ public class OverlayTests
     {
         internal bool WasAsked { get; private set; }
 
-        public IGameOverlay? Create(Answer answer)
+        public IGameOverlay? Create(Presentation presented)
         {
             WasAsked = true;
             return null;
@@ -517,7 +517,7 @@ public class OverlayTests
     /// </summary>
     private sealed class FactoryThatIsBroken : IGameOverlayFactory
     {
-        public IGameOverlay? Create(Answer answer) => throw new StandInFailure();
+        public IGameOverlay? Create(Presentation presented) => throw new StandInFailure();
     }
 
     private sealed class FactoryReturning : IGameOverlayFactory
@@ -529,7 +529,7 @@ public class OverlayTests
             _overlay = overlay;
         }
 
-        public IGameOverlay? Create(Answer answer) => _overlay;
+        public IGameOverlay? Create(Presentation presented) => _overlay;
     }
 
     /// <summary>

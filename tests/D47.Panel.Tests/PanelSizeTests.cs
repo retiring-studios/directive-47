@@ -55,7 +55,7 @@ public class PanelSizeTests
     public void Panel_OnOpening_IsTheSizeOfTheControlsInIt()
     {
         (Size wanted, Size given) = OpenedPanel.Opened((panel, _) =>
-            (WhatTheControlsWant(Fixtures.HelpsAnswer()), OpenedPanel.RoomTheRenderGot(panel)));
+            (WhatTheControlsWant(Presentation.Of(Fixtures.HelpsAnswer())), OpenedPanel.RoomTheRenderGot(panel)));
 
         given.Width.ShouldBe(
             wanted.Width,
@@ -136,11 +136,11 @@ public class PanelSizeTests
     /// shipped once, on the overlay, and one this expectation would quietly agree
     /// with if it made the same mistake.
     /// </remarks>
-    /// <param name="answer">What the render would be showing.</param>
+    /// <param name="presented">What the render would be showing.</param>
     /// <returns>Its natural size.</returns>
-    private static Size WhatTheControlsWant(Answer answer)
+    private static Size WhatTheControlsWant(Presentation presented)
     {
-        var asking = new CapabilityView { DataContext = answer };
+        var asking = new CapabilityView { DataContext = presented };
 
         asking.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         asking.Arrange(new Rect(asking.DesiredSize));
