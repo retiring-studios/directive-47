@@ -27,8 +27,8 @@ public class UpdateTests
     [Fact]
     public void Update_WhenAccepted_IsAppliedOnTheWayOutAndNotBefore()
     {
-        var updater = new UpdateSourceOffering("0.2.0");
-        var updates = Updates.From(updater);
+        var updater = new UpdateSources.Offering("0.2.0");
+        var updates = Updates.From(updater, Ignored);
 
         updates.Look();
 
@@ -52,8 +52,8 @@ public class UpdateTests
         // is told to apply, so anything slow has to be done before then —
         // fetching on the way out would spend the exit waiting on a download and
         // could miss the window entirely.
-        var updater = new UpdateSourceOffering("0.2.0");
-        var updates = Updates.From(updater);
+        var updater = new UpdateSources.Offering("0.2.0");
+        var updates = Updates.From(updater, Ignored);
 
         updates.Look();
 
@@ -66,8 +66,8 @@ public class UpdateTests
     [Fact]
     public void Update_WhenDeclined_LeavesTheRunningApplicationUntouched()
     {
-        var updater = new UpdateSourceOffering("0.2.0");
-        var updates = Updates.From(updater);
+        var updater = new UpdateSources.Offering("0.2.0");
+        var updates = Updates.From(updater, Ignored);
 
         updates.Look();
 
@@ -84,8 +84,8 @@ public class UpdateTests
         // Changing your mind is ordinary, and the notice stays up until it is
         // answered. The last word wins, and a fetch already begun is not a
         // commitment to install it.
-        var updater = new UpdateSourceOffering("0.2.0");
-        var updates = Updates.From(updater);
+        var updater = new UpdateSources.Offering("0.2.0");
+        var updates = Updates.From(updater, Ignored);
 
         updates.Look();
 
@@ -99,8 +99,8 @@ public class UpdateTests
     [Fact]
     public void Update_WhenNoneIsWaiting_HasNothingToOfferAndDoesNothingOnExit()
     {
-        var updater = new UpdateSourceOffering(nothing: true);
-        var updates = Updates.From(updater);
+        var updater = new UpdateSources.Offering();
+        var updates = Updates.From(updater, Ignored);
 
         updates.Look();
 
@@ -122,7 +122,7 @@ public class UpdateTests
     {
         // What #143 will put on the panel and the overlay. A notice that cannot
         // name the version is one nobody can decide about.
-        var updates = Updates.From(new UpdateSourceOffering("0.2.0"));
+        var updates = Updates.From(new UpdateSources.Offering("0.2.0"), Ignored);
 
         updates.Waiting.ShouldBeNull("nothing has been asked yet");
 
@@ -132,30 +132,12 @@ public class UpdateTests
     }
 
     /// <summary>
-    /// An updater that answers, and remembers what it was asked to do.
+    /// Where a record would go. Nothing here is about what gets written down —
+    /// that is <see cref="FailedCheckTests"/>, and a check that answers has
+    /// nothing to write.
     /// </summary>
-    private sealed class UpdateSourceOffering : IUpdateSource
+    private static void Ignored(string complaint)
     {
-        private readonly string? _version;
-
-        internal UpdateSourceOffering(string version)
-        {
-            _version = version;
-        }
-
-        internal UpdateSourceOffering(bool nothing)
-        {
-            _version = nothing ? null : "0.2.0";
-        }
-
-        internal bool Fetched { get; private set; }
-
-        internal bool Applied { get; private set; }
-
-        public string? Waiting() => _version;
-
-        public void Fetch() => Fetched = true;
-
-        public void ApplyOnExit() => Applied = true;
+        // deliberately empty: see the summary
     }
 }
