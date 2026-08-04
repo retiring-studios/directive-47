@@ -79,6 +79,24 @@ internal sealed partial class App : Application, IDisposable
     private const string ExitItem = "Exit";
 
     /// <summary>
+    /// Where a newer Directive 47 comes from: this project's own releases.
+    /// </summary>
+    private const string Releases = "https://github.com/retiring-studios/directive-47";
+
+    /// <summary>
+    /// Whether a release marked prerelease counts as an update.
+    ///
+    /// <para>
+    /// True for now, and it has a revisit trigger. Everything before 1.0.0 is
+    /// published as a prerelease, so an updater ignoring them has nothing to
+    /// find until the MVP ships and the whole feature is inert in the meantime.
+    /// Once 1.0.0 is out, "latest" starts meaning something somebody stood
+    /// behind, and that is the moment this should become false.
+    /// </para>
+    /// </summary>
+    private const bool Prereleases = true;
+
+    /// <summary>
     /// How long to let the shell finish closing its overflow flyout before
     /// asking for the foreground. Long enough to be after it, short enough that
     /// nobody perceives it as a delay.
@@ -104,6 +122,7 @@ internal sealed partial class App : Application, IDisposable
     private Headset? _headset;
     private ChosenHotkey? _hotkey;
     private ForegroundWatcher? _foreground;
+    private Updates? _updates;
 
     /// <summary>
     /// Claims the right to be the running copy, and then puts the icon in the
@@ -200,6 +219,13 @@ internal sealed partial class App : Application, IDisposable
 
         FollowTheForeground();
         ClaimTheHotkey(remembered);
+
+        // Asked once, at startup, and nothing is done about it yet. Putting the
+        // answer on the panel and the overlay is
+        // [#143](https://github.com/retiring-studios/directive-47/issues/143);
+        // what is here is the half that has to exist before there is anything to
+        // put anywhere, and the exit hook that makes accepting mean something.
+        _updates = Updates.From(new VelopackUpdates(Releases, Prereleases));
     }
 
     /// <summary>
@@ -395,6 +421,12 @@ internal sealed partial class App : Application, IDisposable
     /// <param name="e">The exit arguments.</param>
     protected override void OnExit(ExitEventArgs e)
     {
+        // First, and before anything is torn down. The updater is told to wait
+        // for this process and then apply, so the earlier in the shutdown it is
+        // told the more of its minute is left — and it does nothing at all
+        // unless the Commander accepted something.
+        _updates?.Exiting();
+
         Dispose();
         base.OnExit(e);
     }
