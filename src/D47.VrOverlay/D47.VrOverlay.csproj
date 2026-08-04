@@ -7,9 +7,19 @@
         and whether to have one at all is logic that lives outside the adapter,
         the same shape as D47.GameOverlay and for the same reason.
 
-        In ci.slnf as well as hardware.slnf, exactly like D47.GameOverlay:
-        compiling it needs no headset, and the published exe contains it. Only
-        the tests are hardware-only.
+        In ci.slnf as well as hardware.slnf, because compiling it needs no
+        headset and its Tier 1 tests are worth running on every pull request.
+
+        Not, however, in the published exe. D47.GameOverlay is, because D47.Panel
+        references it; nothing shipping references this one, so CI's publish of
+        the panel leaves it out and a downloaded build shows nothing in a
+        headset. That changes when the composition story wires it up, and this
+        comment says so then rather than now — claiming it early is what would
+        tell somebody a build can do something it cannot.
+
+        Of its two test projects only D47.VrOverlay.HardwareTests is
+        hardware-only. D47.VrOverlay.Tests holds what needs neither headset nor
+        runtime.
 
         UseWPF because the render is a WPF control and getting pixels out of one
         means RenderTargetBitmap. That is also why this is net10.0-windows while

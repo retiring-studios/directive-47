@@ -3,7 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 
 using Valve.VR;
 
-namespace D47.VrOverlay.Tests;
+using Xunit;
+
+namespace D47.VrOverlay.HardwareTests;
 
 /// <summary>
 /// Base for every test that needs SteamVR actually running.
@@ -24,7 +26,19 @@ namespace D47.VrOverlay.Tests;
 /// with the Null driver, and an overlay is registered with the compositor
 /// whether or not anybody is wearing anything.
 /// </para>
+///
+/// <para>
+/// Every class deriving from this shares one collection, so they take turns.
+/// The runtime is joined per test — a fresh instance for each, a fresh
+/// <c>VR_Init</c> — and the process may only be joined once at a time. Let two
+/// classes run in parallel, which is what xUnit does unless told otherwise, and
+/// the second one is told <c>Init_ClientVersionAlreadyProvided</c> and reports
+/// SteamVR missing on a machine where it is plainly running. The same rule
+/// <c>GameTest</c> and <c>DesktopTest</c> already follow, for a different scarce
+/// thing.
+/// </para>
 /// </summary>
+[Collection(Collection)]
 [SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -34,6 +48,13 @@ namespace D47.VrOverlay.Tests;
         + "test type because it holds no facts of its own.")]
 public abstract class HeadsetTest : IDisposable
 {
+    /// <summary>
+    /// What makes them take turns. Named for the thing being shared rather than
+    /// for the tests sharing it: there is one SteamVR on this machine and one
+    /// join into it at a time.
+    /// </summary>
+    private const string Collection = "The SteamVR runtime";
+
     /// <summary>
     /// Why a Tier 2 test failed, in the words somebody reading the output
     /// needs — including what to do about it, because a runtime that is not

@@ -25,7 +25,8 @@ disk. Every path in it exists.
 
 `dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI runs — every
 project that does not need real hardware. `hardware.slnf` selects the dev-PC-only
-projects, currently `D47.GameOverlay` and its tests.
+projects, currently `D47.GameOverlay.Tests`, which needs Elite running, and
+`D47.VrOverlay.HardwareTests`, which needs SteamVR.
 
 **CI is Windows only.** Directive 47 is a Windows product, so a Linux job was
 proving a portability claim nothing depends on, and Windows is what lets WPF
@@ -155,6 +156,11 @@ authoritative and neither goes stale, which is more than a briefing can say.
 a test cannot check, and say so when you hand it over. You wrote the code, so
 you know what that is. A pull request without it is claiming the automated
 suite covers everything in it.
+
+A test that a session can run, on any machine it can reach, is not something a
+test cannot check. Run it instead. `hardware.slnf` needs the dev PC rather than
+CI, which is a fact about where the headset is and not about who presses the
+button — so negotiate the machine, run it, and fix what it finds.
 
 Then say **what needs testing and how to test it**: the action, what a pass
 looks like, and what would be a defect. A step that keeps reappearing is a hole

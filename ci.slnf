@@ -16,7 +16,8 @@
       "tests\\D47.Panel.Tests\\D47.Panel.Tests.csproj",
       "tests\\D47.Placement.Tests\\D47.Placement.Tests.csproj",
       "tests\\D47.Render.Tests\\D47.Render.Tests.csproj",
-      "tests\\D47.TestSupport\\D47.TestSupport.csproj"
+      "tests\\D47.TestSupport\\D47.TestSupport.csproj",
+      "tests\\D47.VrOverlay.Tests\\D47.VrOverlay.Tests.csproj"
     ]
   }
 }

@@ -11,13 +11,11 @@ namespace D47.VrOverlay.Tests;
 /// The pixels handed to the headset, before SteamVR ever sees them.
 ///
 /// <para>
-/// Deliberately not a <see cref="HeadsetTest"/>. Nothing here joins the
-/// runtime, and inheriting the base would have made a fact about a byte array
-/// refuse to run unless somebody started SteamVR first. It lives in this
-/// project because this is where the code is, and it stays out of
-/// <c>ci.slnf</c> only because the project it belongs to does — moving that
-/// line is a change to a shared file and belongs to whoever is allowed to touch
-/// one.
+/// Deliberately not a <c>HeadsetTest</c>. Nothing here joins the runtime, and
+/// inheriting that base would have made a fact about a byte array refuse to run
+/// unless somebody started SteamVR first — which is why the base lives in
+/// D47.VrOverlay.HardwareTests and this does not. These run in CI on every
+/// pull request.
 /// </para>
 ///
 /// <para>
