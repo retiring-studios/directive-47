@@ -10,12 +10,12 @@
         In ci.slnf as well as hardware.slnf, because compiling it needs no
         headset and its Tier 1 tests are worth running on every pull request.
 
-        Not, however, in the published exe. D47.GameOverlay is, because D47.Panel
-        references it; nothing shipping references this one, so CI's publish of
-        the panel leaves it out and a downloaded build shows nothing in a
-        headset. That changes when the composition story wires it up, and this
-        comment says so then rather than now — claiming it early is what would
-        tell somebody a build can do something it cannot.
+        And in the published exe, since #136 — D47.Panel references it the same
+        way it references D47.GameOverlay, and asks for a headset overlay at
+        startup on every machine. Until that story this comment said the
+        opposite, because it was true: nothing shipping referenced this project,
+        so a downloaded build showed nothing in a headset however much of the
+        adapter worked.
 
         Of its two test projects only D47.VrOverlay.HardwareTests is
         hardware-only. D47.VrOverlay.Tests holds what needs neither headset nor
