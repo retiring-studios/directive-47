@@ -98,10 +98,20 @@
             An AutomationId so that what the panel is showing can be told from
             what the panel says about itself. The strip is furniture and the
             render is the answer, and a test asking whether the answer reached
-            the screen has to be able to draw that line. An id rather than a
-            name: a name is read aloud, and this is not for reading.
+            the screen has to be able to draw that line.
+
+            The name beside it was left off on purpose — a name is read aloud and
+            a scrolling region has nothing to say — and that was wrong. #167:
+            leaving it off does not produce silence, it produces WPF's fallback,
+            which walks down and stringifies whatever it finds. What it found
+            here was the Answer record, so the region announced the whole object
+            dump, type names and backing-field spellings included.
+
+            So it is named for the least noisy true thing, and the name is not
+            optional. A reader hears the region, then the answer inside it.
         -->
         <ScrollViewer AutomationProperties.AutomationId="TheRender"
+                      AutomationProperties.Name="The render"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <render:CapabilityView x:Name="View" />

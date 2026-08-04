@@ -73,6 +73,23 @@ internal static class Rendering
             .ToList());
 
     /// <summary>
+    /// What every element of the rendered answer calls itself to anything
+    /// listening — a screen reader, or automation looking for something by name.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Read off automation peers rather than off the visual tree, because the
+    /// name is not a property of the element: it is what the element's peer
+    /// answers when asked, and a name set in XAML that never reaches its peer
+    /// reads back perfectly from the element that carries it. That is the whole
+    /// of [#167](https://github.com/retiring-studios/directive-47/issues/167) —
+    /// four in-process tests confirmed the right text was on screen while the
+    /// render announced an object dump to everything else on the machine.
+    /// </remarks>
+    internal static IReadOnlyList<string> AccessibleNamesFor(Answer answer) =>
+        OnAWpfThread(() => AutomationTree.NamesIn(LaidOut(answer)));
+
+    /// <summary>
     /// The face the rendered answer's own font family resolves to at some other
     /// weight — what emphatic text will get when there is any.
     /// </summary>
