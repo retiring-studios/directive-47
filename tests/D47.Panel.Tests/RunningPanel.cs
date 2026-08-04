@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Text;
-using System.Threading;
 using System.Windows.Automation;
+
+using D47.TestSupport;
 
 // Aliased rather than imported: System.Windows also has a Condition, and
 // importing the namespace makes every automation Condition here ambiguous.
@@ -73,45 +73,20 @@ internal sealed class RunningPanel : IDisposable
     /// </exception>
     internal static RunningPanel Launch()
     {
-        Process process = Process.Start(
-                new ProcessStartInfo(Executable()) { UseShellExecute = false })
-            ?? throw new InvalidOperationException("The panel did not start.");
+        Process process = TheApplication.Start();
 
         try
         {
-            AutomationElement window = WaitForWindow(process);
+            AutomationElement window =
+                TheApplication.WaitForWindow(process, WindowName, Patience);
+
             return new RunningPanel(process, window) { ProcessId = process.Id };
         }
         catch
         {
-            Kill(process);
+            TheApplication.Kill(process);
             throw;
         }
-    }
-
-    /// <summary>
-    /// Where the application under test is, checked before anything tries to
-    /// start it.
-    ///
-    /// <para>
-    /// Shared with <see cref="SecondInstance"/>, which starts the same
-    /// executable for the opposite reason. A missing exe reported as "the panel
-    /// did not start" sends the reader looking at the panel.
-    /// </para>
-    /// </summary>
-    /// <returns>The full path to the panel.</returns>
-    /// <exception cref="InvalidOperationException">It was not built, or not copied.</exception>
-    internal static string Executable()
-    {
-        string exe = Path.Combine(AppContext.BaseDirectory, "D47.Panel.exe");
-
-        if (!File.Exists(exe))
-        {
-            throw new InvalidOperationException(
-                $"The panel executable should sit beside the tests, at {exe}.");
-        }
-
-        return exe;
     }
 
     /// <summary>
@@ -310,7 +285,7 @@ internal sealed class RunningPanel : IDisposable
         }
 
         _disposed = true;
-        Kill(_process);
+        TheApplication.Kill(_process);
         _process.Dispose();
     }
 
@@ -336,47 +311,6 @@ internal sealed class RunningPanel : IDisposable
                 new PropertyCondition(AutomationElement.ProcessIdProperty, ProcessId)));
     }
 
-    private static AutomationElement WaitForWindow(Process process)
-    {
-        AutomationElement? root = AutomationElement.RootElement
-            ?? throw new InvalidOperationException(
-                "UI Automation has no root element. This machine has no interactive desktop.");
-
-        // By name *and* by process. The name alone was enough while one test
-        // class launched panels one at a time; the moment a second class did it
-        // too, a test could be handed the other one's window, close it, and
-        // then wait for its own process to exit forever.
-        var condition = new AndCondition(
-            new PropertyCondition(AutomationElement.NameProperty, WindowName),
-            new PropertyCondition(AutomationElement.ProcessIdProperty, process.Id));
-
-        DateTime deadline = DateTime.UtcNow + Patience;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            AutomationElement? window = root.FindFirst(TreeScope.Children, condition);
-
-            if (window is not null)
-            {
-                return window;
-            }
-
-            process.Refresh();
-
-            if (process.HasExited)
-            {
-                throw new InvalidOperationException(
-                    $"The panel exited with code {process.ExitCode} before presenting a window.");
-            }
-
-            Thread.Sleep(250);
-        }
-
-        throw new InvalidOperationException(
-            $"No window named \"{WindowName}\" appeared within {Patience.TotalSeconds:0} seconds. "
-            + $"The process was {(process.HasExited ? "gone" : "still running")}.");
-    }
-
     private static void Walk(AutomationElement element, StringBuilder into, int depth)
     {
         if (depth > DeepEnoughToDiagnose)
@@ -400,17 +334,5 @@ internal sealed class RunningPanel : IDisposable
         }
     }
 
-    private static void Kill(Process process)
-    {
-        process.Refresh();
-
-        if (process.HasExited)
-        {
-            return;
-        }
-
-        process.Kill(entireProcessTree: true);
-        process.WaitForExit(5000);
-    }
 }
 
