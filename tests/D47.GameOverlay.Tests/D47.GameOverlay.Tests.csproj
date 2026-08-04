@@ -10,6 +10,14 @@
         one. D47.Help is referenced so the overlay is fed a real capability's
         answer rather than a hand-built stand-in.
 
+        D47.Panel is referenced for its executable rather than for its types,
+        which are internal and stay that way. Referencing it is what puts
+        D47.Panel.exe beside these tests, and the end-to-end test starts that
+        exe as a process — the only way to assert that the composition root
+        wires the parts together, and the only way to assert that the overlay
+        leaves the foreground alone, since a test runner holds no foreground to
+        lose.
+
         xUnit v3, not v2, for the same reason as the other test projects: the
         SDK template still scaffolds v2, and v3 test projects are executables.
     -->
@@ -30,6 +38,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\D47.GameOverlay\D47.GameOverlay.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
+        <ProjectReference Include="..\..\src\D47.Panel\D47.Panel.csproj" />
         <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
     </ItemGroup>
 
