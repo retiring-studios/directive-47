@@ -1,8 +1,5 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Threading;
 
 using D47.Render;
 using D47.TestSupport;
@@ -57,8 +54,8 @@ public class PanelSizeTests
     [Fact]
     public void Panel_OnOpening_IsTheSizeOfTheControlsInIt()
     {
-        (Size wanted, Size given) = Opened((panel, answer) =>
-            (WhatTheControlsWant(answer), RoomTheRenderGot(panel)));
+        (Size wanted, Size given) = OpenedPanel.Opened((panel, _) =>
+            (WhatTheControlsWant(Fixtures.HelpsAnswer()), OpenedPanel.RoomTheRenderGot(panel)));
 
         given.Width.ShouldBe(
             wanted.Width,
@@ -85,24 +82,21 @@ public class PanelSizeTests
         // starting point, and the size is the Commander's from the moment he
         // touches it.
         (double fitted, double dragged, double kept, double render, double scrollable) =
-            Opened((panel, _) =>
+            OpenedPanel.Opened((panel, _) =>
             {
-                double before = RoomTheRenderGot(panel).Height;
+                double before = OpenedPanel.RoomTheRenderGot(panel).Height;
                 double half = panel.ActualHeight / 2;
 
                 panel.Height = half;
                 panel.UpdateLayout();
 
-                ScrollViewer scroll = Descendant<ScrollViewer>(panel)
-                    ?? throw new InvalidOperationException(
-                        "The panel has nothing to scroll with, so anything that does not fit is "
-                        + "simply not visible.");
+                ScrollViewer scroll = OpenedPanel.ScrollingRegion(panel);
 
                 return (
                     before,
                     half,
                     panel.ActualHeight,
-                    RoomTheRenderGot(panel).Height,
+                    OpenedPanel.RoomTheRenderGot(panel).Height,
                     scroll.ScrollableHeight);
             });
 
@@ -132,38 +126,6 @@ public class PanelSizeTests
     }
 
     /// <summary>
-    /// Opens a panel around help's answer, asks it something, and takes it away
-    /// again.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// <c>ShowActivated</c> is off because a test has no business taking the
-    /// foreground from whoever is at the keyboard, and closing goes through the
-    /// dispatcher rather than through <c>Close</c> — the panel turns a close into
-    /// a hide, so a test that called it would leave the window behind.
-    /// </remarks>
-    /// <typeparam name="T">Whatever the asking works out.</typeparam>
-    /// <param name="asking">What to ask of the open panel.</param>
-    /// <returns>Whatever the asking worked out.</returns>
-    private static T Opened<T>(Func<MainWindow, Answer, T> asking) =>
-        StaThread.Run(() =>
-        {
-            Answer answer = Fixtures.HelpsAnswer();
-            var panel = new MainWindow(answer) { ShowActivated = false };
-
-            try
-            {
-                panel.Show();
-
-                return asking(panel, answer);
-            }
-            finally
-            {
-                Dispatcher.CurrentDispatcher.InvokeShutdown();
-            }
-        });
-
-    /// <summary>
     /// What the controls want, worked out independently of the window.
     /// </summary>
     ///
@@ -185,48 +147,5 @@ public class PanelSizeTests
         asking.UpdateLayout();
 
         return asking.DesiredSize;
-    }
-
-    /// <summary>
-    /// How much room the render was actually given, read off the window's own
-    /// tree rather than worked back from the window's size.
-    /// </summary>
-    /// <param name="panel">The open panel.</param>
-    /// <returns>The size the render was laid out at.</returns>
-    private static Size RoomTheRenderGot(MainWindow panel)
-    {
-        CapabilityView render = Descendant<CapabilityView>(panel)
-            ?? throw new InvalidOperationException("The panel is showing no render.");
-
-        return new Size(render.ActualWidth, render.ActualHeight);
-    }
-
-    /// <summary>
-    /// The first element of a kind under something, or nothing at all.
-    /// </summary>
-    /// <typeparam name="T">The kind being looked for.</typeparam>
-    /// <param name="node">Where to start looking.</param>
-    /// <returns>The first match, or <see langword="null"/>.</returns>
-    private static T? Descendant<T>(DependencyObject node)
-        where T : DependencyObject
-    {
-        int children = VisualTreeHelper.GetChildrenCount(node);
-
-        for (int child = 0; child < children; child++)
-        {
-            DependencyObject descendant = VisualTreeHelper.GetChild(node, child);
-
-            if (descendant is T found)
-            {
-                return found;
-            }
-
-            if (Descendant<T>(descendant) is { } deeper)
-            {
-                return deeper;
-            }
-        }
-
-        return null;
     }
 }

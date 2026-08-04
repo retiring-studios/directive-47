@@ -14,10 +14,19 @@ name: CI
 # the thing a manual pass installs rather than something to be built by hand.
 # Being one Windows job is why that is four extra steps and not a second job
 # with its own checkout and restore.
+#
+# A tag beginning v adds one more job, which turns that same artifact into a
+# release. That one is a second job for the opposite reason: it is the only
+# thing here that writes back to the repository, and the token letting it should
+# not be sitting in the job that builds a pull request.
 
 on:
     push:
         branches: [main]
+        # The stable channel. A tag is the deliberate act that says a version is
+        # worth keeping — the per-pull-request artifact expires and a release
+        # does not.
+        tags: ['v*']
     pull_request:
 
 permissions:
@@ -27,6 +36,11 @@ jobs:
     build:
         name: Build, test and publish
         runs-on: windows-latest
+
+        # Read once from Directory.Build.props and handed on, so the release job
+        # cannot go and read it a second time and get a different answer.
+        outputs:
+            version: ${{ steps.version.outputs.version }}
 
         steps:
             - uses: actions/checkout@v7
@@ -99,3 +113,59 @@ jobs:
                   # something whose whole purpose is to be downloaded once and
                   # tried. The release channels are what keep a build for good.
                   retention-days: 14
+
+    # The stable channel, and only on a tag.
+    #
+    # It takes the exe the build job already made rather than building again.
+    # Two publishes of the same commit ought to agree, and a release day is the
+    # wrong time to find out whether they do — so what gets released is, by
+    # construction, the thing the tests ran against.
+    #
+    # No checkout, because nothing here reads the source. gh is given the
+    # repository by name instead, which is also why this job never has a working
+    # copy it could accidentally write to.
+    release:
+        name: Release
+        needs: build
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: windows-latest
+
+        # The one job that writes to the repository. Scoped here rather than at
+        # the top of the file so every pull request's build keeps the read-only
+        # token it has always had.
+        permissions:
+            contents: write
+
+        steps:
+            - name: Take the exe the build already made
+              uses: actions/download-artifact@v7
+              with:
+                  name: D47.Panel-${{ needs.build.outputs.version }}
+                  path: release
+
+            # The version is asserted against the exe in the build job and
+            # against the tag here, so the three cannot drift apart. Releasing
+            # v0.3.0 from a build that says 0.2.0 is the kind of thing nobody
+            # notices until somebody reports a bug against a version that was
+            # never shipped.
+            - name: Check the tag and the version agree
+              run: |
+                  $tag = "${{ github.ref_name }}"
+                  $version = "${{ needs.build.outputs.version }}"
+                  Write-Host "Tag $tag, version $version"
+                  if ($tag.TrimStart("v") -ne $version) {
+                      throw "The tag is $tag but Directory.Build.props says $version."
+                  }
+
+            # --generate-notes rather than a hand-written body: what changed is
+            # already written down in the pull requests that changed it, and a
+            # summary maintained by hand is one that goes stale.
+            - name: Publish the release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GH_REPO: ${{ github.repository }}
+              run: >
+                  gh release create "${{ github.ref_name }}"
+                  release/D47.Panel.exe
+                  --title "Directive 47 ${{ needs.build.outputs.version }}"
+                  --generate-notes
