@@ -19,11 +19,21 @@
         P/Invoke. All three put the same icon in the same place; only the first
         adds nothing to what gets redistributed. See docs/decisions.md.
     -->
+    <!--
+        StartupObject is what takes the launch away from the entry point WPF
+        generates out of App.xaml and gives it to Program.Main. The updater has
+        to run before there is an application at all, and App.OnStartup is
+        already too late — vpk warns about exactly that while packing, and warns
+        rather than fails. Drop this line and the build still succeeds, the
+        generated Main takes over, and the only symptom is an install that
+        misbehaves on somebody else's machine. EntryPointTests is what notices.
+    -->
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <OutputType>WinExe</OutputType>
         <UseWPF>true</UseWPF>
         <UseWindowsForms>true</UseWindowsForms>
+        <StartupObject>D47.Panel.Program</StartupObject>
     </PropertyGroup>
 
     <!--
@@ -61,6 +71,15 @@
     -->
     <ItemGroup>
         <InternalsVisibleTo Include="D47.Panel.Tests" />
+    </ItemGroup>
+
+    <!--
+        The updater. This project and no other: an updater belongs to the
+        application that ships, and the libraries below it neither know nor care
+        that they are installed rather than copied.
+    -->
+    <ItemGroup>
+        <PackageReference Include="Velopack" />
     </ItemGroup>
 
     <ItemGroup>

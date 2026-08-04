@@ -126,11 +126,12 @@ to infer from what changed.
 
 ### I — Install latest release
 
-There is no installer yet — that is
-[#142](https://github.com/retiring-studios/directive-47/issues/142), and Velopack
-is still only a candidate in `docs/decisions.md`. What a release carries is a
-self-contained single-file exe that needs no .NET on the machine, so installing
-it means fetching it and keeping it somewhere.
+There is an installer since
+[#142](https://github.com/retiring-studios/directive-47/issues/142). A release
+carries `Directive47-win-Setup.exe` — self-contained, needing no .NET on the
+machine — beside the `.nupkg` and release feed an installed copy updates itself
+from. So `I` now means download the setup and run it, rather than keep an exe
+somewhere.
 
 **Ask for the tag explicitly.** Everything before `1.0.0` is a prerelease, and
 `gh release download` with no tag resolves "latest" the way the API does, which
@@ -142,30 +143,44 @@ $tag = gh release list --repo retiring-studios/directive-47 --limit 1 --json tag
 ```
 
 ```powershell
-gh release download $tag --repo retiring-studios/directive-47 --pattern D47.Panel.exe --dir "$env:USERPROFILE\Downloads\d47-$tag" --clobber
+gh release download $tag --repo retiring-studios/directive-47 --pattern Directive47-win-Setup.exe --dir "$env:USERPROFILE\Downloads\d47-$tag" --clobber
+```
+
+```powershell
+& "$env:USERPROFILE\Downloads\d47-$tag\Directive47-win-Setup.exe"
 ```
 
 `$env:USERPROFILE\Downloads\d47-<tag>` matches what pull requests already tell
-the maintainer to type for a per-pull-request artifact, so an installed release
+the maintainer to type for a per-pull-request artifact, so a downloaded release
 and a build under manual test sit beside each other and neither overwrites the
 other.
 
-Report the path and the size. It is about 173MB and grows with every project
-added.
+The setup is about 80MB and installs to `%LOCALAPPDATA%\Directive47` — a stub and
+an updater at the root, the application under `current\` — putting Directive 47
+on the desktop and in the Start menu. It is unsigned, so SmartScreen has
+something to say the first time: More info, then Run anyway. Report where it
+landed.
 
 ### L — Launch
 
-Run the exe that `I` downloaded:
+Run the stub, which is what the shortcuts point at and so what a Commander runs:
 
 ```powershell
-& "$env:USERPROFILE\Downloads\d47-$tag\D47.Panel.exe"
+& "$env:LOCALAPPDATA\Directive47\D47.Panel.exe"
 ```
 
-Launch the *installed* build, never `dotnet run` — the point is to exercise what
-a user would actually have.
+**There are two `D47.Panel.exe` and the stub is the right one.** The application
+is the one under `current\`; the stub at the root starts it and exits
+immediately. So do not wait on the stub or check whether it is still running —
+it will not be, and that is not a failure. Ask for `Get-Process D47.Panel` if you
+need to know something is up, and expect its path to be the `current\` one.
 
-If `L` is given without `I` in the same code, launch the most recent
-`d47-*` directory rather than assuming one was just fetched.
+Launch the *installed* build, never `dotnet run` and never the publish folder —
+the point is to exercise what a user would actually have.
+
+If `L` is given without `I` in the same code, launch whatever is already
+installed rather than assuming something was just fetched. If nothing is
+installed, say so rather than quietly falling back to a build.
 
 ### B[N] — Beep
 

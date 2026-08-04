@@ -8,6 +8,18 @@
     <ItemGroup>
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
+        <!--
+            The updater. MIT, no dependencies. docs/decisions.md settles why it
+            is Velopack and what taking it costs: the single-file publish, in
+            exchange for per-file patches and a per-user install needing no
+            administrator.
+
+            The `vpk` command that builds the installer is pinned to the same
+            version in .config/dotnet-tools.json. A library and a tool that
+            disagree about the package format is the kind of thing that fails on
+            somebody else's machine at install time.
+        -->
+        <PackageVersion Include="Velopack" Version="1.2.0" />
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
         <PackageVersion Include="xunit.v3" Version="3.2.2" />
     </ItemGroup>
