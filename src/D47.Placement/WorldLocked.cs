@@ -3,7 +3,14 @@ using System.Numerics;
 namespace D47.Placement;
 
 /// <summary>
-/// Placement that stays where it was put, whatever the head does.
+/// Placement. The overlay stays where it was put, whatever the head does —
+/// part of the ship rather than of the visor.
+///
+/// <para>
+/// The only mode there is. Head-locked was built and taken out again, so this
+/// is no longer one of two things a Commander chooses between; it is what
+/// placement means.
+/// </para>
 /// </summary>
 public static class WorldLocked
 {
@@ -12,11 +19,11 @@ public static class WorldLocked
     /// </summary>
     ///
     /// <remarks>
-    /// No head anywhere in this, which is the whole difference between the two
-    /// modes and the reason it is one line. What is worth checking is not that
-    /// this ignores the head — its signature says so — but that a placement
-    /// handed over from head-locked then stops following, and that is asserted
-    /// against <see cref="HeadLocked.Follows"/> rather than against this alone.
+    /// No head anywhere in this, and nothing left to compare it against. While
+    /// there were two modes, "world-locked does not follow the view" was worth
+    /// asserting, because a placement could arrive from head-locked and had to
+    /// stop following. With one mode, ignoring the head is simply what this is,
+    /// and the signature is the whole of the claim.
     /// </remarks>
     /// <param name="placed">Where it was bolted.</param>
     /// <returns>The overlay's transform.</returns>
@@ -33,32 +40,5 @@ public static class WorldLocked
         transform.Translation = placed.Position;
 
         return transform;
-    }
-
-    /// <summary>
-    /// The world pose that keeps a head-locked overlay exactly where it is, so
-    /// that changing mode moves nothing.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// Asked of the head-locked transform rather than worked out again from the
-    /// offset. The two would have to agree exactly for the handover to be
-    /// invisible, and the surest way to make two calculations agree is for
-    /// there to be one of them.
-    /// </remarks>
-    /// <param name="head">Where the Commander's head is now.</param>
-    /// <param name="inView">Where the overlay sits relative to the head.</param>
-    /// <returns>Where to bolt it.</returns>
-    /// <exception cref="System.ArgumentException">
-    /// Some part of the pose or the offset is not a finite number, or the
-    /// orientation is not a rotation.
-    /// </exception>
-    public static Pose TakingOver(Pose head, Vector3 inView)
-    {
-        Matrix4x4 following = HeadLocked.Follows(head, inView);
-
-        return new Pose(
-            following.Translation,
-            Quaternion.CreateFromRotationMatrix(following));
     }
 }
