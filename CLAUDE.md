@@ -25,7 +25,8 @@ disk. Every path in it exists.
 
 `dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI runs — every
 project that does not need real hardware. `hardware.slnf` selects the dev-PC-only
-projects, currently `D47.GameOverlay` and its tests.
+projects, currently `D47.GameOverlay.Tests`, which needs Elite running, and
+`D47.VrOverlay.HardwareTests`, which needs SteamVR.
 
 **CI is Windows only.** Directive 47 is a Windows product, so a Linux job was
 proving a portability claim nothing depends on, and Windows is what lets WPF

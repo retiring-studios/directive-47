@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using Valve.VR;
 
-namespace D47.VrOverlay.Tests;
+namespace D47.VrOverlay.HardwareTests;
 
 /// <summary>
 /// Base for every test that needs SteamVR actually running.

@@ -6,7 +6,7 @@ using D47.TestSupport;
 
 using Xunit;
 
-namespace D47.VrOverlay.Tests;
+namespace D47.VrOverlay.HardwareTests;
 
 /// <summary>
 /// Puts the overlay up and leaves it there, so a person can look at it.

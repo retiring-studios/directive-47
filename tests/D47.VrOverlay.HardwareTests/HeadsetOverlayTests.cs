@@ -9,7 +9,7 @@ using Valve.VR;
 
 using Xunit;
 
-namespace D47.VrOverlay.Tests;
+namespace D47.VrOverlay.HardwareTests;
 
 /// <summary>
 /// Surface two: the same render the panel shows, on a quad floating in the
@@ -25,8 +25,8 @@ namespace D47.VrOverlay.Tests;
 /// Not what is on it. SteamVR will not answer for a raw overlay's pixels, so
 /// there is a real gap here and it is named rather than papered over: delete the
 /// <c>SetOverlayRaw</c> call and every test in this class still passes. The
-/// bytes on our side of that call are covered by
-/// <see cref="PanelRenderTests"/>, which needs no headset; that the bytes
+/// bytes on our side of that call are covered by <c>PanelRenderTests</c> in
+/// D47.VrOverlay.Tests, which needs no headset and runs in CI; that the bytes
 /// arrived is covered by a person putting the headset on, which is what the
 /// pull request asks for.
 /// </para>

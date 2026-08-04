@@ -18,6 +18,7 @@
     <Project Path="tests/D47.Placement.Tests/D47.Placement.Tests.csproj" />
     <Project Path="tests/D47.Render.Tests/D47.Render.Tests.csproj" />
     <Project Path="tests/D47.TestSupport/D47.TestSupport.csproj" />
+    <Project Path="tests/D47.VrOverlay.HardwareTests/D47.VrOverlay.HardwareTests.csproj" />
     <Project Path="tests/D47.VrOverlay.Tests/D47.VrOverlay.Tests.csproj" />
   </Folder>
 </Solution>
