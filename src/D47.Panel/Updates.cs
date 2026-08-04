@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace D47.Panel;
 
@@ -15,13 +16,29 @@ namespace D47.Panel;
 /// </summary>
 internal sealed class Updates
 {
+    /// <summary>
+    /// What to say when the check itself would not run.
+    ///
+    /// <para>
+    /// Names what was being attempted and says the running copy is fine, because
+    /// whoever reads this went looking for why they were never offered a version
+    /// they know exists. The reason is appended by the caller — "the check
+    /// failed" on its own is a line nobody can act on.
+    /// </para>
+    /// </summary>
+    private const string CouldNotAsk =
+        "Directive 47 could not find out whether there is a newer version of itself. It has "
+        + "carried on with the one you have, and will look again.";
+
     private readonly IUpdateSource _source;
+    private readonly Action<string> _record;
 
     private bool _accepted;
 
-    private Updates(IUpdateSource source)
+    private Updates(IUpdateSource source, Action<string> record)
     {
         _source = source;
+        _record = record;
     }
 
     /// <summary>
@@ -39,36 +56,68 @@ internal sealed class Updates
     /// Wraps an updater. Asks it nothing.
     /// </summary>
     /// <param name="source">Where a newer version comes from.</param>
+    /// <param name="record">Where to note a check that would not run.</param>
     /// <returns>Something to ask, accept and decline with.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
-    internal static Updates From(IUpdateSource source)
+    /// <exception cref="ArgumentNullException">Either argument is null.</exception>
+    internal static Updates From(IUpdateSource source, Action<string> record)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(record);
 
-        return new Updates(source);
+        return new Updates(source, record);
     }
 
     /// <summary>
-    /// Goes and finds out whether there is a newer version.
+    /// Goes and finds out whether there is a newer version, and carries on if it
+    /// cannot.
     /// </summary>
     ///
     /// <remarks>
     /// <para>
-    /// Separate from <see cref="From"/>, and deliberately not called at startup
-    /// yet. This is the one call here that reaches the network, so it is the one
-    /// that can fail on a machine that is merely offline — and what should happen
-    /// then is
-    /// [#145](https://github.com/retiring-studios/directive-47/issues/145)'s
-    /// criterion rather than a guess made here. Constructing without asking is
-    /// what keeps that story's absence from being a crash on startup in the
-    /// meantime.
+    /// Absent, not failed — the third place this application draws that line,
+    /// after the two overlays. No network, no server, no answer: none of it is a
+    /// reason to interrupt somebody flying, and every one of them is outside
+    /// this application to fix. A Commander who cannot reach GitHub has a
+    /// working copy and nothing to hear about.
     /// </para>
     /// <para>
-    /// [#143](https://github.com/retiring-studios/directive-47/issues/143) is
-    /// what calls this, when it has somewhere to show the answer.
+    /// Nothing is offered when the check failed, which is what "does not
+    /// interrupt" comes to here. There is no dialog to suppress — this class
+    /// cannot draw one — so the way a failed check could still reach the
+    /// Commander is by leaving a notice on the panel and the overlay, and
+    /// <see cref="Waiting"/> staying null is what stops it.
+    /// </para>
+    /// <para>
+    /// Written down every time rather than once. Looking again is ordinary, and
+    /// a second failure suppressed because it matched the first is a second
+    /// failure nobody can see happened.
     /// </para>
     /// </remarks>
-    internal void Look() => Waiting = _source.Waiting();
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification =
+            "Every reason a check fails is outside this application and they are "
+            + "indistinguishable here: no network, a proxy, a rate limit, a certificate, a "
+            + "server having a bad day. The updater makes no promise about which exception "
+            + "each arrives as, and a narrow catch that guessed wrong would take the "
+            + "application down on startup for a machine that is merely offline.")]
+    internal void Look()
+    {
+        try
+        {
+            Waiting = _source.Waiting();
+        }
+        catch (Exception problem)
+        {
+            // The previous answer goes with it. Keeping it would offer a version
+            // this run never confirmed is there, and the notice is the one thing
+            // a failed check must not produce.
+            Waiting = null;
+
+            _record($"{CouldNotAsk} ({problem.Message})");
+        }
+    }
 
     /// <summary>
     /// Takes the update, to be installed once Directive 47 is closed.

@@ -220,12 +220,19 @@ internal sealed partial class App : Application, IDisposable
         FollowTheForeground();
         ClaimTheHotkey(remembered);
 
-        // Asked once, at startup, and nothing is done about it yet. Putting the
+        // Asked once, at startup, and nothing is shown about it yet. Putting the
         // answer on the panel and the overlay is
         // [#143](https://github.com/retiring-studios/directive-47/issues/143);
         // what is here is the half that has to exist before there is anything to
         // put anywhere, and the exit hook that makes accepting mean something.
-        _updates = Updates.From(new VelopackUpdates(Releases, Prereleases));
+        //
+        // Asked at all only since
+        // [#145](https://github.com/retiring-studios/directive-47/issues/145).
+        // Until then a check on a machine that is merely offline would have
+        // thrown out of here and taken startup with it, which is why building
+        // one and asking it were separated in the first place.
+        _updates = Updates.From(new VelopackUpdates(Releases, Prereleases), _log.Warning);
+        _updates.Look();
     }
 
     /// <summary>
