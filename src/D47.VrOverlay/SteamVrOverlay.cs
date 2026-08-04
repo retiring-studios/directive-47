@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 
 using D47.Placement;
+using D47.Render;
 
 using Valve.VR;
 
@@ -154,6 +155,21 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
         {
             pinned.Free();
         }
+    }
+
+    /// <inheritdoc/>
+    ///
+    /// <remarks>
+    /// The render happens here rather than arriving already done, because an
+    /// answer is what the rest of the application holds and pixels are what
+    /// SteamVR wants — and being the place those two meet is most of what this
+    /// project is for.
+    /// </remarks>
+    public void Paint(Answer answer)
+    {
+        (byte[] pixels, int width, int height) = PanelRender.Take(answer);
+
+        Paint(pixels, width, height);
     }
 
     /// <inheritdoc/>
