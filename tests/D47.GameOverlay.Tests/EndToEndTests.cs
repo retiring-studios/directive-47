@@ -24,8 +24,9 @@ namespace D47.GameOverlay.Tests;
 ///
 /// <para>
 /// Tier 3, and for two reasons rather than one. It needs the game, like
-/// everything else here; and it needs the application to hold the foreground,
-/// which only a real process showing a real panel does.
+/// everything else here; and it needs a real window in the foreground for an
+/// overlay to be capable of taking, which a test runner never provides and only
+/// a real process showing a real panel does.
 /// </para>
 /// </summary>
 public class EndToEndTests : GameTest
@@ -79,15 +80,29 @@ public class EndToEndTests : GameTest
         // passed just as happily against an overlay built to steal focus, and
         // was deleted.
         //
+        // Stated as "the overlay does not have it" rather than "the panel does".
+        // Those are the same claim only on a machine nobody is using. The panel
+        // takes the foreground when it opens and nothing keeps it there: any
+        // window that raises itself in the second this takes holds it instead,
+        // and on a development machine that is the ordinary case rather than the
+        // exception.
+        //
+        // The stronger form was tried and reported the maintainer's own editor
+        // as an overlay stealing focus, on an idle machine with the game up and
+        // nothing else running — while the window stack in the same message
+        // showed the overlay sitting quietly four places behind it. A test that
+        // calls somebody clicking a defect is a test that gets ignored, and a
+        // defect this one would catch then goes with it.
+        //
         // Compared as text rather than as handles. Run against an overlay built
-        // to steal focus, the handle form reported "should be <blank> but was
-        // <blank>" — Shouldly renders an IntPtr as nothing — so the one line
-        // somebody reads first said only that the wrong window was in front.
-        // Naming them is what turns that into a diagnosis.
-        Describe(Screen.Foreground()).ShouldBe(
-            Describe(app.Panel),
-            $"showing the overlay must leave the foreground where it was — the overlay is "
-            + $"{Describe(app.Overlay)}.{stack}");
+        // to steal focus, the handle form reported "should not be <blank>" —
+        // Shouldly renders an IntPtr as nothing — so the one line somebody reads
+        // first said nothing at all. Naming them is what turns that into a
+        // diagnosis.
+        Describe(Screen.Foreground()).ShouldNotBe(
+            Describe(app.Overlay),
+            $"showing the overlay must not take the foreground — the panel is "
+            + $"{Describe(app.Panel)}.{stack}");
     }
 
     /// <summary>
