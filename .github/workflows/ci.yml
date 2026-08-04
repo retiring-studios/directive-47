@@ -160,12 +160,27 @@ jobs:
             # --generate-notes rather than a hand-written body: what changed is
             # already written down in the pull requests that changed it, and a
             # summary maintained by hand is one that goes stale.
+            #
+            # Anything before 1.0.0 is marked a prerelease. The Releases table
+            # says the stable channel is what an epic completing produces, and a
+            # 0.x build is by definition not that. Marking it keeps "latest"
+            # pointing at something somebody chose to stand behind rather than
+            # at whatever was tagged most recently — which matters more once an
+            # updater is reading this feed.
             - name: Publish the release
               env:
                   GH_TOKEN: ${{ github.token }}
                   GH_REPO: ${{ github.repository }}
-              run: >
-                  gh release create "${{ github.ref_name }}"
-                  release/D47.Panel.exe
-                  --title "Directive 47 ${{ needs.build.outputs.version }}"
-                  --generate-notes
+              run: |
+                  $version = "${{ needs.build.outputs.version }}"
+                  $flags = @()
+
+                  if ($version.StartsWith("0.")) {
+                      $flags += "--prerelease"
+                      Write-Host "$version is before 1.0.0, so this is a prerelease."
+                  }
+
+                  gh release create "${{ github.ref_name }}" `
+                      release/D47.Panel.exe `
+                      --title "Directive 47 $version" `
+                      --generate-notes @flags

@@ -649,8 +649,9 @@ capability to save nothing.
 - **Self-contained and not trimmed.** Self-contained because the artifact is
   what a manual pass installs and runs, and it has to work on a machine with no
   .NET on it. Not trimmed because trimming and WPF's reflection over XAML do not
-  get along. The cost is about 165MB either way, which is why the per-PR artifact
-  is kept for fourteen days rather than the default ninety — it exists to be
+  get along. The cost was about 165MB when this was written and is 173MB now,
+  and it goes up with every project added — which is why the per-PR artifact is
+  kept for fourteen days rather than the default ninety. It exists to be
   downloaded once and tried, and a release is what keeps a build for good.
 
   **Single file was the third of these and is being given up**, for the updater
@@ -672,7 +673,7 @@ capability to save nothing.
   file and run it" becomes "download the installer and run it", and the property
   worth keeping was never the file count — it is that there is nothing else to
   install first. The exchange is that updates become per-file patches: a change
-  to our own assemblies ships as a patch rather than as 165MB of unchanged WPF
+  to our own assemblies ships as a patch rather than as 173MB of unchanged WPF
   and runtime, which is only possible because the publish is a folder.
 - **The 60-second rule.** The updater waits a minute for the application to exit
   and then stops waiting. Asking it to update is therefore something done on the
