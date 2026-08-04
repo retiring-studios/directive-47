@@ -214,17 +214,40 @@ jobs:
                       throw "The installed exe reports $($app.VersionInfo.ProductVersion), not $expected."
                   }
 
+                  # The installer starts what it installed, which is ordinary and
+                  # is also why the next step used to fail: it launched a second
+                  # copy, and a second copy of Directive 47 correctly says so and
+                  # shuts down. Exit code 0, twenty seconds, and nothing wrong.
+                  #
+                  # Cleared here rather than there so the next step starts from
+                  # nothing, and so that "it was already running" cannot be
+                  # mistaken for "it started".
+                  Get-Process D47.Panel -ErrorAction SilentlyContinue |
+                      ForEach-Object {
+                          Write-Host "The installer launched it, pid $($_.Id). Stopping it."
+                          Stop-Process -Id $_.Id -Force
+                      }
+
             # Started, given a moment, and asked whether it is still there. A
             # missing dependency does not announce itself — the process simply
             # goes away — so "it exited on its own" is the failure being looked
             # for, and the only version of this question that can catch it is
             # one that waits.
+            #
+            # Nothing of ours is running by now: the step above stopped the copy
+            # the installer started. That matters more than it looks, because a
+            # second copy of Directive 47 exits cleanly on purpose, so leaving one
+            # up would make this step fail on the single-instance guard working.
             - name: See whether the installed copy actually runs
               run: |
                   $root = Join-Path $env:LOCALAPPDATA "Directive47"
                   $app = Get-ChildItem $root -Recurse -Filter D47.Panel.exe |
                       Where-Object { $_.DirectoryName -notmatch "Update" } |
                       Select-Object -First 1
+
+                  if (Get-Process D47.Panel -ErrorAction SilentlyContinue) {
+                      throw "Something of ours is already running, so this would measure the single-instance guard rather than the install."
+                  }
 
                   $running = Start-Process $app.FullName -PassThru
                   Start-Sleep -Seconds 20
