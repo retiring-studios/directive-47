@@ -74,6 +74,29 @@ internal static class Input
 
     private static void Click(Rect box, uint down, uint up)
     {
+        // Before anything is aimed, because the middle of nowhere is a real
+        // place. A UI Automation element with no presence on screen reports
+        // (0,0,0,0) — which is what a tray icon reports the moment the overflow
+        // flyout closes, and the flyout closes whenever anything takes focus.
+        // The middle of that is the top-left pixel of the screen, where a window
+        // keeps its system-menu icon.
+        //
+        // Clicking it opened an unrelated application's menu, which put that
+        // application's thread into a modal loop, which hung the next UI
+        // Automation call in this process — so a bounded retry loop with a throw
+        // at the end of it never reached the throw. The whole desktop suite
+        // stopped there, twice.
+        //
+        // The check below this one does not catch it: it asks whether the
+        // pointer arrived where it was sent, and the pointer had.
+        if (box.IsEmpty || box.Width <= 0 || box.Height <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Asked to click {box}, which is not a place — whatever this was aimed at is not "
+                + "on screen. An element that has gone away reports a rectangle of zeroes, and "
+                + "the middle of that is the corner of the desktop.");
+        }
+
         double x = box.X + (box.Width / 2);
         double y = box.Y + (box.Height / 2);
 
