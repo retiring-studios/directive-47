@@ -16,7 +16,7 @@ first-class surface, not an afterthought.
 | `tests/` | One `.Tests.csproj` per production project, plus `D47.TestSupport` for machinery more than one of them needs |
 | `assets/` | Icons, images, audio, other media |
 | `docs/` | `decisions.md` and anything else written down |
-| `scripts/` | Provisioning and local automation |
+| `scripts/` | Provisioning, local automation, and checks CI runs |
 
 This table is a map of the repo, and it is wrong if it does not match what is on
 disk. Every path in it exists.
