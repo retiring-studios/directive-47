@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:D47.Render"
              Background="{x:Static local:Palette.Background}"
+             AutomationProperties.Name="Capability answer"
              Padding="32"
              FontFamily="pack://application:,,,/D47.Render;component/assets/fonts/#Saira"
              FontStretch="Condensed">
@@ -57,13 +58,21 @@
     </UserControl.Resources>
 
     <!--
-        AutomationProperties.Name is not decoration. Without it a ContentControl
-        holding a non-visual object reports that object's ToString() as its
-        accessible name, which a screen reader then reads aloud and automation
-        then cannot match on.
+        AutomationProperties.Name is not decoration, and it is on the UserControl
+        above rather than here. Without it, a control holding a non-visual object
+        announces that object's ToString() as its accessible name — the whole
+        Answer record, type names and backing-field spellings included — which a
+        screen reader reads aloud and automation cannot match on.
+
+        It was on this ContentControl until #167, where it did nothing at all:
+        ContentControl creates no automation peer, so a name set here reaches
+        nothing, while reading the property straight back off the element says it
+        is set. The UserControl is the element with a peer, and it is also the
+        element every surface hosts — so it is the thing that has a name to give.
+        CapabilityViewTests asks the peers rather than the elements, which is
+        the only version of the question that can fail this way.
     -->
     <ContentControl Content="{Binding}"
-                    ContentTemplateSelector="{StaticResource ByDisplayModel}"
-                    AutomationProperties.Name="Capability answer" />
+                    ContentTemplateSelector="{StaticResource ByDisplayModel}" />
 
 </UserControl>

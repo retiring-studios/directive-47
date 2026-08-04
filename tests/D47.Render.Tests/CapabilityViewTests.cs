@@ -113,6 +113,34 @@ public class CapabilityViewTests
         detail.ShouldBe(["Does the fuel thing.", "Try saying:", "do the fuel thing"]);
     }
 
+    [Fact]
+    public void CapabilityAnswer_WhereverItIsHosted_CarriesItsOwnName()
+    {
+        var answer = new Answer
+        {
+            Descriptor = Descriptor("fuel"),
+            Result = new ListResult
+            {
+                CapabilityId = "fuel",
+                Items = ["Main tank: 24 tonnes."],
+            },
+        };
+
+        IReadOnlyList<string> names = Rendering.AccessibleNamesFor(answer);
+
+        // The render on its own, which is what all three surfaces host. Naming
+        // it here rather than in each surface is what makes the panel, the game
+        // overlay and the headset agree without any of them saying so — the same
+        // reason the palette and the typeface are set on the render.
+        //
+        // Both halves, because either alone passes while the defect stands: the
+        // name can be present on one element while another announces the dump,
+        // which is exactly what #167 was. What the window around this adds is
+        // PanelNameTests' business, not this one's.
+        names.ShouldContain("Capability answer");
+        names.ShouldNotContain(answer.ToString());
+    }
+
     // There is deliberately no test for a display model the panel has no
     // template for. DisplayModel's constructor is private protected, so the
     // hierarchy is closed outside D47.Capabilities and the case cannot be
