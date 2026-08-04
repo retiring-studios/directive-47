@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace D47.Capabilities;
 
@@ -35,4 +37,39 @@ public sealed record ListResult : CapabilityResult
     /// The lines, in the order they should be shown or spoken.
     /// </summary>
     public required IReadOnlyList<string> Items { get; init; }
+
+    /// <summary>
+    /// Whether two results say the same thing.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Written out for the same reason as
+    /// <see cref="CapabilityDescriptor.Equals(CapabilityDescriptor)"/>: a record
+    /// compares a list by reference, so two results holding identical lines were
+    /// unequal. <c>base.Equals</c> first, because it carries the equality
+    /// contract and the capability id — without it, two different capabilities
+    /// that happened to list the same lines would be the same result.
+    /// </remarks>
+    /// <param name="other">The result to compare with.</param>
+    /// <returns>Whether they say the same thing.</returns>
+    public bool Equals(ListResult? other) =>
+        base.Equals(other) && Items.SequenceEqual(other.Items);
+
+    /// <summary>
+    /// A hash consistent with <see cref="Equals(ListResult)"/>.
+    /// </summary>
+    /// <returns>The hash.</returns>
+    public override int GetHashCode()
+    {
+        var hash = default(HashCode);
+
+        hash.Add(base.GetHashCode());
+
+        foreach (string item in Items)
+        {
+            hash.Add(item);
+        }
+
+        return hash.ToHashCode();
+    }
 }

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace D47.Capabilities;
 
@@ -61,4 +63,62 @@ public sealed record CapabilityDescriptor
     /// </para>
     /// </summary>
     public required IReadOnlyList<string> Examples { get; init; }
+
+    /// <summary>
+    /// Whether two descriptors are the same descriptor.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Written out because the generated one is wrong here.
+    /// <see cref="Examples"/> is a list, a record compares each member with
+    /// <c>EqualityComparer&lt;T&gt;.Default</c>, and for a list that is reference
+    /// equality — so two descriptors with identical examples compared unequal
+    /// and the <c>record</c> keyword quietly stopped being true partway down the
+    /// type.
+    /// </para>
+    /// <para>
+    /// The cost of writing it out is that a member added below is a member this
+    /// forgets, silently — the same shape of fault, moved. That is what
+    /// <c>ValueEqualityTests.CapabilityDescriptor_HasTheMembersThisFileKnowsAbout</c>
+    /// is for: add one and it fails, naming this method.
+    /// </para>
+    /// </remarks>
+    /// <param name="other">The descriptor to compare with.</param>
+    /// <returns>Whether they say the same thing.</returns>
+    public bool Equals(CapabilityDescriptor? other) =>
+        other is not null
+        && Id == other.Id
+        && Group == other.Group
+        && HelpText == other.HelpText
+        && Display == other.Display
+        && Examples.SequenceEqual(other.Examples);
+
+    /// <summary>
+    /// A hash consistent with <see cref="Equals(CapabilityDescriptor)"/>.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Over the examples one at a time rather than over the list, for the same
+    /// reason the equality is written out: hashing the list would hash its
+    /// identity, and equal values that hash differently are two entries in every
+    /// dictionary — the same defect wearing a different coat.
+    /// </remarks>
+    /// <returns>The hash.</returns>
+    public override int GetHashCode()
+    {
+        var hash = default(HashCode);
+
+        hash.Add(Id);
+        hash.Add(Group);
+        hash.Add(HelpText);
+        hash.Add(Display);
+
+        foreach (string example in Examples)
+        {
+            hash.Add(example);
+        }
+
+        return hash.ToHashCode();
+    }
 }
