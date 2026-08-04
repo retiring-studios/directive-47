@@ -45,14 +45,14 @@ internal static class Rendering
     /// line of text the result actually put on screen, top to bottom.
     /// </summary>
     internal static IReadOnlyList<string> LinesFor(Answer answer) =>
-        Rendered(() => VisualTree.TextIn(LaidOut(answer)));
+        OnAWpfThread(() => VisualTree.TextIn(LaidOut(answer)));
 
     /// <summary>
     /// The face every line of the rendered answer is actually set in, top to
     /// bottom, as the render itself asked for it.
     /// </summary>
     internal static IReadOnlyList<Face> FacesFor(Answer answer) =>
-        Rendered(() => LabelsIn(LaidOut(answer))
+        OnAWpfThread(() => LabelsIn(LaidOut(answer))
             .Select(label => Face.Of(
                 new Typeface(label.FontFamily, label.FontStyle, label.FontWeight, label.FontStretch)))
             .ToList());
@@ -61,14 +61,14 @@ internal static class Rendering
     /// The color the render actually filled its surface with.
     /// </summary>
     internal static Color? BackgroundOf(Answer answer) =>
-        Rendered(() => ColorOf(LaidOut(answer).Background));
+        OnAWpfThread(() => ColorOf(LaidOut(answer).Background));
 
     /// <summary>
     /// The color every line of the rendered answer is actually written in, top
     /// to bottom, as the render itself resolved it.
     /// </summary>
     internal static IReadOnlyList<Color?> ForegroundsFor(Answer answer) =>
-        Rendered(() => LabelsIn(LaidOut(answer))
+        OnAWpfThread(() => LabelsIn(LaidOut(answer))
             .Select(label => ColorOf(label.Foreground))
             .ToList());
 
@@ -94,7 +94,7 @@ internal static class Rendering
     /// weight — what emphatic text will get when there is any.
     /// </summary>
     internal static Face FaceAt(Answer answer, FontWeight weight) =>
-        Rendered(() =>
+        OnAWpfThread(() =>
         {
             TextBlock label = LabelsIn(LaidOut(answer))[0];
 
@@ -116,7 +116,7 @@ internal static class Rendering
     /// <typeparam name="T">What the reading works out.</typeparam>
     /// <param name="reading">Building a tree and reading it back.</param>
     /// <returns>Whatever it worked out.</returns>
-    private static T Rendered<T>(Func<T> reading)
+    internal static T OnAWpfThread<T>(Func<T> reading)
     {
         lock (OneAtATime)
         {

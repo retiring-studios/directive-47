@@ -50,7 +50,7 @@ internal partial class MainWindow : Window
         View.DataContext = answer;
 
         _zoom = zoom;
-        _controls = WhatTheControlsWant(answer);
+        _controls = CapabilityView.LaidOutFor(answer).DesiredSize;
 
         DrawAtTheZoom();
         _zoom.Changed += (_, _) => DrawAtTheZoom();
@@ -143,46 +143,6 @@ internal partial class MainWindow : Window
     /// <param name="sender">The control.</param>
     /// <param name="e">The click.</param>
     private void ZoomOut(object sender, RoutedEventArgs e) => _zoom.Out();
-
-    /// <summary>
-    /// How big the controls want to be, asked of an instance that belongs to
-    /// nobody.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// <para>
-    /// A throwaway rather than the one in the window. The one in the window
-    /// already has a parent, so measuring it asks what it wants inside whatever
-    /// it is already sitting in rather than what it wants.
-    /// </para>
-    /// <para>
-    /// Arranged and laid out, not merely measured. Templates are resolved during
-    /// layout, and the answer's template is chosen by a resource lookup that
-    /// needs the control connected — so measuring alone returns the size of an
-    /// almost empty box. That is not a hypothetical: it shipped once on the
-    /// overlay, which came out too narrow for its own chrome while looking
-    /// internally consistent.
-    /// </para>
-    /// <para>
-    /// This is the second window to ask the question and <c>GameOverlayWindow</c>
-    /// is the first, so there is a shared question here and no shared code for
-    /// it. Deliberately left as two and raised in the pull request rather than
-    /// extracted quietly: zoom is a third caller, and where "how big does the
-    /// render want to be" belongs is the maintainer's call.
-    /// </para>
-    /// </remarks>
-    /// <param name="answer">What the render would be showing.</param>
-    /// <returns>Its natural size.</returns>
-    private static Size WhatTheControlsWant(Answer answer)
-    {
-        var asking = new CapabilityView { DataContext = answer };
-
-        asking.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        asking.Arrange(new Rect(asking.DesiredSize));
-        asking.UpdateLayout();
-
-        return asking.DesiredSize;
-    }
 
     /// <summary>
     /// Opens the window around its controls, at the moment it has a handle and

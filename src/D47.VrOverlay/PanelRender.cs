@@ -49,7 +49,7 @@ public static class PanelRender
     {
         ArgumentNullException.ThrowIfNull(answer);
 
-        return SizeOf(LaidOut(answer));
+        return SizeOf(LaidOutForATexture(answer));
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public static class PanelRender
     {
         ArgumentNullException.ThrowIfNull(answer);
 
-        CapabilityView view = LaidOut(answer);
+        CapabilityView view = LaidOutForATexture(answer);
         (int width, int height) = SizeOf(view);
 
         var drawn = new RenderTargetBitmap(
@@ -95,31 +95,19 @@ public static class PanelRender
     }
 
     /// <summary>
-    /// The control, measured and arranged at its natural size.
+    /// The control at its natural size, arranged at the whole pixels a texture
+    /// is made of.
     /// </summary>
     ///
     /// <remarks>
-    /// Measured against infinity on purpose: the render decides how big it is,
-    /// and every surface then presents that at whatever size it has. Handing it
-    /// a constraint here would make the headset the thing that decides the
-    /// layout, which is the direction
-    /// [#96](https://github.com/retiring-studios/directive-47/issues/96)
-    /// establishes runs the other way.
+    /// The natural size is <see cref="CapabilityView.LaidOutFor"/>'s, which
+    /// every surface asks and which carries the reasons the sequence is what it
+    /// is. What is left here is the part only a texture needs — and the reason
+    /// this asks for the control rather than the size.
     /// </remarks>
-    private static CapabilityView LaidOut(Answer answer)
+    private static CapabilityView LaidOutForATexture(Answer answer)
     {
-        var view = new CapabilityView { DataContext = answer };
-
-        // Three steps, and the order is the whole of it.
-        //
-        // The first two plus UpdateLayout are what actually realize the
-        // content: without UpdateLayout the templated ContentControl never
-        // measures its items and the whole render collapses to a 64x64 default.
-        // Measured, not reasoned about — dropping it as redundant is exactly
-        // what produced that.
-        view.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        view.Arrange(new Rect(view.DesiredSize));
-        view.UpdateLayout();
+        var view = CapabilityView.LaidOutFor(answer);
 
         // Then arranged again, at the whole-pixel size the texture will be. A
         // bitmap is whole pixels and rounds up, so a control left at 221.6 wide
@@ -153,7 +141,7 @@ public static class PanelRender
     /// </summary>
     ///
     /// <remarks>
-    /// Taken from what <see cref="LaidOut"/> asked for rather than read back
+    /// Taken from what <see cref="LaidOutForATexture"/> asked for rather than read back
     /// off the control. <c>RenderSize</c> comes back fractional even after an
     /// arrange at whole pixels, and casting that to <c>int</c> truncates — a
     /// 222-wide render became a 221-wide texture, which is the missing column

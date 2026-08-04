@@ -86,40 +86,6 @@ public partial class GameOverlayWindow : Window
     }
 
     /// <summary>
-    /// How big the render wants to be, asked of an instance that belongs to
-    /// nobody.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// <para>
-    /// A throwaway rather than the one in the window, and the difference is not
-    /// academic: the one in the window already has a parent, so measuring it
-    /// out of band asks what it wants *inside a Viewbox inside a Grid* rather
-    /// than what it wants. That came out exactly one padding narrower — 64
-    /// device-independent pixels — than the truth, which is the sort of wrong
-    /// that looks plausible.
-    /// </para>
-    /// <para>
-    /// Arranged and laid out, not merely measured. Templates are resolved
-    /// during layout, and the answer's template is chosen by a resource lookup
-    /// that needs the control connected — so measuring alone returns the size of
-    /// an almost empty box.
-    /// </para>
-    /// </remarks>
-    /// <param name="answer">What the render would be showing.</param>
-    /// <returns>Its natural size.</returns>
-    private static Size WhatTheRenderWants(Answer answer)
-    {
-        var asking = new CapabilityView { DataContext = answer };
-
-        asking.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        asking.Arrange(new Rect(asking.DesiredSize));
-        asking.UpdateLayout();
-
-        return asking.DesiredSize;
-    }
-
-    /// <summary>
     /// Gives the window the render's own size to start at, and pins the render
     /// to it.
     /// </summary>
@@ -144,7 +110,7 @@ public partial class GameOverlayWindow : Window
     /// <param name="answer">What the render will be showing.</param>
     private void FitTheRender(Answer answer)
     {
-        Size natural = WhatTheRenderWants(answer);
+        Size natural = CapabilityView.LaidOutFor(answer).DesiredSize;
 
         View.Width = natural.Width;
         View.Height = natural.Height;
