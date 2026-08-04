@@ -157,6 +157,11 @@ a test cannot check, and say so when you hand it over. You wrote the code, so
 you know what that is. A pull request without it is claiming the automated
 suite covers everything in it.
 
+A test that a session can run, on any machine it can reach, is not something a
+test cannot check. Run it instead. `hardware.slnf` needs the dev PC rather than
+CI, which is a fact about where the headset is and not about who presses the
+button — so negotiate the machine, run it, and fix what it finds.
+
 Then say **what needs testing and how to test it**: the action, what a pass
 looks like, and what would be a defect. A step that keeps reappearing is a hole
 in automation — promote it rather than listing it again. A step that cannot be

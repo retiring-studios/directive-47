@@ -599,12 +599,21 @@ capability to save nothing.
   A step that cannot be written down that concretely is usually not a check at
   all.
 
+  **Anything a session can run itself is not a manual test.** The hardware tier
+  runs on the dev PC rather than on CI, which is a fact about which machine has a
+  headset and not about who presses the button. A session can reach that machine
+  — so it negotiates a window for desktop exclusivity, runs the tests, and fixes
+  what they find. Neither `needs-manual-test` nor `verified` belongs on a pull
+  request whose only unautomated step was one the session could have taken. Those
+  labels are for what needs the maintainer's eyes and judgment.
+
   **The verification step is neither required nor part of a pull request unless
   manual testing is required for newly introduced functionality.** A pull request
   that introduces something needing a human pass carries `needs-manual-test`,
   applied by whoever wrote the code, because that is the party who knows what
   was built and what no test can check. The maintainer applies `verified` when
-  he has done the pass. Neither label is read by CI.
+  he has done the pass if manual testing is required, or may delegate to Claude
+  to do so on a case by case basis. Neither label is read by CI.
 
   It was a gate, briefly. `manual-verification` was a workflow that read the
   `verified` label, stripped it on every new commit, and was a required status
