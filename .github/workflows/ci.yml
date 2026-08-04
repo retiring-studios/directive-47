@@ -191,7 +191,9 @@ jobs:
                       throw "Nothing was installed to $root."
                   }
 
-                  Write-Host "Installed under $root:"
+                  # ${root} rather than $root, because a colon straight after a
+                  # variable name is how PowerShell spells a drive qualifier.
+                  Write-Host "Installed under ${root}:"
                   Get-ChildItem $root -Recurse -Filter D47.Panel.exe |
                       ForEach-Object {
                           Write-Host "  $($_.FullName) reports $($_.VersionInfo.ProductVersion)"
