@@ -87,7 +87,7 @@ internal static class Rendering
     /// render announced an object dump to everything else on the machine.
     /// </remarks>
     internal static IReadOnlyList<string> AccessibleNamesFor(Answer answer) =>
-        Rendered(() => AutomationTree.NamesIn(LaidOut(answer)));
+        OnAWpfThread(() => AutomationTree.NamesIn(LaidOut(answer)));
 
     /// <summary>
     /// The face the rendered answer's own font family resolves to at some other
