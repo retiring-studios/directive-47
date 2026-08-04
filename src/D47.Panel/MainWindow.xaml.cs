@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 
@@ -29,19 +30,119 @@ internal partial class MainWindow : Window
     private readonly Size _controls;
 
     /// <summary>
-    /// Creates the window around an answer to show.
+    /// How big the panel is drawing what it is showing.
+    /// </summary>
+    private readonly Zoom _zoom;
+
+    /// <summary>
+    /// Creates the window around an answer to show, at the size it was last left
+    /// drawing things.
     /// </summary>
     /// <param name="answer">What to render.</param>
-    public MainWindow(Answer answer)
+    /// <param name="zoom">How big to draw it.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="zoom"/> is null.</exception>
+    public MainWindow(Answer answer, Zoom zoom)
     {
+        ArgumentNullException.ThrowIfNull(zoom);
+
         InitializeComponent();
 
         View.DataContext = answer;
 
+        _zoom = zoom;
         _controls = WhatTheControlsWant(answer);
+
+        DrawAtTheZoom();
+        _zoom.Changed += (_, _) => DrawAtTheZoom();
+
+        PreviewKeyDown += (_, pressed) =>
+            pressed.Handled = Do(ZoomGestures.For(pressed.Key, Keyboard.Modifiers));
+
+        PreviewMouseWheel += (_, turned) =>
+            turned.Handled = Do(ZoomGestures.For(turned.Delta, Keyboard.Modifiers));
 
         Closing += HideInsteadOfClosing;
     }
+
+    /// <summary>
+    /// Does what a gesture asked for, and says whether it was one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Whether it was one is what the caller marks the event handled with, and
+    /// the distinction matters in both directions: a zoom gesture that was not
+    /// marked would also scroll the region under it, and an ordinary wheel or
+    /// keypress that was marked would stop working entirely.
+    /// </remarks>
+    /// <param name="asked">What the gesture asked for.</param>
+    /// <returns>Whether it asked for anything.</returns>
+    private bool Do(ZoomGesture asked)
+    {
+        switch (asked)
+        {
+            case ZoomGesture.Bigger:
+                _zoom.In();
+                return true;
+
+            case ZoomGesture.Smaller:
+                _zoom.Out();
+                return true;
+
+            case ZoomGesture.LifeSize:
+                _zoom.Reset();
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Puts the current zoom onto the render.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A <c>LayoutTransform</c>, which is the whole of "the way a browser does".
+    /// The render is laid out again at the new size and then reflows into the
+    /// window it is already in — wrapping across, running on down, and scrolling
+    /// once there is more of it than the window holds.
+    /// </para>
+    /// <para>
+    /// Deliberately not a <c>RenderTransform</c>, and the difference is
+    /// invisible until it matters. That one scales the drawing after the layout
+    /// is settled, so the type is just as big and nothing above it knows: the
+    /// scrolling region still believes the render fits, and everything past the
+    /// window's edge is gone rather than somewhere to scroll to. It is also what
+    /// the overlay wants and has — a <c>Viewbox</c>, scaling a fixed layout —
+    /// which is the same mechanism pointed at the opposite behaviour.
+    /// </para>
+    /// </remarks>
+    private void DrawAtTheZoom()
+    {
+        View.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
+
+        // The strip says where the zoom is and stops offering the direction it
+        // cannot go. A control that stays enabled at the end of the range does
+        // nothing when it is pressed, which nobody can tell from broken.
+        Reading.Text = _zoom.AsSaid;
+        Bigger.IsEnabled = _zoom.CanGoIn;
+        Smaller.IsEnabled = _zoom.CanGoOut;
+    }
+
+    /// <summary>
+    /// The strip's own way in.
+    /// </summary>
+    /// <param name="sender">The control.</param>
+    /// <param name="e">The click.</param>
+    private void ZoomIn(object sender, RoutedEventArgs e) => _zoom.In();
+
+    /// <summary>
+    /// The strip's own way out.
+    /// </summary>
+    /// <param name="sender">The control.</param>
+    /// <param name="e">The click.</param>
+    private void ZoomOut(object sender, RoutedEventArgs e) => _zoom.Out();
 
     /// <summary>
     /// How big the controls want to be, asked of an instance that belongs to
@@ -113,8 +214,22 @@ internal partial class MainWindow : Window
         DpiScale scale = VisualTreeHelper.GetDpi(this);
         Size frame = TheFrameWindowsDraws();
 
-        Width = (WholePixels(_controls.Width, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
-        Height = (WholePixels(_controls.Height, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
+        // At the zoom, not at life size. A panel reopening at the size it was
+        // last left drawing at is a panel that fits what is actually in it,
+        // which is what #96 asked for — fitting it to a render nobody is being
+        // shown would open every zoomed panel scrolling.
+        double across = _controls.Width * _zoom.Factor;
+
+        // Plus the strip, which is one of the controls in the window and so is
+        // one of the things it is the size of. Measured rather than declared:
+        // its height is a button's, which is the theme's business and not this
+        // window's to predict.
+        ZoomStrip.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        double down = (_controls.Height * _zoom.Factor) + ZoomStrip.DesiredSize.Height;
+
+        Width = (WholePixels(across, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
+        Height = (WholePixels(down, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
     }
 
     /// <summary>

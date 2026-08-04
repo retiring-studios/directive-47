@@ -42,9 +42,14 @@ public class PanelBackgroundTests
     [Fact]
     public void Panel_ForWhatIsBehindTheRender_NamesNoColorOfItsOwn()
     {
+        using var folder = new TemporaryStore();
+        string file = folder.File;
+
         string named = StaThread.Run(() =>
         {
-            object background = new MainWindow(Fixtures.HelpsAnswer())
+            var zoom = new Zoom(Store.OpenAt(file, _ => { }), _ => { });
+
+            object background = new MainWindow(Fixtures.HelpsAnswer(), zoom)
                 .ReadLocalValue(Control.BackgroundProperty);
 
             return background == DependencyProperty.UnsetValue

@@ -42,9 +42,71 @@
         measured against infinite width never wraps at all — and put a second
         scrollbar in place of it.
     -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
-        <render:CapabilityView x:Name="View" />
-    </ScrollViewer>
+    <DockPanel>
+
+        <!--
+            The zoom, shown and changeable. Ctrl and the wheel is what most
+            people reach for and is also invisible: a Commander who has never
+            used it cannot find out the panel zooms, and one who has zoomed by
+            accident cannot see that they did.
+
+            Docked rather than drawn over the render, so it covers nothing. The
+            window fits the render plus this strip, which is the same rule #96
+            already set — the window is as big as the controls in it, and this is
+            one of them.
+
+            Its colours come from the render's palette rather than from anywhere
+            here, for the reason above: one source, so the strip cannot come to
+            disagree with what it sits under. Its typeface deliberately does not
+            — Saira is tuned for reading a render across a cockpit, and this is
+            chrome, which is the one thing on the surface that should not compete
+            with what it frames.
+        -->
+        <Border x:Name="ZoomStrip"
+                DockPanel.Dock="Bottom"
+                Background="{x:Static render:Palette.Background}"
+                Padding="8,4">
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+
+                <Button x:Name="Smaller"
+                        Content="&#8722;"
+                        Click="ZoomOut"
+                        Width="28"
+                        AutomationProperties.Name="Zoom out" />
+
+                <TextBlock x:Name="Reading"
+                           Width="56"
+                           Margin="6,0"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="{x:Static render:Palette.BodyText}"
+                           AutomationProperties.Name="Zoom" />
+
+                <Button x:Name="Bigger"
+                        Content="+"
+                        Click="ZoomIn"
+                        Width="28"
+                        AutomationProperties.Name="Zoom in" />
+
+            </StackPanel>
+
+        </Border>
+
+        <!--
+            An AutomationId so that what the panel is showing can be told from
+            what the panel says about itself. The strip is furniture and the
+            render is the answer, and a test asking whether the answer reached
+            the screen has to be able to draw that line. An id rather than a
+            name: a name is read aloud, and this is not for reading.
+        -->
+        <ScrollViewer AutomationProperties.AutomationId="TheRender"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <render:CapabilityView x:Name="View" />
+        </ScrollViewer>
+
+    </DockPanel>
 
 </Window>

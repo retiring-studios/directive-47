@@ -115,14 +115,38 @@ internal sealed class RunningPanel : IDisposable
     }
 
     /// <summary>
-    /// Every line of text the window presents, in tree order — what a screen
-    /// reader would read out, rather than what the visual tree was built from.
+    /// Every line of text the rendered answer presents, in tree order — what a
+    /// screen reader would read out, rather than what the visual tree was built
+    /// from.
     /// </summary>
+    ///
+    /// <remarks>
+    /// Under the render rather than under the window, and it used to be under
+    /// the window. The panel has chrome now — the zoom strip along the bottom —
+    /// so a walk from the window reports what the panel says about itself mixed
+    /// in with what it is showing. The distinction is exactly what the test
+    /// using this is about: whether the answer reached the screen, not whether
+    /// the furniture did.
+    ///
+    /// <para>
+    /// Found by the id the panel puts on the region rather than by an accessible
+    /// name. The first attempt looked for the render's own
+    /// <c>AutomationProperties.Name</c> and found nothing — see the pull
+    /// request; that name is not reaching the automation tree, which is a defect
+    /// in its own right and not this method's to fix.
+    /// </para>
+    /// </remarks>
     internal IReadOnlyList<string> VisibleText()
     {
         List<string> lines = [];
 
-        AutomationElementCollection texts = Window.FindAll(
+        AutomationElement answer = Window.FindFirst(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.AutomationIdProperty, "TheRender"))
+            ?? throw new InvalidOperationException(
+                $"The panel is presenting no render at all.{Describe()}");
+
+        AutomationElementCollection texts = answer.FindAll(
             TreeScope.Descendants,
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text));
 
