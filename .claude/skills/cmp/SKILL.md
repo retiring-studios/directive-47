@@ -36,11 +36,21 @@ install → launch → beep.
 
 ## Steps
 
-### Preflight — always, before committing
+### The build is CI's job
 
-Run `dotnet build ci.slnf` and `dotnet test ci.slnf`. **If either fails,
-stop.** Do not commit. Report what broke, and sound the failure tone if a `B`
-code was given. Never commit a red build to get to the release step.
+**No local build or test before committing.** CI runs `ci.slnf` on every push to
+`main`, on every pull request and on every tag, so running it here first is the
+same check twice — and the slower copy, on the machine the maintainer is trying
+to stay out of.
+
+Report the run after pushing so there is something to watch. If a step here
+fails, Partial completion below says what to do.
+
+The release suffixes are covered by the same run: the release job `needs` the
+build job, so a red build publishes nothing. What a red build does leave behind
+is a tag pointing at a broken commit, which then has to be moved or deleted —
+that is why cutting a release watches the run rather than pushing and walking
+away.
 
 ### C — Commit
 
@@ -71,27 +81,91 @@ If the maintainer explicitly asks for a local merge in words, do that instead.
 
 ### Suffix P / M — Cut a release
 
-**Not implemented.** Stop and say so. These need things that do not exist yet:
+The version is one hand-maintained literal in `Directory.Build.props`, and CI
+turns a tag beginning `v` into a GitHub Release carrying the exe the build job
+already tested.
 
-- No version anywhere — no `<Version>` in `Directory.Build.props`, no version
-  file, no tags. There is nothing to increment. Where the version lives is an
-  open decision; deriving it from tags would mean a dependency such as MinVer,
-  which is a stop-and-ask under the refactor line in `docs/decisions.md`.
-- No release pipeline. CI builds and tests; it does not publish.
+Be on `main`, clean, and up to date first. The tag releases whatever ref it
+points at.
 
-Do not improvise a version scheme.
+1. Read the current version the way CI reads it, so there is no second answer:
+
+   ```powershell
+   dotnet msbuild src/D47.Panel/D47.Panel.csproj -getProperty:Version
+   ```
+
+2. Edit the `<Version>` literal in `Directory.Build.props`. `P` bumps the patch;
+   `M` bumps the minor and resets the patch to zero.
+3. Commit that edit on its own.
+4. Tag the commit that carries the version and push both:
+
+   ```powershell
+   git tag v0.1.1
+   ```
+
+   ```powershell
+   git push origin main
+   ```
+
+   ```powershell
+   git push origin v0.1.1
+   ```
+
+   The tag must point at the commit whose `Directory.Build.props` matches it.
+   The release job compares the two and throws if they disagree, so a tag pushed
+   before the bump lands fails the run rather than releasing the wrong number.
+
+5. Watch the run and report the release URL.
+
+Anything before `1.0.0` is published as a prerelease. That is inferred from the
+version by the workflow, not passed by hand, so there is nothing to remember.
+
+Do not improvise a version scheme. Whether an epic is major or minor is decided
+when the epic is defined — `docs/decisions.md` has that, and it is not something
+to infer from what changed.
 
 ### I — Install latest release
 
-**Not implemented.** No app, no installer. Velopack is a candidate in
-`docs/decisions.md`; nothing is built. Stop and say so.
+There is no installer yet — that is
+[#142](https://github.com/retiring-studios/directive-47/issues/142), and Velopack
+is still only a candidate in `docs/decisions.md`. What a release carries is a
+self-contained single-file exe that needs no .NET on the machine, so installing
+it means fetching it and keeping it somewhere.
+
+**Ask for the tag explicitly.** Everything before `1.0.0` is a prerelease, and
+`gh release download` with no tag resolves "latest" the way the API does, which
+skips prereleases and fails with nothing to download. `gh release list` includes
+them, newest first:
+
+```powershell
+$tag = gh release list --repo retiring-studios/directive-47 --limit 1 --json tagName --jq '.[0].tagName'
+```
+
+```powershell
+gh release download $tag --repo retiring-studios/directive-47 --pattern D47.Panel.exe --dir "$env:USERPROFILE\Downloads\d47-$tag" --clobber
+```
+
+`$env:USERPROFILE\Downloads\d47-<tag>` matches what pull requests already tell
+the maintainer to type for a per-pull-request artifact, so an installed release
+and a build under manual test sit beside each other and neither overwrites the
+other.
+
+Report the path and the size. It is about 173MB and grows with every project
+added.
 
 ### L — Launch
 
-**Not implemented.** No WPF project and no exe. Stop and say so.
+Run the exe that `I` downloaded:
 
-Once it exists, launch the *installed* build, never `dotnet run` — the point is
-to exercise what a user would actually have.
+```powershell
+& "$env:USERPROFILE\Downloads\d47-$tag\D47.Panel.exe"
+```
+
+Launch the *installed* build, never `dotnet run` — the point is to exercise what
+a user would actually have.
+
+If `L` is given without `I` in the same code, launch the most recent
+`d47-*` directory rather than assuming one was just fetched.
 
 ### B[N] — Beep
 
@@ -131,7 +205,6 @@ survives losing a fragment in a way that counting cannot.
 
 ## Partial completion
 
-If a code asks for steps that are not implemented, do the implemented ones, then
-stop and report exactly which step could not run and why. Do not silently skip
-and do not pretend the whole code succeeded. Sound the failure tone, not the
-success tone.
+If a step fails or cannot run, do the ones before it, then stop and report
+exactly which step stopped and why. Do not silently skip and do not pretend the
+whole code succeeded. Sound the failure tone, not the success tone.
