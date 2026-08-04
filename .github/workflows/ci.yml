@@ -109,6 +109,36 @@ jobs:
                       throw "The published exe reports $actual, not $expected."
                   }
 
+            # "No prerequisites" is a claim about a machine nobody here has: a
+            # hosted runner comes with .NET installed and the maintainer has no
+            # spare box without it, so the absence itself cannot be staged.
+            #
+            # This asserts the property that makes the absence survivable, which
+            # can be staged. A framework-dependent publish asks the machine for a
+            # runtime and names it under "framework"; a self-contained one brings
+            # its own and lists them under "includedFrameworks", with the host
+            # that loads them sitting in the folder rather than in Program Files.
+            # An app that asks for nothing cannot be failed by a machine that has
+            # nothing.
+            - name: Check it brings its own runtime
+              run: |
+                  $config = Get-Content publish/D47.Panel.runtimeconfig.json -Raw | ConvertFrom-Json
+
+                  if ($config.runtimeOptions.PSObject.Properties.Name -contains "framework") {
+                      throw "The publish asks the machine for $($config.runtimeOptions.framework.name), so it needs .NET installed first."
+                  }
+
+                  $carried = $config.runtimeOptions.includedFrameworks
+                  if (-not $carried) {
+                      throw "The publish names no included frameworks, so it is not self-contained."
+                  }
+
+                  if (-not (Test-Path publish/hostfxr.dll)) {
+                      throw "hostfxr.dll is not beside the exe, so the runtime host is the machine's rather than ours."
+                  }
+
+                  $carried | ForEach-Object { Write-Host "Carries $($_.name) $($_.version)" }
+
             # The installer, from the folder that was just published and
             # version-checked. packId is the application's identity to the
             # updater — the per-user install folder is named from it — so it is
@@ -132,6 +162,77 @@ jobs:
               run: |
                   $setup = Get-Item installer/Directive47-win-Setup.exe
                   Write-Host "Installer is $([math]::Round($setup.Length / 1MB, 1)) MB"
+
+            # Then actually run it, because an installer nobody has run is a file
+            # rather than an installer. The runner is a throwaway machine, which
+            # is the one thing it is better at than the dev PC.
+            #
+            # Silently: there is nobody to click through it, and a setup waiting
+            # on a dialog would hang the job rather than fail it.
+            #
+            # What this settles is the layout — where it puts itself and what the
+            # exe in there reports — which is otherwise something every caller
+            # would be guessing at, the cmp skill included. What it cannot settle
+            # is elevation: the runner's user is an administrator, so nothing
+            # here can tell a per-user install from one that would have prompted.
+            # That part is on the maintainer's own machine.
+            - name: Install it, and see where it went
+              run: |
+                  $setup = "installer/Directive47-win-Setup.exe"
+                  $installed = Start-Process $setup -ArgumentList "--silent" -Wait -PassThru
+
+                  if ($installed.ExitCode -ne 0) {
+                      throw "The installer exited $($installed.ExitCode)."
+                  }
+
+                  $root = Join-Path $env:LOCALAPPDATA "Directive47"
+
+                  if (-not (Test-Path $root)) {
+                      throw "Nothing was installed to $root."
+                  }
+
+                  Write-Host "Installed under $root:"
+                  Get-ChildItem $root -Recurse -Filter D47.Panel.exe |
+                      ForEach-Object {
+                          Write-Host "  $($_.FullName) reports $($_.VersionInfo.ProductVersion)"
+                      }
+
+                  # The installed copy, not the published folder. A build that
+                  # publishes correctly and installs something that will not
+                  # start is exactly what this story is about, and only the
+                  # installed one can fail that way.
+                  $app = Get-ChildItem $root -Recurse -Filter D47.Panel.exe |
+                      Where-Object { $_.DirectoryName -notmatch "Update" } |
+                      Select-Object -First 1
+
+                  if (-not $app) { throw "No D47.Panel.exe anywhere under $root." }
+
+                  $expected = "${{ steps.version.outputs.version }}"
+                  if (-not $app.VersionInfo.ProductVersion.StartsWith($expected)) {
+                      throw "The installed exe reports $($app.VersionInfo.ProductVersion), not $expected."
+                  }
+
+            # Started, given a moment, and asked whether it is still there. A
+            # missing dependency does not announce itself — the process simply
+            # goes away — so "it exited on its own" is the failure being looked
+            # for, and the only version of this question that can catch it is
+            # one that waits.
+            - name: See whether the installed copy actually runs
+              run: |
+                  $root = Join-Path $env:LOCALAPPDATA "Directive47"
+                  $app = Get-ChildItem $root -Recurse -Filter D47.Panel.exe |
+                      Where-Object { $_.DirectoryName -notmatch "Update" } |
+                      Select-Object -First 1
+
+                  $running = Start-Process $app.FullName -PassThru
+                  Start-Sleep -Seconds 20
+
+                  if ($running.HasExited) {
+                      throw "The installed copy started and exited $($running.ExitCode) within twenty seconds."
+                  }
+
+                  Write-Host "Still running after twenty seconds, pid $($running.Id)."
+                  Stop-Process -Id $running.Id -Force
 
             # if-no-files-found: error is the third done-when. Without it a
             # publish that produced nothing uploads nothing and passes, which
