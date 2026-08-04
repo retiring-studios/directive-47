@@ -45,6 +45,17 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
+            # A run: block is only compiled when its step executes, so a typo in
+            # one is found by running it. The release job's blocks only run on a
+            # v* tag, which makes a release day the first time anything reads
+            # them. This parses every block in the file in about a second, so
+            # that failure lands on the pull request that wrote it instead.
+            #
+            # Before restore for the same reason it is cheap: a syntax error
+            # should not cost a build first.
+            - name: Check the workflow's PowerShell parses
+              run: ./scripts/check-workflow-powershell.ps1
+
             # Reads global.json, so the pinned SDK band is stated in exactly one
             # place and CI cannot drift from the dev machine.
             - uses: actions/setup-dotnet@v6
