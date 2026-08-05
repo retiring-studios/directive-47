@@ -37,6 +37,7 @@ internal static class Settings
     internal static readonly string[] Known =
     [
         ChosenHotkey.WhatItIsCalled,
+        PushToTalk.WhatItIsCalled,
         Overlay.HowSeeThrough,
         Zoom.HowBig,
     ];
@@ -65,6 +66,7 @@ internal static class Settings
     internal static string DefaultFor(string setting) => setting switch
     {
         ChosenHotkey.WhatItIsCalled => ChosenHotkey.Familiar.ToString(),
+        PushToTalk.WhatItIsCalled => PushToTalk.ShippedWith.ToString(),
         Overlay.HowSeeThrough =>
             Overlay.SeeThroughEnough.ToString(CultureInfo.InvariantCulture),
         Zoom.HowBig =>

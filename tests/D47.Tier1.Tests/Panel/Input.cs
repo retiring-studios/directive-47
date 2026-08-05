@@ -178,6 +178,56 @@ internal static class Input
         }
     }
 
+    /// <summary>
+    /// Holds the modifiers and puts the key down, and leaves it there — the way
+    /// a Commander starts talking.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The half of <see cref="Press"/> that push-to-talk needs separated. A
+    /// combination that goes down and up in one call can never show that the
+    /// release is what ends a turn, because there is no moment in between for a
+    /// test to look at. Every caller owes a matching <see cref="LetGo"/>, or the
+    /// key stays down for whatever runs next.
+    /// </remarks>
+    /// <param name="modifiers">The modifiers to hold.</param>
+    /// <param name="key">The key to put down.</param>
+    internal static void Hold(ModifierKeys modifiers, Key key)
+    {
+        foreach (byte modifier in VirtualKeysFor(modifiers))
+        {
+            keybd_event(modifier, 0, 0, UIntPtr.Zero);
+        }
+
+        Thread.Sleep(40);
+
+        keybd_event((byte)KeyInterop.VirtualKeyFromKey(key), 0, 0, UIntPtr.Zero);
+        Thread.Sleep(40);
+    }
+
+    /// <summary>
+    /// Lets go of what <see cref="Hold"/> put down.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The key first and the modifiers after, in reverse — what a hand does, and
+    /// what leaves nothing stuck down for whatever runs next.
+    /// </remarks>
+    /// <param name="modifiers">The modifiers being held.</param>
+    /// <param name="key">The key being held.</param>
+    internal static void LetGo(ModifierKeys modifiers, Key key)
+    {
+        keybd_event((byte)KeyInterop.VirtualKeyFromKey(key), 0, KeyUp, UIntPtr.Zero);
+        Thread.Sleep(40);
+
+        byte[] held = VirtualKeysFor(modifiers);
+
+        for (int index = held.Length - 1; index >= 0; index--)
+        {
+            keybd_event(held[index], 0, KeyUp, UIntPtr.Zero);
+        }
+    }
+
     private static byte[] VirtualKeysFor(ModifierKeys modifiers)
     {
         List<byte> keys = [];

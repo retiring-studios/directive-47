@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-        Tier 1. WPF, so net10.0-windows and Windows-only — but no hardware, so
+        Tier 1. WPF, so net10.0-windows and Windows-only â€” but no hardware, so
         its tests run in CI like everything else.
 
         This is the window, and only the window: showing it, hiding it to the
@@ -23,7 +23,7 @@
         StartupObject is what takes the launch away from the entry point WPF
         generates out of App.xaml and gives it to Program.Main. The updater has
         to run before there is an application at all, and App.OnStartup is
-        already too late — vpk warns about exactly that while packing, and warns
+        already too late â€” vpk warns about exactly that while packing, and warns
         rather than fails. Drop this line and the build still succeeds, the
         generated Main takes over, and the only symptom is an install that
         misbehaves on somebody else's machine. EntryPointTests is what notices.
@@ -42,7 +42,7 @@
         This one property covers the executable in Explorer, the title bar, the
         taskbar button and alt-tab: it compiles the .ico into the executable's
         icon resource, and a WPF window with no Icon of its own falls back to
-        the executable's. MainWindow therefore sets no Icon deliberately — one
+        the executable's. MainWindow therefore sets no Icon deliberately â€” one
         that did would be a second place to change the mark and a chance for the
         title bar to disagree with the taskbar.
 
@@ -64,7 +64,7 @@
     </ItemGroup>
 
     <!--
-        The panel is an application, so its types are internal — CA1515, and it
+        The panel is an application, so its types are internal â€” CA1515, and it
         is right. The tests reach the window and the application object through
         this, which is what it opens the door for and the only thing it opens it
         for. The render is public and needs none of it.
@@ -88,6 +88,7 @@
         <ProjectReference Include="..\D47.GameOverlay\D47.GameOverlay.csproj" />
         <ProjectReference Include="..\D47.Help\D47.Help.csproj" />
         <ProjectReference Include="..\D47.Render\D47.Render.csproj" />
+        <ProjectReference Include="..\D47.VoiceLoop\D47.VoiceLoop.csproj" />
         <ProjectReference Include="..\D47.VrOverlay\D47.VrOverlay.csproj" />
     </ItemGroup>
 

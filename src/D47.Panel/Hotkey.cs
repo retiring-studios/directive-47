@@ -80,15 +80,17 @@ internal sealed class Hotkey : IDisposable
 
     private readonly HwndSource _messages;
     private readonly Action _pressed;
+    private readonly Action _released;
     private readonly HeldKey _held = new();
     private readonly int _virtualKey;
     private readonly DispatcherTimer _watchingForRelease;
     private bool _disposed;
 
-    private Hotkey(HwndSource messages, Action pressed, int virtualKey)
+    private Hotkey(HwndSource messages, Action pressed, Action released, int virtualKey)
     {
         _messages = messages;
         _pressed = pressed;
+        _released = released;
         _virtualKey = virtualKey;
 
         _watchingForRelease = new DispatcherTimer { Interval = BetweenLooks };
@@ -105,6 +107,11 @@ internal sealed class Hotkey : IDisposable
     /// </remarks>
     /// <param name="combination">The combination to claim.</param>
     /// <param name="pressed">What to do when it arrives.</param>
+    /// <param name="released">
+    /// What to do when the key comes up, for a caller that holds the combination
+    /// rather than tapping it. Omitted by the overlay's toggle, which cares only
+    /// that the combination arrived.
+    /// </param>
     /// <returns>
     /// The registration, which the caller owns and must dispose, or an absence
     /// carrying what to say about it when another application already owns the
@@ -142,7 +149,8 @@ internal sealed class Hotkey : IDisposable
             + "Perhaps, which it cannot see through. Both failure paths still dispose "
             + "explicitly before returning, and the successful one is the caller's from "
             + "the moment it is returned.")]
-    internal static Perhaps<Hotkey> TryRegister(Combination combination, Action pressed)
+    internal static Perhaps<Hotkey> TryRegister(
+        Combination combination, Action pressed, Action? released = null)
     {
         ArgumentNullException.ThrowIfNull(combination);
 
@@ -150,7 +158,10 @@ internal sealed class Hotkey : IDisposable
             new HwndSourceParameters("Directive 47 hotkeys") { WindowStyle = Invisible });
 
         var hotkey = new Hotkey(
-            messages, pressed, KeyInterop.VirtualKeyFromKey(combination.Key));
+            messages,
+            pressed,
+            released ?? DoNothing,
+            KeyInterop.VirtualKeyFromKey(combination.Key));
 
         messages.AddHook(hotkey.OnMessage);
 
@@ -257,6 +268,22 @@ internal sealed class Hotkey : IDisposable
 
         _watchingForRelease.Stop();
         _held.LetGo();
+        _released();
+    }
+
+    /// <summary>
+    /// What a registration that only cares about the press does when the key
+    /// comes up.
+    ///
+    /// <para>
+    /// The overlay's toggle is exactly that, and giving it a callback to ignore
+    /// would be asking every caller to say it is not interested. The watching for
+    /// release still happens either way — it is what re-arms the claim — so this
+    /// costs nothing beyond a call that returns.
+    /// </para>
+    /// </summary>
+    private static void DoNothing()
+    {
     }
 
     private static uint ToNative(ModifierKeys modifiers)
