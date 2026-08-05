@@ -32,19 +32,11 @@ public sealed class SettingsStore
     /// </summary>
     private const string FileName = "settings.json";
 
-    /// <summary>
-    /// Indented, because this is the one file a Commander is meant to be able
-    /// to open and read.
-    /// </summary>
-    private static readonly JsonSerializerOptions Layout = new() { WriteIndented = true };
-
-    private readonly string _file;
-    private readonly Dictionary<string, string> _chosen;
+    private readonly KeyedJson _chosen;
 
     private SettingsStore(string file, Dictionary<string, string> chosen)
     {
-        _file = file;
-        _chosen = chosen;
+        _chosen = new KeyedJson(file, chosen);
     }
 
     /// <summary>
@@ -125,8 +117,7 @@ public sealed class SettingsStore
     /// </summary>
     /// <param name="key">The setting's name.</param>
     /// <returns>The chosen value, or <see langword="null"/>.</returns>
-    public string? Read(string key) =>
-        _chosen.TryGetValue(key, out string? value) ? value : null;
+    public string? Read(string key) => _chosen.Read(key);
 
     /// <summary>
     /// Records a choice, and saves at once for the same reason
@@ -134,12 +125,29 @@ public sealed class SettingsStore
     /// </summary>
     /// <param name="key">The setting's name.</param>
     /// <param name="value">What the Commander chose.</param>
-    public void Write(string key, string value)
-    {
-        _chosen[key] = value;
+    public void Write(string key, string value) => _chosen.Write(key, value);
 
-        DurableFile.Write(_file, JsonSerializer.Serialize(_chosen, Layout));
-    }
+    /// <summary>
+    /// Puts a setting back to whatever Directive 47 ships with, by having no
+    /// opinion about it again.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The key goes out of the file rather than being written empty. An empty
+    /// value is a value, and the next reader has to guess whether the Commander
+    /// meant the default or meant nothing — which is the whole reason the
+    /// overrides are a separate layer instead of the file holding every setting
+    /// Directive 47 has.
+    ///
+    /// <para>
+    /// Clearing something never chosen is not an error and writes nothing. The
+    /// caller's intent is that there is no override afterwards, and there is
+    /// not; a settings page with a Reset beside every row would otherwise
+    /// create a file for a Commander who has changed nothing.
+    /// </para>
+    /// </remarks>
+    /// <param name="key">The setting's name.</param>
+    public void Forget(string key) => _chosen.Forget(key);
 
     /// <summary>
     /// Reads the file, and refuses all of it rather than part of it when it

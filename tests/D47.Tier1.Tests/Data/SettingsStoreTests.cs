@@ -102,4 +102,28 @@ public class SettingsStoreTests
         File.ReadAllText(temporary.SettingsFile).ShouldContain("panel zoom");
         temporary.Files().ShouldBe(["settings.json"]);
     }
+    [Fact]
+    public void Setting_WhenCleared_IsNotThereOnTheNextRun()
+    {
+        using var temporary = new TemporaryStore();
+
+        temporary.Settings().Write("panel zoom", "150");
+        temporary.Settings().Forget("panel zoom");
+
+        temporary.Settings().Read("panel zoom").ShouldBeNull();
+    }
+
+    [Fact]
+    public void Clearing_SomethingNeverSet_IsNotAnEventAndWritesNothing()
+    {
+        using var temporary = new TemporaryStore();
+
+        temporary.Settings().Forget("panel zoom");
+
+        // The caller's intent is that it is gone afterwards, and it is. Writing
+        // a file to record the absence of a setting nobody chose is litter, and
+        // a settings page with a Reset on every row would do this constantly.
+        temporary.Files().ShouldBeEmpty();
+        temporary.Recorded.ShouldBeEmpty();
+    }
 }

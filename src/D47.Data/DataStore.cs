@@ -58,15 +58,7 @@ public sealed class DataStore
     private const string NotWindows =
         "Keys are kept with Windows DPAPI, and this is not Windows.";
 
-    /// <summary>
-    /// Indented on purpose. This is a file somebody opens when they are already
-    /// puzzled — most likely because something told them it could not be read —
-    /// and one long line is a worse answer than four short ones.
-    /// </summary>
-    private static readonly JsonSerializerOptions Layout = new() { WriteIndented = true };
-
-    private readonly string _file;
-    private readonly Dictionary<string, string> _remembered;
+    private readonly KeyedJson _remembered;
     private readonly Action<string> _record;
 
     private DataStore(
@@ -74,8 +66,7 @@ public sealed class DataStore
         Dictionary<string, string> remembered,
         Action<string> record)
     {
-        _file = file;
-        _remembered = remembered;
+        _remembered = new KeyedJson(file, remembered);
         _record = record;
     }
 
@@ -123,7 +114,7 @@ public sealed class DataStore
     /// also the first thing anyone diagnosing one would want named.
     /// </para>
     /// </summary>
-    public string Location => _file;
+    public string Location => _remembered.File;
 
     /// <summary>
     /// What was written down under a name, or <see langword="null"/> if nothing
@@ -131,8 +122,7 @@ public sealed class DataStore
     /// </summary>
     /// <param name="key">The name it was written down under.</param>
     /// <returns>The value, or <see langword="null"/>.</returns>
-    public string? Read(string key) =>
-        _remembered.TryGetValue(key, out string? value) ? value : null;
+    public string? Read(string key) => _remembered.Read(key);
 
     /// <summary>
     /// Writes something down, and saves at once.
@@ -155,12 +145,8 @@ public sealed class DataStore
     /// </remarks>
     /// <param name="key">The name to write it down under.</param>
     /// <param name="value">What to remember.</param>
-    public void Write(string key, string value)
-    {
-        _remembered[key] = value;
-
-        DurableFile.Write(_file, JsonSerializer.Serialize(_remembered, Layout));
-    }
+    public void Write(string key, string value) =>
+        _remembered.Write(key, value);
 
     /// <summary>
     /// Stops remembering something, and saves at once.
@@ -178,15 +164,7 @@ public sealed class DataStore
     /// </para>
     /// </remarks>
     /// <param name="key">The name to stop remembering.</param>
-    public void Forget(string key)
-    {
-        if (!_remembered.Remove(key))
-        {
-            return;
-        }
-
-        DurableFile.Write(_file, JsonSerializer.Serialize(_remembered, Layout));
-    }
+    public void Forget(string key) => _remembered.Forget(key);
 
     /// <summary>
     /// Writes a key down the way <see cref="Write"/> writes anything else,
