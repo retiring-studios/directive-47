@@ -13,7 +13,7 @@ first-class surface, not an afterthought.
 |---|---|
 | `D47.slnx` | Solution, at the repo root |
 | `src/` | Production projects, `D47.*` |
-| `tests/` | One `.Tests.csproj` per production project, plus `D47.TestSupport` for machinery more than one of them needs |
+| `tests/` | One `.Tests.csproj` per tier — `D47.Tier0.Tests` through `D47.Tier3.Tests`, a folder per production project inside each — plus `D47.TestSupport` for machinery more than one of them needs |
 | `assets/` | Icons, images, audio, other media |
 | `docs/` | `decisions.md` and anything else written down |
 | `scripts/` | Provisioning, local automation, and checks CI runs |
@@ -23,10 +23,14 @@ disk. Every path in it exists.
 
 ## Building
 
-`dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI runs — every
-project that does not need real hardware. `hardware.slnf` selects the dev-PC-only
-projects, currently `D47.GameOverlay.Tests`, which needs Elite running, and
-`D47.VrOverlay.HardwareTests`, which needs SteamVR.
+`dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI **tests** —
+`D47.Tier0.Tests` and `D47.Tier1.Tests`, which need no real hardware.
+`hardware.slnf` selects the dev-PC-only projects: `D47.Tier2.Tests`, which needs
+SteamVR, and `D47.Tier3.Tests`, which needs Elite running.
+
+**CI builds the whole solution and tests only `ci.slnf`.** Building the filter
+alone meant nothing ever compiled Tier 2 or Tier 3, and both sat broken through
+a rename until somebody next picked up the headset.
 
 **CI is Windows only.** Directive 47 is a Windows product, so a Linux job was
 proving a portability claim nothing depends on, and Windows is what lets WPF
@@ -65,9 +69,15 @@ Branch off `origin/main`, never off another story's branch — a worktree that
 inherits unmerged work turns one review into two. After the pull request merges,
 `git worktree remove C:\dev\d47-125`.
 
-**Which three can run at once.** Stories in different `D47.*` projects are safe.
-Two stories in the same project is the common trap: they will reach for the same
-file, and the second one to merge pays for it.
+**Which three can run at once.** Stories in different `D47.*` production
+projects are safe. Two stories in the same project is the common trap: they
+will reach for the same file, and the second one to merge pays for it.
+
+Test projects are shared by tier now, and that is a smaller problem than it
+sounds. Two stories writing into different folders of `D47.Tier1.Tests` never
+touch the same file. What they can both touch is that project's `.csproj`, and
+only if both add a `ProjectReference` — so a story that adds a production
+project says so, and the others take the conflict knowingly.
 
 A story that touches any of this **runs alone**, because every other worktree is
 built on it:

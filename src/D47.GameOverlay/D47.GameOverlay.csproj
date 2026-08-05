@@ -9,8 +9,8 @@
 
         Built by CI even so, and named in ci.slnf for that reason. Compiling it
         needs no game, and the published single-file exe contains it — what
-        needs the game is D47.GameOverlay.Tests, which is in hardware.slnf and
-        nowhere else.
+        needs the game is D47.Tier3.Tests, which is in hardware.slnf and nowhere
+        else.
 
         Adapters hold no logic. Deciding to carry on without an overlay is
         logic, and lives outside this project.

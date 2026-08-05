@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 0 · Pure. Parsers, planners, routing, state machines, display
+        models and capability descriptors — nothing that reaches a screen, a
+        device, a network or a clock. Every fact in here fails the same way on
+        every machine, so it runs in CI on every pull request.
+
+        One project for the tier rather than one per production project. A
+        folder per production project inside it is what keeps "where does this
+        test live" answerable; the tier is what decides which project.
+
+        net10.0, not net10.0-windows, and no UseWPF. Nothing here builds a
+        visual tree — that is what makes it Tier 0 — so it does not reference
+        D47.TestSupport either, whose whole contents are a WPF visual tree
+        walker, an STA thread pump and a capability answer.
+
+        xUnit v3, not v2. The SDK's `dotnet new xunit` template still scaffolds
+        v2, so this project is hand-written. v3 test projects are executables,
+        which is why OutputType is set.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.Capabilities\D47.Capabilities.csproj" />
+        <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
+        <ProjectReference Include="..\..\src\D47.Placement\D47.Placement.csproj" />
+    </ItemGroup>
+
+</Project>

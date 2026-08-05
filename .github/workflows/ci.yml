@@ -6,9 +6,15 @@ name: CI
 # the net10.0-windows ones, which is what lets the panel's layout snapshots gate
 # a pull request instead of waiting for a manual pass.
 #
-# What this still cannot do is Tier 2. Microphones, WASAPI, hotkeys, SendInput
-# and the SteamVR overlay need real hardware, and no hosted runner has any.
-# Those live in hardware.slnf and run on the dev PC. ci.slnf is everything else.
+# What this still cannot do is run Tier 2 or Tier 3. A microphone, a headset and
+# a game need real hardware, and no hosted runner has any. Those live in
+# hardware.slnf and run on the dev PC. ci.slnf is everything else.
+#
+# It does build them, though, which is why the build step takes the whole
+# solution and only the test step takes ci.slnf. Building ci.slnf alone meant
+# nothing here ever compiled the hardware tiers, and they sat broken through
+# eleven call sites of a rename until somebody next went looking — which is the
+# same defect as a test that quietly stops running, minus the evidence.
 #
 # Every run also publishes the panel and attaches it, so a pull request carries
 # the thing a manual pass installs rather than something to be built by hand.
@@ -63,7 +69,7 @@ jobs:
                   global-json-file: global.json
 
             - name: Restore
-              run: dotnet restore ci.slnf
+              run: dotnet restore D47.slnx
 
             # vpk, pinned in .config/dotnet-tools.json to the same version as
             # the Velopack package the application references. A tool and a
@@ -73,9 +79,15 @@ jobs:
             - name: Restore the tools
               run: dotnet tool restore
 
+            # The whole solution, so a change that breaks Tier 2 or Tier 3 fails
+            # the pull request that made it rather than the next person to pick
+            # up the headset.
             - name: Build
-              run: dotnet build ci.slnf --no-restore --configuration Release
+              run: dotnet build D47.slnx --no-restore --configuration Release
 
+            # ci.slnf, because the hardware tiers have nothing here to run
+            # against. --no-build works across the two because the build above
+            # is a superset.
             - name: Test
               run: dotnet test ci.slnf --no-build --configuration Release
 

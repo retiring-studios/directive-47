@@ -17,9 +17,9 @@
         so a downloaded build showed nothing in a headset however much of the
         adapter worked.
 
-        Of its two test projects only D47.VrOverlay.HardwareTests is
-        hardware-only. D47.VrOverlay.Tests holds what needs neither headset nor
-        runtime.
+        Its tests span two tiers, which is why they sit in two projects. Only
+        the Tier 2 ones need a headset and a running SteamVR; what needs neither
+        is in D47.Tier1.Tests and runs on every pull request.
 
         UseWPF because the render is a WPF control and getting pixels out of one
         means RenderTargetBitmap. That is also why this is net10.0-windows while
