@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/D47.Audio/D47.Audio.csproj" />
     <Project Path="src/D47.Capabilities/D47.Capabilities.csproj" />
+    <Project Path="src/D47.Composition/D47.Composition.csproj" />
     <Project Path="src/D47.Data/D47.Data.csproj" />
     <Project Path="src/D47.GameOverlay/D47.GameOverlay.csproj" />
     <Project Path="src/D47.Help/D47.Help.csproj" />

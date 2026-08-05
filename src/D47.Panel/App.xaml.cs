@@ -10,7 +10,7 @@ using System.Windows.Threading;
 
 using D47.Data;
 
-using D47.Capabilities;
+using D47.Composition;
 using D47.GameOverlay;
 using D47.Help;
 using D47.Render;
@@ -392,21 +392,18 @@ internal sealed partial class App : Application, IDisposable
     ///
     /// <para>
     /// Help, because help is the only capability that exists and it needs no
-    /// microphone, no network and no game. A composition root that knows about
-    /// every capability arrives with the second one; this is the shape it will
-    /// grow into.
+    /// microphone, no network and no game. Which capabilities there are is
+    /// <see cref="Composed.Capabilities"/>'s to say, not this method's — this
+    /// used to construct its own registry, and so did the test fixture and the
+    /// parity test, and the three agreed only by coincidence.
     /// </para>
     /// </summary>
-    private static Answer Compose()
-    {
-        var registry = new CapabilityRegistry(HelpCapability.Descriptor);
-
-        return new Answer
+    private static Answer Compose() =>
+        new()
         {
             Descriptor = HelpCapability.Descriptor,
-            Result = new HelpCapability(registry).Answer(),
+            Result = new HelpCapability(Composed.Capabilities).Answer(),
         };
-    }
 
 
     /// <summary>

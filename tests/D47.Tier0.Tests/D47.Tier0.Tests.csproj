@@ -34,6 +34,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\D47.Capabilities\D47.Capabilities.csproj" />
+        <ProjectReference Include="..\..\src\D47.Composition\D47.Composition.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
         <ProjectReference Include="..\..\src\D47.Placement\D47.Placement.csproj" />
     </ItemGroup>
