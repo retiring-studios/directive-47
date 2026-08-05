@@ -80,7 +80,7 @@ internal sealed class Overlay
     /// move once it has been seen over a bright station interior.
     /// </para>
     /// </summary>
-    private const double SeeThroughEnough = 0.75;
+    internal const double SeeThroughEnough = 0.75;
 
     private readonly IGameOverlay? _overlay;
     private readonly Func<IntPtr, bool> _isTheGame;

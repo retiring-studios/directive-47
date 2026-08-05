@@ -83,4 +83,51 @@ public class SettingsPageTests
     {
         // Deliberately empty.
     }
+    [Fact]
+    public void SettingsPage_ForASettingNobodyChose_ShowsTheDefaultBehindAnEmptyBox()
+    {
+        using var folder = new TemporaryStore();
+
+        (IReadOnlyList<string> boxes, IReadOnlyList<string> shown) =
+            StaThread.Run(() =>
+        {
+            var page = SettingsPage.For(folder.Settings(), Ignored);
+
+            return (VisualTree.ValuesIn(page), VisualTree.TextIn(page));
+        });
+
+        // Empty box, and the shipped answer visible behind it. A blank row is
+        // true of the file and useless to a Commander, who cannot be told what
+        // the hotkey is by being shown nothing.
+        boxes.ShouldAllBe(box => box.Length == 0);
+
+        shown.ShouldContain(
+            Settings.DefaultFor(ChosenHotkey.WhatItIsCalled),
+            "the page should say what the hotkey is when nobody has changed it");
+    }
+
+    [Fact]
+    public void SettingsPage_WhenTheDefaultIsOnlyShown_DoesNotOfferItAsAChange()
+    {
+        using var folder = new TemporaryStore();
+
+        List<(string Key, string Value)> changed = [];
+
+        StaThread.Run(() =>
+        {
+            var page = SettingsPage.For(
+                folder.Settings(), (key, value) => changed.Add((key, value)));
+
+            // What tabbing past an untouched row does. If the default were in
+            // the box rather than behind it, this would hand the shipped answer
+            // back as a change and write it into the file as an override —
+            // which is the two layers becoming one.
+            page.Change(Zoom.HowBig, string.Empty);
+
+            return true;
+        });
+
+        changed.ShouldHaveSingleItem().Value.ShouldBeEmpty(
+            "an untouched row reports nothing chosen, not the default");
+    }
 }

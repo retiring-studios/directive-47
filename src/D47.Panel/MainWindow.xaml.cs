@@ -156,7 +156,14 @@ internal partial class MainWindow : Window
     /// </remarks>
     private void DrawAtTheZoom()
     {
-        View.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
+        // Whatever the surface is showing, not the render by name. The settings
+        // page is a page in the panel, so the panel's zoom is its zoom too —
+        // scaling View while the page was in there left the one thing a
+        // Commander had just changed the zoom on as the only thing unaffected.
+        if (Surface.Content is FrameworkElement showing)
+        {
+            showing.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
+        }
 
         // The strip says where the zoom is and stops offering the direction it
         // cannot go. A control that stays enabled at the end of the range does
@@ -193,6 +200,11 @@ internal partial class MainWindow : Window
     internal void Showing(UIElement? page)
     {
         Surface.Content = page ?? View;
+
+        // The window is as big as what is in it, and swapping the content does
+        // not re-ask. Without this the panel keeps the render's size and the
+        // page arrives with a scrollbar it does not need.
+        InvalidateMeasure();
 
         // The zoom is a property of the panel rather than of a page, so it
         // follows whatever is in there. Applied here as well as at startup

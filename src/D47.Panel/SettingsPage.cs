@@ -42,6 +42,7 @@ internal sealed class SettingsPage : StackPanel
     {
         _changed = changed;
         Margin = new Thickness(24);
+        Background = Palette.Background;
     }
 
     /// <summary>
@@ -111,7 +112,7 @@ internal sealed class SettingsPage : StackPanel
         _changed(setting, value);
     }
 
-    private static StackPanel Row(SettingsPage page, string setting, string inForce)
+    private static StackPanel Row(SettingsPage page, string setting, string chosen)
     {
         var label = new TextBlock
         {
@@ -123,11 +124,34 @@ internal sealed class SettingsPage : StackPanel
 
         var field = new TextBox
         {
-            Text = inForce,
+            Text = chosen,
             FontSize = 20,
             MinWidth = 240,
+            Padding = new Thickness(6, 4, 6, 4),
+            Background = Palette.Background,
+            Foreground = Palette.BodyText,
+            CaretBrush = Palette.BodyText,
+            BorderBrush = Palette.BodyText,
             HorizontalAlignment = HorizontalAlignment.Left,
         };
+
+        // The default, behind an empty box rather than in it. In it, a
+        // Commander who tabs past a row they never meant to touch commits the
+        // shipped answer as an override, and the two layers become one.
+        var shipped = new TextBlock
+        {
+            Text = Settings.DefaultFor(setting),
+            FontSize = 20,
+            Margin = new Thickness(7, 4, 0, 0),
+            Opacity = 0.45,
+            Foreground = Palette.BodyText,
+            IsHitTestVisible = false,
+            Visibility =
+                chosen.Length == 0 ? Visibility.Visible : Visibility.Collapsed,
+        };
+
+        field.TextChanged += (_, _) => shipped.Visibility =
+            field.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         // On losing focus rather than on every keystroke. "Ctrl+Alt" is a
         // prefix of a hotkey somebody is halfway through typing, and applying
@@ -137,10 +161,15 @@ internal sealed class SettingsPage : StackPanel
 
         page._fields[setting] = field;
 
+        var box = new Grid { HorizontalAlignment = HorizontalAlignment.Left };
+
+        box.Children.Add(field);
+        box.Children.Add(shipped);
+
         var row = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
 
         row.Children.Add(label);
-        row.Children.Add(field);
+        row.Children.Add(box);
 
         return row;
     }
