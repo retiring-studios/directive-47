@@ -201,15 +201,17 @@ internal partial class MainWindow : Window
     {
         Surface.Content = page ?? View;
 
-        // The window is as big as what is in it, and swapping the content does
-        // not re-ask. Without this the panel keeps the render's size and the
-        // page arrives with a scrollbar it does not need.
-        InvalidateMeasure();
+        // The window is as big as what is in it, and a page is not the size of
+        // a render. Measured before the zoom goes on, because FitTo puts it
+        // back — the same unzoomed number the render's own size is.
+        Size wanted = page is null ? _controls : WhatItWants(page);
 
         // The zoom is a property of the panel rather than of a page, so it
         // follows whatever is in there. Applied here as well as at startup
         // because the page arrives after the window did.
         DrawAtTheZoom();
+
+        FitTo(wanted);
     }
 
     /// <summary>
@@ -299,6 +301,29 @@ internal partial class MainWindow : Window
 
         TakeAwayMaximize();
 
+        FitTo(_controls);
+    }
+
+    /// <summary>
+    /// Sizes the window to what is in it, once, on being asked.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Called at startup and again whenever the page changes, which is the two
+    /// moments the content is a different size through no act of the
+    /// Commander's. Not <c>SizeToContent</c>: that refits on every change, so
+    /// the size a Commander dragged the window to stops being theirs the first
+    /// time anything inside moves. The note in the XAML records that it was
+    /// tried and why turning it off again does not work.
+    /// </remarks>
+    /// <param name="controls">How big the content wants to be, before zoom.</param>
+    private void FitTo(Size controls)
+    {
+        if (PresentationSource.FromVisual(this) is null)
+        {
+            return;
+        }
+
         DpiScale scale = VisualTreeHelper.GetDpi(this);
         Size frame = TheFrameWindowsDraws();
 
@@ -306,7 +331,7 @@ internal partial class MainWindow : Window
         // last left drawing at is a panel that fits what is actually in it,
         // which is what #96 asked for — fitting it to a render nobody is being
         // shown would open every zoomed panel scrolling.
-        double across = _controls.Width * _zoom.Factor;
+        double across = controls.Width * _zoom.Factor;
 
         // Plus the strip, which is one of the controls in the window and so is
         // one of the things it is the size of. Measured rather than declared:
@@ -314,10 +339,36 @@ internal partial class MainWindow : Window
         // window's to predict.
         ZoomStrip.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
-        double down = (_controls.Height * _zoom.Factor) + ZoomStrip.DesiredSize.Height;
+        double down = (controls.Height * _zoom.Factor) + ZoomStrip.DesiredSize.Height;
 
         Width = (WholePixels(across, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
         Height = (WholePixels(down, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
+    }
+
+    /// <summary>
+    /// How big something wants to be with the zoom taken off, which is what
+    /// <see cref="FitTo"/> expects and what <c>_controls</c> already holds for
+    /// the render.
+    /// </summary>
+    /// <param name="content">Whatever the surface is showing.</param>
+    /// <returns>Its unzoomed desired size.</returns>
+    private static Size WhatItWants(object content)
+    {
+        if (content is not FrameworkElement element)
+        {
+            return default;
+        }
+
+        Transform zoomed = element.LayoutTransform;
+
+        element.LayoutTransform = Transform.Identity;
+        element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        Size wanted = element.DesiredSize;
+
+        element.LayoutTransform = zoomed;
+
+        return wanted;
     }
 
     /// <summary>

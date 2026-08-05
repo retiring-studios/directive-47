@@ -23,10 +23,17 @@
         turning it off there froze the panel at the smallest size Windows will
         draw.
 
-        Deliberately no Background. There is one render, it fills the window, and
-        the background is a property of what that render draws — see
-        D47.Render/Palette.cs. This window naming one of its own is how it came
-        to disagree with the render in the first place.
+        Deliberately no Background. There is one render, the background is a
+        property of what that render draws — see D47.Render/Palette.cs — and
+        this window naming one of its own is how it came to disagree with the
+        render in the first place (#100).
+
+        What changed when settings arrived is where that background has to
+        reach. "The render fills the window" stopped being true: a page is as
+        big as its rows, and everywhere it did not reach showed through. So the
+        surface that hosts a page carries the render's own brush, the same way
+        the strip below already does. That is the palette naming the colour
+        once, not the window naming it twice.
     -->
 
     <!--
@@ -160,6 +167,7 @@
             optional. A reader hears the region, then the answer inside it.
         -->
         <ScrollViewer x:Name="Surface"
+                      Background="{x:Static render:Palette.Background}"
                       AutomationProperties.AutomationId="TheRender"
                       AutomationProperties.Name="The render"
                       VerticalScrollBarVisibility="Auto"
