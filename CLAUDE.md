@@ -69,9 +69,15 @@ Branch off `origin/main`, never off another story's branch — a worktree that
 inherits unmerged work turns one review into two. After the pull request merges,
 `git worktree remove C:\dev\d47-125`.
 
-**Which three can run at once.** Stories in different `D47.*` projects are safe.
-Two stories in the same project is the common trap: they will reach for the same
-file, and the second one to merge pays for it.
+**Which three can run at once.** Stories in different `D47.*` production
+projects are safe. Two stories in the same project is the common trap: they
+will reach for the same file, and the second one to merge pays for it.
+
+Test projects are shared by tier now, and that is a smaller problem than it
+sounds. Two stories writing into different folders of `D47.Tier1.Tests` never
+touch the same file. What they can both touch is that project's `.csproj`, and
+only if both add a `ProjectReference` — so a story that adds a production
+project says so, and the others take the conflict knowingly.
 
 A story that touches any of this **runs alone**, because every other worktree is
 built on it:
