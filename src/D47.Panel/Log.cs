@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 
+using D47.Data;
+
 namespace D47.Panel;
 
 /// <summary>

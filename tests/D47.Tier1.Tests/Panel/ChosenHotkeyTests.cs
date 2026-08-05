@@ -56,7 +56,7 @@ public class ChosenHotkeyTests
         chosen.ToString().ShouldBe(TheDefault);
 
         // And silently. A first run has chosen nothing, which is every machine
-        // once and is not an event — the same line Store draws between a file
+        // once and is not an event — the same line DataStore draws between a file
         // that is not there and one that will not open.
         _recorded.ShouldBeEmpty("having chosen nothing yet is not an absence to report");
     }

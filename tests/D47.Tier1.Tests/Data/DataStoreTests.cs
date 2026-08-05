@@ -1,10 +1,12 @@
-using D47.Panel;
+using System;
+
+using D47.Data;
 
 using Shouldly;
 
 using Xunit;
 
-namespace D47.Tier1.Tests.Panel;
+namespace D47.Tier1.Tests.Data;
 
 /// <summary>
 /// Somewhere for the application to write things down and find them again next
@@ -22,7 +24,7 @@ namespace D47.Tier1.Tests.Panel;
 /// [#117](https://github.com/retiring-studios/directive-47/issues/117).
 /// </para>
 /// </summary>
-public class StoreTests
+public class DataStoreTests
 {
     [Fact]
     public void Application_OnRestart_RemembersWhatItWasTold()
@@ -37,7 +39,7 @@ public class StoreTests
     }
 
     [Fact]
-    public void Store_WhenToldSomethingTwice_KeepsTheSecondAnswer()
+    public void DataStore_WhenToldSomethingTwice_KeepsTheSecondAnswer()
     {
         using var temporary = new TemporaryStore();
 
@@ -48,11 +50,11 @@ public class StoreTests
     }
 
     [Fact]
-    public void Store_WhenNothingWasEverWritten_StartsEmptyAndSaysNothing()
+    public void DataStore_WhenNothingWasEverWritten_StartsEmptyAndSaysNothing()
     {
         using var temporary = new TemporaryStore();
 
-        Store store = temporary.Open();
+        DataStore store = temporary.Open();
 
         store.Read("where").ShouldBeNull("a machine that has never been asked knows nothing");
 
@@ -62,13 +64,13 @@ public class StoreTests
     }
 
     [Fact]
-    public void Store_WhenTheFileCannotBeRead_StartsEmptyAndLeavesARecord()
+    public void DataStore_WhenTheFileCannotBeRead_StartsEmptyAndLeavesARecord()
     {
         using var temporary = new TemporaryStore();
 
         temporary.Corrupt("this is not a store");
 
-        Store store = temporary.Open();
+        DataStore store = temporary.Open();
 
         store.Read("where").ShouldBeNull("an unreadable store is no answer, not a failure");
 
@@ -82,7 +84,7 @@ public class StoreTests
     }
 
     [Fact]
-    public void Store_WhenTheFileCannotBeRead_IsWritableAgainAfterwards()
+    public void DataStore_WhenTheFileCannotBeRead_IsWritableAgainAfterwards()
     {
         using var temporary = new TemporaryStore();
 
@@ -97,17 +99,17 @@ public class StoreTests
     }
 
     [Fact]
-    public void Store_WhenOpenedWithoutBeingToldWhere_KeepsItselfBesideTheLog()
+    public void DataStore_WhenOpenedWithoutBeingToldWhere_KeepsItselfBesideTheLog()
     {
         // Reading is all this does — a store nobody has written to creates no
         // file — so it is safe to ask on the machine running the tests.
-        Store.Open(Nowhere).Location.ShouldBe(
+        DataStore.Open(Nowhere).Location.ShouldBe(
             ApplicationData.File("remembered.json"),
             customMessage: "the store and the log were supposed to settle this once, together");
     }
 
     [Fact]
-    public void Store_WhenItWrites_LeavesNothingBehindButTheStore()
+    public void DataStore_WhenItWrites_LeavesNothingBehindButTheStore()
     {
         using var temporary = new TemporaryStore();
 
@@ -117,6 +119,19 @@ public class StoreTests
         // way to do it and it is invisible when it works — the visible failure
         // is a folder slowly filling with the debris of every write.
         temporary.Files().ShouldBe(["remembered.json"]);
+    }
+
+    [Fact]
+    public void DataStore_WithNowhereToRecord_FailsLoudlyRatherThanGuessing()
+    {
+        // Where a swallowed failure goes is the caller's to decide, and this
+        // class is the wrong place to decide it — a store that quietly accepted
+        // null would drop the one message anybody diagnosing it would want. The
+        // question only exists because the store is public now: inside the
+        // panel every caller was in the same file tree, and across an assembly
+        // boundary they are not.
+        Should.Throw<ArgumentNullException>(
+            () => DataStore.OpenAt("anywhere.json", null!));
     }
 
     /// <summary>

@@ -45,6 +45,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.Data\D47.Data.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
         <ProjectReference Include="..\..\src\D47.Journal\D47.Journal.csproj" />
         <ProjectReference Include="..\..\src\D47.Panel\D47.Panel.csproj" />

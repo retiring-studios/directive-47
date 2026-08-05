@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 
+using D47.Data;
 using D47.GameOverlay;
 using D47.Panel;
 using D47.Render;
@@ -410,7 +411,7 @@ public class OverlayTests
         // not a size. So is a comma for a decimal point, because the file has
         // to mean the same thing on every machine that opens it.
         using var remembered = new TemporaryStore();
-        Store store = remembered.Open();
+        DataStore store = remembered.Open();
 
         store.Write("game overlay left", left);
         store.Write("game overlay top", top);
@@ -463,7 +464,7 @@ public class OverlayTests
         // the Commander can neither see nor grab — so the failure is invisible
         // and looks like the overlay never came back.
         using var remembered = new TemporaryStore();
-        Store store = remembered.Open();
+        DataStore store = remembered.Open();
 
         store.Write("game overlay left", "5000");
         store.Write("game overlay top", "300");

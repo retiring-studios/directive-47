@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
+using D47.Data;
 using D47.Panel;
 using D47.Render;
 using D47.TestSupport;
@@ -49,7 +50,7 @@ public class PanelBackgroundTests
 
         string named = StaThread.Run(() =>
         {
-            var zoom = new Zoom(Store.OpenAt(file, _ => { }), _ => { });
+            var zoom = new Zoom(DataStore.OpenAt(file, _ => { }), _ => { });
 
             object background = new MainWindow(
                 Presentation.Of(Fixtures.HelpsAnswer()),

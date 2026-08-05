@@ -1,13 +1,19 @@
 using System;
 using System.Collections.Generic;
 
-using D47.Panel;
+using D47.Data;
 
-namespace D47.Tier1.Tests.Panel;
+namespace D47.Tier1.Tests;
 
 /// <summary>
 /// A store in a folder of its own, and everything it wrote down while it was
 /// there.
+///
+/// <para>
+/// At the project's root for the same reason as
+/// <see cref="TemporaryFolder"/>: the panel's tests use it as much as the
+/// store's own do, and the folders here name production projects.
+/// </para>
 /// </summary>
 internal sealed class TemporaryStore : IDisposable
 {
@@ -30,7 +36,7 @@ internal sealed class TemporaryStore : IDisposable
     /// Opens the store, the way a run of the application would. Called more than
     /// once on purpose: a second open is the next run.
     /// </summary>
-    internal Store Open() => Store.OpenAt(File, _recorded.Add);
+    internal DataStore Open() => DataStore.OpenAt(File, _recorded.Add);
 
     /// <summary>
     /// Puts something in the store's place that is not a store.

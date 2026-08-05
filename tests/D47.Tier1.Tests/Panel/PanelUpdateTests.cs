@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
+using D47.Data;
 using D47.Panel;
 using D47.Render;
 using D47.TestSupport;
@@ -115,7 +116,7 @@ public class PanelUpdateTests
 
             var panel = new MainWindow(
                 new Presentation { Answer = Fixtures.HelpsAnswer(), UpdateWaiting = waiting },
-                new Zoom(Store.OpenAt(file, Ignored), Ignored),
+                new Zoom(DataStore.OpenAt(file, Ignored), Ignored),
                 updates);
 
             return asking(panel);

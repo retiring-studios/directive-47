@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 2. Capture, playback and transcription — a microphone, a speaker
+        and a CPU, none of which a hosted runner has. Its tests live in
+        D47.Tier2.Tests under hardware.slnf.
+
+        In ci.slnf as well, the same way D47.GameOverlay and D47.VrOverlay are:
+        compiling it needs no microphone, and the published exe contains it. It
+        is the tests that need the machine, not the build.
+
+        net10.0-windows because WASAPI is a Windows API and
+        [#7](https://github.com/retiring-studios/directive-47/issues/7) settles
+        on NAudio.Wasapi, which is Windows-targeted. That is a real constraint
+        on who can reference this, and the reason the loop's state machine is a
+        separate Tier 0 project rather than something living in here.
+
+        Empty until [#7](https://github.com/retiring-studios/directive-47/issues/7)
+        and [#8](https://github.com/retiring-studios/directive-47/issues/8), and
+        it takes no package until one of them needs it. It is here now because
+        D47.slnx, ci.slnf and hardware.slnf are on the run-alone list in
+        CLAUDE.md, so adding the wave's projects in one story is what lets C run
+        three-up.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>
