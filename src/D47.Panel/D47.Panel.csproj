@@ -83,7 +83,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
+        <ProjectReference Include="..\D47.Composition\D47.Composition.csproj" />
         <ProjectReference Include="..\D47.Data\D47.Data.csproj" />
         <ProjectReference Include="..\D47.GameOverlay\D47.GameOverlay.csproj" />
         <ProjectReference Include="..\D47.Help\D47.Help.csproj" />

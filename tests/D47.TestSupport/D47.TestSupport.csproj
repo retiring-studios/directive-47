@@ -24,9 +24,14 @@
         D47.Help, because the fixture in here is a real capability's answer
         rather than a hand-built stand-in. Help is the only capability that
         exists, and it needs no microphone, no network and no game.
+
+        D47.Composition, because which capabilities there are is not this
+        project's to answer. The fixture used to build its own registry, which
+        made it a second answer nothing reconciled.
     -->
     <ItemGroup>
         <ProjectReference Include="..\..\src\D47.Render\D47.Render.csproj" />
+        <ProjectReference Include="..\..\src\D47.Composition\D47.Composition.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
     </ItemGroup>
 

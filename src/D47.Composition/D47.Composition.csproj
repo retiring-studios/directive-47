@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        The one place the real capability registry is built. Everything that
+        needs it reads this: the application, the shared test fixture, and
+        parity.
+
+        A project of its own rather than a file in an existing one, and not a
+        split by capability — docs/decisions.md forbids that and this is not
+        one. The composition sits above every tier by definition, because it
+        knows every capability. D47.Capabilities is the contract and must stay
+        free of anything that consumes it; D47.Help is a Tier 0 consumer, and
+        putting the composition there would make Tier 0 reference the higher
+        tiers the moment a capability needs the journal or the game.
+
+        net10.0 today because every capability that exists is Tier 0, which is
+        what lets D47.Tier0.Tests reference this and assert on it. The first
+        capability above Tier 0 changes that, and CompositionTests moves up a
+        tier with it. That is a real edit and it is deliberately not
+        pre-empted — see docs/decisions.md on building it when you need it.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.Capabilities\D47.Capabilities.csproj" />
+        <ProjectReference Include="..\D47.Help\D47.Help.csproj" />
+    </ItemGroup>
+
+</Project>

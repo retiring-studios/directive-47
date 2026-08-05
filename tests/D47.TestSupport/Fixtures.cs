@@ -1,4 +1,4 @@
-using D47.Capabilities;
+using D47.Composition;
 using D47.Help;
 using D47.Render;
 
@@ -10,8 +10,8 @@ namespace D47.TestSupport;
 public static class Fixtures
 {
     /// <summary>
-    /// What every surface shows today: help, answered from a registry holding
-    /// the one capability that exists.
+    /// What every surface shows today: help, answered from the registry the
+    /// application answers from.
     ///
     /// <para>
     /// A real capability's answer rather than a hand-built stand-in, because a
@@ -19,16 +19,19 @@ public static class Fixtures
     /// actually produces. Help needs no microphone, no network and no game,
     /// which is what makes it usable from a test at any tier.
     /// </para>
+    ///
+    /// <para>
+    /// The registry comes from <see cref="Composed.Capabilities"/> rather than
+    /// being built here. Built here, it was a second answer to what the
+    /// application is made of, and a capability added to one and not the other
+    /// left every surface test asserting the old answer without failing.
+    /// </para>
     /// </summary>
     /// <returns>The answer, composed the way the application composes it.</returns>
-    public static Answer HelpsAnswer()
-    {
-        var registry = new CapabilityRegistry(HelpCapability.Descriptor);
-
-        return new Answer
+    public static Answer HelpsAnswer() =>
+        new()
         {
             Descriptor = HelpCapability.Descriptor,
-            Result = new HelpCapability(registry).Answer(),
+            Result = new HelpCapability(Composed.Capabilities).Answer(),
         };
-    }
 }

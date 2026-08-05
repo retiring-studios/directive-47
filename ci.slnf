@@ -4,6 +4,7 @@
     "projects": [
       "src\\D47.Audio\\D47.Audio.csproj",
       "src\\D47.Capabilities\\D47.Capabilities.csproj",
+      "src\\D47.Composition\\D47.Composition.csproj",
       "src\\D47.Data\\D47.Data.csproj",
       "src\\D47.GameOverlay\\D47.GameOverlay.csproj",
       "src\\D47.Help\\D47.Help.csproj",
