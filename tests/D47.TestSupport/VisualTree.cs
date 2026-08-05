@@ -44,6 +44,47 @@ public static class VisualTree
     }
 
     /// <summary>
+    /// What the editable fields under this one are showing.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Separate from <see cref="TextIn"/> rather than folded into it. That one
+    /// answers "what does this say", and every caller of it today asserts an
+    /// exact list of lines — quietly adding a second kind of text to those
+    /// would change what they mean. A field's value is on screen and is worth
+    /// asking about; it is just a different question.
+    /// </remarks>
+    /// <param name="root">Where to start looking.</param>
+    /// <returns>The values, in tree order.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="root"/> is null.</exception>
+    public static IReadOnlyList<string> ValuesIn(DependencyObject root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+
+        List<string> values = [];
+        CollectValues(root, values);
+
+        return values;
+    }
+
+    private static void CollectValues(DependencyObject root, List<string> values)
+    {
+        int children = VisualTreeHelper.GetChildrenCount(root);
+
+        for (int at = 0; at < children; at++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, at);
+
+            if (child is TextBox field)
+            {
+                values.Add(field.Text);
+            }
+
+            CollectValues(child, values);
+        }
+    }
+
+    /// <summary>
     /// Walks down, stopping wherever the screen would.
     /// </summary>
     ///

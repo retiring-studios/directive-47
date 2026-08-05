@@ -115,6 +115,20 @@ internal sealed class Zoom
     /// The way back, and the reason the range can be as wide as it is. Without
     /// one, a Commander who has leant on the wheel has to count their way home.
     /// </remarks>
+    /// <summary>
+    /// Goes to a level written the way the settings file writes one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The same parse the file gets, deliberately. A settings page hands over
+    /// text and so does the file, and two readings of "150" that could ever
+    /// disagree is one more than this needs.
+    /// </remarks>
+    /// <param name="written">The zoom, as a percentage.</param>
+    /// <param name="record">Where to say so when it cannot be used.</param>
+    public void SaidToBe(string written, Action<string> record) =>
+        MoveTo(LevelIn(written, record));
+
     public void Reset() => MoveTo(Nearest(Percentage(LifeSize)));
 
     /// <summary>
@@ -153,9 +167,34 @@ internal sealed class Zoom
     /// belongs at one of the sizes the panel draws at, and the nearest one is
     /// what the Commander meant.
     /// </remarks>
-    /// <param name="settings">What the Commander chose.</param>
+    /// <param name="written">The zoom as written, or null if nothing was.</param>
     /// <param name="record">Where to say so when what was written cannot be used.</param>
     /// <returns>The level to start at.</returns>
+    private static int LevelIn(string? written, Action<string> record)
+    {
+        int lifeSize = Nearest(Percentage(LifeSize));
+
+        if (written is null)
+        {
+            return lifeSize;
+        }
+
+        if (double.TryParse(
+                written,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double percent)
+            && percent >= Percentage(Levels[0])
+            && percent <= Percentage(Levels[^1]))
+        {
+            return Nearest(percent);
+        }
+
+        record(CouldNotUse(written));
+
+        return lifeSize;
+    }
+
     private static int WhereItWasLeft(SettingsStore settings, Action<string> record)
     {
         int lifeSize = Nearest(Percentage(LifeSize));

@@ -167,6 +167,48 @@ internal partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Asked for the settings page, and asked again to put it away.
+    ///
+    /// <para>
+    /// An event rather than the window building the page itself. What a
+    /// settings page needs — the store, and somewhere to send a change — is
+    /// the composition root's, and a window that reached for either would be a
+    /// second place that knows how the application is assembled.
+    /// </para>
+    /// </summary>
+    internal event Action? SettingsAsked;
+
+    /// <summary>
+    /// Puts a page in the panel in place of whatever it was showing.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Two pages today and no more built than that: what the panel shows, and
+    /// settings. [#72](https://github.com/retiring-studios/directive-47/issues/72)
+    /// assumes there are pages — its cancel button works from any of them — so
+    /// this is the seam that story arrives at rather than a general one built
+    /// in advance.
+    /// </remarks>
+    /// <param name="page">What to show, or null to go back to the render.</param>
+    internal void Showing(UIElement? page)
+    {
+        Surface.Content = page ?? View;
+
+        // The zoom is a property of the panel rather than of a page, so it
+        // follows whatever is in there. Applied here as well as at startup
+        // because the page arrives after the window did.
+        DrawAtTheZoom();
+    }
+
+    /// <summary>
+    /// Whether the panel is on its settings page right now.
+    /// </summary>
+    internal bool ShowingSettings => !ReferenceEquals(Surface.Content, View);
+
+    private void ShowOrHideSettings(object sender, RoutedEventArgs e) =>
+        SettingsAsked?.Invoke();
+
+    /// <summary>
     /// The strip's own way in.
     /// </summary>
     /// <param name="sender">The control.</param>

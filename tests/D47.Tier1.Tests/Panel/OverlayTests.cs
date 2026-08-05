@@ -630,5 +630,40 @@ public class OverlayTests
 
         public void Hide() => IsVisible = false;
     }
+    [Fact]
+    public void GameOverlay_WhenTheSeeThroughAmountChanges_TakesItAtOnce()
+    {
+        using var remembered = new TemporaryStore();
+        var overlay = new OverlayThatRemembers();
 
+        var showing = Overlay.From(
+            new FactoryReturning(overlay),
+            Presentation.Of(Fixtures.HelpsAnswer()),
+            remembered.Open(),
+            remembered.Settings(),
+            _recorded.Add);
+
+        showing.SeeThrough(0.25);
+
+        // At once, not at the next launch. A settings page whose effect a
+        // Commander cannot see is one they change twice and then stop trusting.
+        overlay.Opacity.ShouldBe(0.25);
+    }
+
+    [Fact]
+    public void GameOverlay_WhenThereIsNoOverlay_ShrugsAtASeeThroughChange()
+    {
+        using var remembered = new TemporaryStore();
+
+        var none = Overlay.From(
+            new FactoryThatRefuses(),
+            Presentation.Of(Fixtures.HelpsAnswer()),
+            remembered.Open(),
+            remembered.Settings(),
+            _recorded.Add);
+
+        // Absent, not failed, the same as everything else here. A machine with
+        // no overlay still has a settings page.
+        Should.NotThrow(() => none.SeeThrough(0.25));
+    }
 }

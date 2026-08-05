@@ -448,5 +448,53 @@ internal sealed class Overlay
     /// <summary>
     /// Shows the overlay, if there is one and there is a game to put it over.
     /// </summary>
+    /// <summary>
+    /// Makes the overlay more or less see-through, now.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The amount is read once at creation, which was enough while the only way
+    /// to change it was to edit a file and relaunch. A settings page is not
+    /// that, and a change a Commander cannot see is a change they make twice
+    /// before they stop trusting the page.
+    ///
+    /// <para>
+    /// Nothing is written down here. What a changed setting is worth keeping is
+    /// the composition root's to decide, and this method is called by things
+    /// that have already decided it — the same reason the page reports rather
+    /// than writes.
+    /// </para>
+    /// </remarks>
+    /// <param name="written">The amount, as the settings file writes it.</param>
+    /// <param name="record">Where to say so when it cannot be used.</param>
+    internal void SeeThroughSaidToBe(string written, Action<string> record) =>
+        SeeThrough(SeeThroughIn(written, record));
+
+    /// <summary>
+    /// How see-through to be, from text, using the reading the file gets.
+    /// </summary>
+    /// <param name="written">The amount, between clear and opaque.</param>
+    /// <param name="record">Where to say so when it cannot be used.</param>
+    /// <returns>The opacity.</returns>
+    private static double SeeThroughIn(string written, Action<string> record)
+    {
+        if (AsNumber(written) is { } opacity && opacity is >= 0 and <= 1)
+        {
+            return opacity;
+        }
+
+        record(CouldNotUse(written));
+
+        return SeeThroughEnough;
+    }
+
+    internal void SeeThrough(double amount)
+    {
+        if (_overlay is { } surface)
+        {
+            surface.Opacity = amount;
+        }
+    }
+
     internal void Show() => _overlay?.Show();
 }

@@ -79,6 +79,7 @@ internal sealed partial class App : Application, IDisposable
     /// to be a different gesture or the two become the same reflex.
     /// </summary>
     private const string ExitItem = "Exit";
+    private const string SettingsItem = "Settings";
 
     /// <summary>
     /// Where a newer Directive 47 comes from: this project's own releases.
@@ -120,6 +121,9 @@ internal sealed partial class App : Application, IDisposable
     private SingleInstance? _theOnlyCopy;
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
+    private SettingsStore? _settings;
+    private MainWindow? _panel;
+    private Zoom? _zoom;
     private Overlay? _overlay;
     private Headset? _headset;
     private ChosenHotkey? _hotkey;
@@ -165,6 +169,7 @@ internal sealed partial class App : Application, IDisposable
         }
 
         _trayMenu = new Forms.ContextMenuStrip();
+        _trayMenu.Items.Add(SettingsItem, null, (_, _) => ShowSettings());
         _trayMenu.Items.Add(ExitItem, null, (_, _) => Shutdown());
 
         _trayIcon = new Forms.NotifyIcon
@@ -225,8 +230,16 @@ internal sealed partial class App : Application, IDisposable
         // Explicitly, rather than through StartupUri, because the window now
         // takes what it shows as an argument and StartupUri can only call a
         // parameterless constructor.
-        MainWindow = new MainWindow(
-            presented, new Zoom(settings, _log.Warning), _updates);
+        var zoom = new Zoom(settings, _log.Warning);
+        var panel = new MainWindow(presented, zoom, _updates);
+
+        MainWindow = panel;
+
+        _settings = settings;
+        _zoom = zoom;
+        _panel = panel;
+
+        panel.SettingsAsked += ShowSettings;
         MainWindow.Show();
 
         _overlay = Overlay.From(
@@ -291,6 +304,85 @@ internal sealed partial class App : Application, IDisposable
     /// so everything done to it afterwards has to come back here.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// Shows the settings page, or puts it away if it is already up.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// One way in, called by the gear in the panel's chrome and by the tray
+    /// menu, and the door a voice command joins when there is a voice loop to
+    /// say it into — see
+    /// [#18](https://github.com/retiring-studios/directive-47/issues/18)'s
+    /// <c>Setting_WhenChangedByVoice_IsVisibleInThePanel</c>. Three routes to
+    /// the same page is fine; three implementations of showing it is not.
+    /// </remarks>
+    private void ShowSettings()
+    {
+        if (_panel is not { } panel || _settings is not { } settings)
+        {
+            return;
+        }
+
+        panel.Show();
+
+        panel.Showing(panel.ShowingSettings
+            ? null
+            : SettingsPage.For(settings, Apply));
+    }
+
+    /// <summary>
+    /// What a changed setting means to an application that is already running.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Here rather than on the store or the page, because this is the one place
+    /// that holds every consumer. The store keeps no list of who cares and the
+    /// page knows nothing about a zoom or an overlay; both would have to learn
+    /// it, and it is already known here.
+    ///
+    /// <para>
+    /// Written down first, then applied. A change that took effect and was not
+    /// kept is a setting that reverts on the next launch for no reason the
+    /// Commander can see.
+    /// </para>
+    /// </remarks>
+    /// <param name="setting">Which setting changed.</param>
+    /// <param name="value">What it changed to.</param>
+    private void Apply(string setting, string value)
+    {
+        if (_settings is not { } settings)
+        {
+            return;
+        }
+
+        if (value.Length == 0)
+        {
+            settings.Forget(setting);
+        }
+        else
+        {
+            settings.Write(setting, value);
+        }
+
+        if (setting == Zoom.HowBig)
+        {
+            _zoom?.SaidToBe(value, _log.Warning);
+        }
+        else if (setting == Overlay.HowSeeThrough)
+        {
+            _overlay?.SeeThroughSaidToBe(value, _log.Warning);
+        }
+        else if (setting == ChosenHotkey.WhatItIsCalled
+            && Combination.TryParse(value, out Combination? wanted))
+        {
+            // Unwrapping is what writes the reason down, so a combination
+            // somebody else already owns leaves a mark rather than nothing. The
+            // hotkey in force does not change, which is the right answer: the
+            // Commander still has the one that works.
+            _hotkey?.Rebind(wanted).Or(_log.Warning);
+        }
+    }
+
     /// <param name="settings">What the Commander chose.</param>
     private void ClaimTheHotkey(SettingsStore settings) =>
         _hotkey = ChosenHotkey.From(settings, _log.Warning, () => _overlay?.Toggle());

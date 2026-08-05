@@ -124,6 +124,19 @@
                         Width="28"
                         AutomationProperties.Name="Zoom in" />
 
+                <!--
+                    Settings, on the surface that has a pointer. It sits with
+                    the zoom controls because both are chrome around whatever
+                    the panel is showing rather than part of it, and because
+                    #72's cancel button will want the same strip.
+                -->
+                <Button x:Name="Preferences"
+                        Content="&#9881;"
+                        Click="ShowOrHideSettings"
+                        Width="28"
+                        Margin="12,0,0,0"
+                        AutomationProperties.Name="Settings" />
+
             </StackPanel>
 
             </DockPanel>
@@ -146,7 +159,8 @@
             So it is named for the least noisy true thing, and the name is not
             optional. A reader hears the region, then the answer inside it.
         -->
-        <ScrollViewer AutomationProperties.AutomationId="TheRender"
+        <ScrollViewer x:Name="Surface"
+                      AutomationProperties.AutomationId="TheRender"
                       AutomationProperties.Name="The render"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
