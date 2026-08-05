@@ -90,7 +90,7 @@ internal sealed class Overlay
     }
 
     /// <summary>
-    /// Asks for an overlay, and accepts the presented either way.
+    /// Asks for an overlay, and accepts the answer either way.
     /// </summary>
     ///
     /// <remarks>

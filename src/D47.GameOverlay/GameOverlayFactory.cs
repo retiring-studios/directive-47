@@ -38,7 +38,7 @@ public sealed class GameOverlayFactory : IGameOverlayFactory
     /// every version of Windows this product supports — so in practice this
     /// answers yes. Where it answers no is the case worth having: a remote
     /// session, or a machine whose compositor has been turned off. If the call
-    /// itself fails, the presented is no, because a machine that cannot say
+    /// itself fails, the answer is no, because a machine that cannot say
     /// whether it composites is not one to hand a transparent window.
     /// </para>
     /// </remarks>
