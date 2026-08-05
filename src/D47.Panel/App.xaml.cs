@@ -213,13 +213,24 @@ internal sealed partial class App : Application, IDisposable
         // first would open at life size and jump.
         var remembered = DataStore.Open(_log.Warning);
 
+        // The second file, and the migration between them. Settings used
+        // to live in the one above, so a build installed before this ran
+        // has a hotkey, an opacity and a zoom sitting in the wrong place —
+        // and every run calls this, because the one that matters is
+        // whichever run happens to be the first after the upgrade.
+        var settings = SettingsStore.Open(Settings.Known, _log.Warning);
+
+        SettingsStore.MigrateFrom(remembered, settings, Settings.Known);
+
         // Explicitly, rather than through StartupUri, because the window now
         // takes what it shows as an argument and StartupUri can only call a
         // parameterless constructor.
-        MainWindow = new MainWindow(presented, new Zoom(remembered, _log.Warning), _updates);
+        MainWindow = new MainWindow(
+            presented, new Zoom(settings, _log.Warning), _updates);
         MainWindow.Show();
 
-        _overlay = Overlay.From(new GameOverlayFactory(), presented, remembered, _log.Warning);
+        _overlay = Overlay.From(
+            new GameOverlayFactory(), presented, remembered, settings, _log.Warning);
         _overlay.Show();
 
         // Asked on every machine, most of which have no SteamVR. Whether there
@@ -236,7 +247,7 @@ internal sealed partial class App : Application, IDisposable
         _headset.Show();
 
         FollowTheForeground();
-        ClaimTheHotkey(remembered);
+        ClaimTheHotkey(settings);
 
     }
 
@@ -280,9 +291,9 @@ internal sealed partial class App : Application, IDisposable
     /// so everything done to it afterwards has to come back here.
     /// </para>
     /// </remarks>
-    /// <param name="remembered">What the last run left behind.</param>
-    private void ClaimTheHotkey(DataStore remembered) =>
-        _hotkey = ChosenHotkey.From(remembered, _log.Warning, () => _overlay?.Toggle());
+    /// <param name="settings">What the Commander chose.</param>
+    private void ClaimTheHotkey(SettingsStore settings) =>
+        _hotkey = ChosenHotkey.From(settings, _log.Warning, () => _overlay?.Toggle());
 
     /// <summary>
     /// What every surface shows.

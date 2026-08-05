@@ -26,7 +26,7 @@ public class ZoomTests
     public void Zoom_WithNothingRemembered_StartsAtLifeSize()
     {
         using var folder = new TemporaryStore();
-        var zoom = new Zoom(folder.Open(), Ignored);
+        var zoom = new Zoom(folder.Settings(), Ignored);
 
         zoom.Factor.ShouldBe(1.0);
         zoom.AsSaid.ShouldBe("100%");
@@ -39,7 +39,7 @@ public class ZoomTests
         // either crawl at the bottom or leap at the top, and the levels are
         // where they are because somebody wanted 110% to exist and 105% not to.
         using var folder = new TemporaryStore();
-        var zoom = new Zoom(folder.Open(), Ignored);
+        var zoom = new Zoom(folder.Settings(), Ignored);
 
         zoom.In();
 
@@ -54,7 +54,7 @@ public class ZoomTests
     public void Zoom_WhenSteppedOut_MovesDownOneLevel()
     {
         using var folder = new TemporaryStore();
-        var zoom = new Zoom(folder.Open(), Ignored);
+        var zoom = new Zoom(folder.Settings(), Ignored);
 
         zoom.Out();
 
@@ -68,7 +68,7 @@ public class ZoomTests
         // walking off into a size nothing can be read at. A Commander leaning on
         // Ctrl and the wheel is the ordinary way to arrive here.
         using var folder = new TemporaryStore();
-        var zoom = new Zoom(folder.Open(), Ignored);
+        var zoom = new Zoom(folder.Settings(), Ignored);
 
         for (int step = 0; step < 50; step++)
         {
@@ -89,7 +89,7 @@ public class ZoomTests
     public void Zoom_WhenReset_GoesBackToLifeSize()
     {
         using var folder = new TemporaryStore();
-        var zoom = new Zoom(folder.Open(), Ignored);
+        var zoom = new Zoom(folder.Settings(), Ignored);
 
         zoom.In();
         zoom.In();
@@ -106,11 +106,11 @@ public class ZoomTests
         // position go to, under a key spelled the way it would be said aloud.
         using var folder = new TemporaryStore();
 
-        var setting = new Zoom(folder.Open(), Ignored);
+        var setting = new Zoom(folder.Settings(), Ignored);
         setting.In();
         setting.In();
 
-        var nextLaunch = new Zoom(folder.Open(), Ignored);
+        var nextLaunch = new Zoom(folder.Settings(), Ignored);
 
         nextLaunch.AsSaid.ShouldBe("125%");
     }
@@ -122,10 +122,10 @@ public class ZoomTests
         // not a zoom is a thing that happens. Loud rather than silent: starting
         // at 100% without a word looks identical to the edit having worked.
         using var folder = new TemporaryStore();
-        folder.Open().Write(Zoom.HowBig, "enormous");
+        folder.Settings().Write(Zoom.HowBig, "enormous");
 
         List<string> complaints = [];
-        var zoom = new Zoom(folder.Open(), complaints.Add);
+        var zoom = new Zoom(folder.Settings(), complaints.Add);
 
         zoom.Factor.ShouldBe(1.0);
 

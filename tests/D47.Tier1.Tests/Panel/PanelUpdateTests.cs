@@ -116,7 +116,8 @@ public class PanelUpdateTests
 
             var panel = new MainWindow(
                 new Presentation { Answer = Fixtures.HelpsAnswer(), UpdateWaiting = waiting },
-                new Zoom(DataStore.OpenAt(file, Ignored), Ignored),
+                new Zoom(
+                    SettingsStore.OpenAt(file, Settings.Known, Ignored), Ignored),
                 updates);
 
             return asking(panel);

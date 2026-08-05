@@ -53,22 +53,22 @@ internal sealed class Zoom
     internal static readonly IReadOnlyList<double> Levels =
         [0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 
-    private readonly DataStore _remembered;
+    private readonly SettingsStore _settings;
     private int _level;
 
     /// <summary>
     /// Picks up wherever the last run left off.
     /// </summary>
-    /// <param name="remembered">Where the last run wrote it down.</param>
+    /// <param name="settings">What the Commander chose.</param>
     /// <param name="record">Where to say so when what was written cannot be used.</param>
     /// <exception cref="ArgumentNullException">Either argument is null.</exception>
-    public Zoom(DataStore remembered, Action<string> record)
+    public Zoom(SettingsStore settings, Action<string> record)
     {
-        ArgumentNullException.ThrowIfNull(remembered);
+        ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(record);
 
-        _remembered = remembered;
-        _level = WhereItWasLeft(remembered, record);
+        _settings = settings;
+        _level = WhereItWasLeft(settings, record);
     }
 
     /// <summary>
@@ -137,7 +137,7 @@ internal sealed class Zoom
 
         _level = level;
 
-        _remembered.Write(HowBig, AsWritten(Factor));
+        _settings.Write(HowBig, AsWritten(Factor));
 
         Changed?.Invoke(this, EventArgs.Empty);
     }
@@ -153,14 +153,14 @@ internal sealed class Zoom
     /// belongs at one of the sizes the panel draws at, and the nearest one is
     /// what the Commander meant.
     /// </remarks>
-    /// <param name="remembered">Where the last run wrote it down.</param>
+    /// <param name="settings">What the Commander chose.</param>
     /// <param name="record">Where to say so when what was written cannot be used.</param>
     /// <returns>The level to start at.</returns>
-    private static int WhereItWasLeft(DataStore remembered, Action<string> record)
+    private static int WhereItWasLeft(SettingsStore settings, Action<string> record)
     {
         int lifeSize = Nearest(Percentage(LifeSize));
 
-        if (remembered.Read(HowBig) is not { } written)
+        if (settings.Read(HowBig) is not { } written)
         {
             return lifeSize;
         }

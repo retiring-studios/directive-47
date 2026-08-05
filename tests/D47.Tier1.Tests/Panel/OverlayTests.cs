@@ -43,7 +43,11 @@ public class OverlayTests
 
         Overlay overlay = Should.NotThrow(
             () => Overlay.From(
-                machineThatCannot, Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add));
+                machineThatCannot,
+                    Presentation.Of(Fixtures.HelpsAnswer()),
+                    remembered.Open(),
+                    remembered.Settings(),
+                    _recorded.Add));
 
         // Asked, and not merely survived. Without this the test passes on any
         // machine with no game running, for a reason that has nothing to do
@@ -67,7 +71,11 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
 
         Overlay.From(
-            new FactoryThatRefuses(), Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add);
+            new FactoryThatRefuses(),
+                Presentation.Of(Fixtures.HelpsAnswer()),
+                remembered.Open(),
+                remembered.Settings(),
+                _recorded.Add);
 
         _recorded.ShouldHaveSingleItem().ShouldContain(
             "cannot host an overlay",
@@ -85,6 +93,7 @@ public class OverlayTests
             new FactoryReturning(new OverlayThatRemembers()),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         _recorded.ShouldBeEmpty("nothing was carried on without");
@@ -100,7 +109,11 @@ public class OverlayTests
         var broken = new FactoryThatIsBroken();
 
         Should.Throw<StandInFailure>(
-            () => Overlay.From(broken, Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add));
+            () => Overlay.From(broken,
+                Presentation.Of(Fixtures.HelpsAnswer()),
+                remembered.Open(),
+                remembered.Settings(),
+                _recorded.Add));
     }
 
     [Fact]
@@ -111,7 +124,11 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var toggling = Overlay.From(
-            new FactoryReturning(overlay), Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add);
+            new FactoryReturning(overlay),
+                Presentation.Of(Fixtures.HelpsAnswer()),
+                remembered.Open(),
+                remembered.Settings(),
+                _recorded.Add);
 
         toggling.Toggle();
         overlay.IsVisible.ShouldBeTrue("the first press should put it on screen");
@@ -132,7 +149,11 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
         var overlay = new OverlayThatRemembers();
         var toggling = Overlay.From(
-            new FactoryReturning(overlay), Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add);
+            new FactoryReturning(overlay),
+                Presentation.Of(Fixtures.HelpsAnswer()),
+                remembered.Open(),
+                remembered.Settings(),
+                _recorded.Add);
 
         toggling.Show();
         overlay.IsVisible.ShouldBeTrue();
@@ -151,6 +172,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add,
             IsTheGame);
 
@@ -171,6 +193,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add,
             IsTheGame);
 
@@ -190,6 +213,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add,
             IsTheGame);
 
@@ -213,7 +237,11 @@ public class OverlayTests
         using var remembered = new TemporaryStore();
         var machineThatCannot = new FactoryThatRefuses();
         var following = Overlay.From(
-            machineThatCannot, Presentation.Of(Fixtures.HelpsAnswer()), remembered.Open(), _recorded.Add, IsTheGame);
+            machineThatCannot,
+                Presentation.Of(Fixtures.HelpsAnswer()),
+                remembered.Open(),
+                remembered.Settings(),
+                _recorded.Add, IsTheGame);
 
         Should.NotThrow(() => following.ForegroundIsNow(TheGame));
     }
@@ -232,6 +260,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         overlay.Opacity.ShouldBe(0.75, "what is under the overlay has to stay readable");
@@ -242,7 +271,7 @@ public class OverlayTests
     {
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write("game overlay opacity", "0.4");
+        remembered.Settings().Write("game overlay opacity", "0.4");
 
         var overlay = new OverlayThatRemembers();
 
@@ -252,6 +281,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         overlay.Opacity.ShouldBe(0.4);
@@ -274,7 +304,7 @@ public class OverlayTests
         // every machine.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write("game overlay opacity", nonsense);
+        remembered.Settings().Write("game overlay opacity", nonsense);
 
         var overlay = new OverlayThatRemembers();
 
@@ -282,6 +312,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         overlay.Opacity.ShouldBe(0.75, "an unusable setting is no answer, not a failure");
@@ -298,12 +329,13 @@ public class OverlayTests
         // identify.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write("game overlay opacity", "half");
+        remembered.Settings().Write("game overlay opacity", "half");
 
         Overlay.From(
             new FactoryReturning(new OverlayThatRemembers()),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         _recorded.ShouldHaveSingleItem().ShouldContain("\"half\"");
@@ -318,13 +350,14 @@ public class OverlayTests
         // nobody has is noise on top of it.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write("game overlay opacity", "half");
+        remembered.Settings().Write("game overlay opacity", "half");
 
         Should.NotThrow(
             () => Overlay.From(
                 new FactoryThatRefuses(),
                 Presentation.Of(Fixtures.HelpsAnswer()),
                 remembered.Open(),
+                remembered.Settings(),
                 _recorded.Add));
 
         _recorded.ShouldHaveSingleItem().ShouldContain("cannot host an overlay");
@@ -344,6 +377,7 @@ public class OverlayTests
             new FactoryReturning(moved),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add,
             whereTheScreensAre: Screens);
 
@@ -358,6 +392,7 @@ public class OverlayTests
             new FactoryReturning(restarted),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add,
             whereTheScreensAre: Screens);
 
@@ -381,6 +416,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         overlay.WasPlaced.ShouldBeFalse(
@@ -423,6 +459,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         overlay.WasPlaced.ShouldBeFalse("an unusable place is no answer, not a failure");
@@ -449,6 +486,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add);
 
         overlay.WasPlaced.ShouldBeFalse();
@@ -476,6 +514,7 @@ public class OverlayTests
             new FactoryReturning(overlay),
             Presentation.Of(Fixtures.HelpsAnswer()),
             remembered.Open(),
+            remembered.Settings(),
             _recorded.Add,
             whereTheScreensAre: Screens);
 
