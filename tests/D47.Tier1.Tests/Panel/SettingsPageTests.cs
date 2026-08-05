@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Windows.Input;
 
 using D47.Panel;
 using D47.TestSupport;
@@ -129,5 +130,50 @@ public class SettingsPageTests
 
         changed.ShouldHaveSingleItem().Value.ShouldBeEmpty(
             "an untouched row reports nothing chosen, not the default");
+    }
+    [Fact]
+    public void HotkeyRow_WhenACombinationIsPressed_TakesItWithoutBeingSpelled()
+    {
+        using var folder = new TemporaryStore();
+
+        List<(string Key, string Value)> changed = [];
+
+        StaThread.Run(() =>
+        {
+            var page = SettingsPage.For(
+                folder.Settings(), (key, value) => changed.Add((key, value)));
+
+            page.Pressed(ModifierKeys.Control | ModifierKeys.Alt, Key.E);
+
+            return true;
+        });
+
+        // Spelled by the same thing that writes the file, which is the whole
+        // point: nobody has to know whether it wants "ctrl" or "Control".
+        changed.ShouldHaveSingleItem().ShouldBe(
+            (ChosenHotkey.WhatItIsCalled,
+             new Combination(ModifierKeys.Control | ModifierKeys.Alt, Key.E).ToString()));
+    }
+
+    [Fact]
+    public void HotkeyRow_WhileOnlyAModifierIsDown_HasNotBeenGivenACombination()
+    {
+        using var folder = new TemporaryStore();
+
+        List<(string Key, string Value)> changed = [];
+
+        StaThread.Run(() =>
+        {
+            var page = SettingsPage.For(
+                folder.Settings(), (key, value) => changed.Add((key, value)));
+
+            page.Pressed(ModifierKeys.Control, Key.LeftCtrl);
+
+            return true;
+        });
+
+        // Holding Ctrl on the way to Ctrl+Alt+E must not claim Ctrl. Every
+        // combination is reached through its own modifiers going down first.
+        changed.ShouldBeEmpty();
     }
 }
