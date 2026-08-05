@@ -41,19 +41,26 @@ public static class Resting
     /// How far below the line of sight it sits, in degrees.
     ///
     /// <para>
-    /// Sixty, which is a glance down at a console rather than a panel in the
-    /// way. Straight ahead is where a Commander looks to fly, and an overlay
-    /// parked there is one that has to be turned off to see out of — the same
-    /// failure as an overlay that cannot be moved, reached from the other side.
+    /// Thirty, which at <see cref="AtArmsLength"/> puts it 1.30 m forward and
+    /// 0.75 m down — out in front of a seated Commander's knees. Straight ahead
+    /// is where they look to fly, and an overlay parked there is one that has to
+    /// be turned off to see out of.
+    /// </para>
+    /// <para>
+    /// Sixty was tried first and was wrong in a way the arithmetic makes
+    /// obvious afterwards: the angle swings the panel down <em>and</em> in, so
+    /// sixty is only 0.75 m forward and 1.30 m below — which lands in the
+    /// Commander's lap rather than in front of him. Worth knowing before
+    /// reaching for a bigger number to get it lower; past about forty-five it
+    /// stops moving down and starts moving closer.
     /// </para>
     /// <para>
     /// A number to react to rather than a measured one, in the same spirit as
     /// the quad's width and the game overlay's opening opacity. This is the one
-    /// value to change if it is wrong, and it is expected to move once somebody
-    /// has worn it.
+    /// value to change if it is wrong.
     /// </para>
     /// </summary>
-    private const float BelowTheLevel = 60f;
+    private const float BelowTheLevel = 30f;
 
     /// <summary>
     /// The resting place: straight ahead across, below the line of sight, square

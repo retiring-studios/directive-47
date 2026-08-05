@@ -65,7 +65,7 @@ public class RestingTests
         float belowTheLevel = float.RadiansToDegrees(
             MathF.Atan2(-where.Y, -where.Z));
 
-        belowTheLevel.ShouldBe(60f, 0.1f);
+        belowTheLevel.ShouldBe(30f, 0.1f);
     }
 
     [Fact]
