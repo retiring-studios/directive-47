@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 
+using D47.Data;
 using D47.Panel;
 using D47.Render;
 using D47.TestSupport;
@@ -44,7 +45,7 @@ internal static class OpenedPanel
 
         return StaThread.Run(() =>
         {
-            var zoom = new Zoom(Store.OpenAt(file, Ignored), Ignored);
+            var zoom = new Zoom(DataStore.OpenAt(file, Ignored), Ignored);
             var panel = new MainWindow(
                     Presentation.Of(Fixtures.HelpsAnswer()),
                     zoom,

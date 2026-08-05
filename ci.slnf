@@ -2,13 +2,17 @@
   "solution": {
     "path": "D47.slnx",
     "projects": [
+      "src\\D47.Audio\\D47.Audio.csproj",
       "src\\D47.Capabilities\\D47.Capabilities.csproj",
+      "src\\D47.Data\\D47.Data.csproj",
       "src\\D47.GameOverlay\\D47.GameOverlay.csproj",
       "src\\D47.Help\\D47.Help.csproj",
       "src\\D47.Journal\\D47.Journal.csproj",
       "src\\D47.Panel\\D47.Panel.csproj",
       "src\\D47.Placement\\D47.Placement.csproj",
+      "src\\D47.Providers\\D47.Providers.csproj",
       "src\\D47.Render\\D47.Render.csproj",
+      "src\\D47.VoiceLoop\\D47.VoiceLoop.csproj",
       "src\\D47.VrOverlay\\D47.VrOverlay.csproj",
       "tests\\D47.TestSupport\\D47.TestSupport.csproj",
       "tests\\D47.Tier0.Tests\\D47.Tier0.Tests.csproj",

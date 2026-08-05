@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace D47.Panel;
+namespace D47.Data;
 
 /// <summary>
 /// Where Directive 47 keeps what it writes down.
@@ -13,6 +13,13 @@ namespace D47.Panel;
 /// The log picked a path first, for a single line, and that choice was a
 /// throwaway rather than a decision. This is the decision, and it happens to
 /// land in the same place.
+/// </para>
+///
+/// <para>
+/// The two are in different projects since Wave 2 — the log stayed in
+/// <c>D47.Panel</c> and the store came down here — and this came down with the
+/// store rather than being copied, because two answers that must not disagree
+/// are one answer or they are a bug waiting.
 /// </para>
 ///
 /// <para>
@@ -31,14 +38,14 @@ namespace D47.Panel;
 /// Program Files breaks it, and it breaks silently.
 /// </para>
 /// </summary>
-internal static class ApplicationData
+public static class ApplicationData
 {
     /// <summary>
     /// The folder itself. Not created here: the things that write decide when
     /// there is something worth creating it for, and a folder made at startup
     /// for a file nobody ever writes is litter on every machine that runs this.
     /// </summary>
-    internal static string Folder => Path.Combine(
+    public static string Folder => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Directive 47");
 
@@ -47,5 +54,5 @@ internal static class ApplicationData
     /// </summary>
     /// <param name="name">The file's name, with its extension.</param>
     /// <returns>The full path.</returns>
-    internal static string File(string name) => Path.Combine(Folder, name);
+    public static string File(string name) => Path.Combine(Folder, name);
 }

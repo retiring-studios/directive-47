@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 1. What Directive 47 writes down and finds again next time, and
+        where it puts it. Not Tier 0 despite holding no logic worth the name:
+        the tests write real files and read them back, which is the same reason
+        D47.Journal's are Tier 1.
+
+        At the bottom of the dependency graph, which is the whole reason it
+        exists as a project. This was `Store`, internal to D47.Panel, and the
+        panel is the executable and sits at the top — so nothing below it could
+        see the store. In this wave almost everything that needs to read
+        something back *is* below it: the voice loop, the transcriber, the
+        speech service, both overlays.
+
+        net10.0 rather than net10.0-windows for the same reason. A Tier 0
+        project cannot reference a Windows-targeted one, and D47.VoiceLoop is
+        Tier 0 and will want this.
+
+        No package references and no project references. It knows about paths,
+        files and JSON, all of which are in the box.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>

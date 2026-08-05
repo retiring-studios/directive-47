@@ -1,12 +1,16 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/D47.Audio/D47.Audio.csproj" />
     <Project Path="src/D47.Capabilities/D47.Capabilities.csproj" />
+    <Project Path="src/D47.Data/D47.Data.csproj" />
     <Project Path="src/D47.GameOverlay/D47.GameOverlay.csproj" />
     <Project Path="src/D47.Help/D47.Help.csproj" />
     <Project Path="src/D47.Journal/D47.Journal.csproj" />
     <Project Path="src/D47.Panel/D47.Panel.csproj" />
     <Project Path="src/D47.Placement/D47.Placement.csproj" />
+    <Project Path="src/D47.Providers/D47.Providers.csproj" />
     <Project Path="src/D47.Render/D47.Render.csproj" />
+    <Project Path="src/D47.VoiceLoop/D47.VoiceLoop.csproj" />
     <Project Path="src/D47.VrOverlay/D47.VrOverlay.csproj" />
   </Folder>
   <Folder Name="/tests/">

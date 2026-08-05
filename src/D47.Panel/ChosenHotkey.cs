@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.Windows.Input;
 
+using D47.Data;
+
 namespace D47.Panel;
 
 /// <summary>
@@ -53,7 +55,7 @@ internal sealed class ChosenHotkey : IDisposable
     private static readonly Combination Familiar =
         new(ModifierKeys.Control | ModifierKeys.Alt, Key.D);
 
-    private readonly Store _remembered;
+    private readonly DataStore _remembered;
     private readonly Action<string> _record;
     private readonly Action _pressed;
 
@@ -62,7 +64,7 @@ internal sealed class ChosenHotkey : IDisposable
     private bool _disposed;
 
     private ChosenHotkey(
-        Store remembered,
+        DataStore remembered,
         Action<string> record,
         Action pressed,
         Combination inForce,
@@ -100,7 +102,8 @@ internal sealed class ChosenHotkey : IDisposable
     /// <exception cref="ArgumentNullException">
     /// <paramref name="remembered"/> or <paramref name="record"/> is null.
     /// </exception>
-    internal static Combination ChosenIn(Store remembered, Action<string> record)
+    internal static Combination ChosenIn(
+        DataStore remembered, Action<string> record)
     {
         ArgumentNullException.ThrowIfNull(remembered);
         ArgumentNullException.ThrowIfNull(record);
@@ -138,7 +141,8 @@ internal sealed class ChosenHotkey : IDisposable
     /// <exception cref="ArgumentNullException">
     /// Any argument is null.
     /// </exception>
-    internal static ChosenHotkey From(Store remembered, Action<string> record, Action pressed)
+    internal static ChosenHotkey From(
+        DataStore remembered, Action<string> record, Action pressed)
     {
         ArgumentNullException.ThrowIfNull(pressed);
 

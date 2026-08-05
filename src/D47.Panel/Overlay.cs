@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.Windows;
 
+using D47.Data;
+
 using D47.GameOverlay;
 using D47.Render;
 
@@ -130,7 +132,7 @@ internal sealed class Overlay
     internal static Overlay From(
         IGameOverlayFactory overlays,
         Presentation presented,
-        Store remembered,
+        DataStore remembered,
         Action<string> record,
         Func<IntPtr, bool>? isTheGame = null,
         Func<Rect>? whereTheScreensAre = null)
@@ -200,7 +202,8 @@ internal sealed class Overlay
     /// <param name="remembered">What the last run left behind.</param>
     /// <param name="record">Where to note a setting that could not be used.</param>
     /// <returns>The opacity to use.</returns>
-    private static double HowSeeThroughToBe(Store remembered, Action<string> record)
+    private static double HowSeeThroughToBe(
+        DataStore remembered, Action<string> record)
     {
         if (remembered.Read(HowSeeThrough) is not { } written)
         {
@@ -243,7 +246,7 @@ internal sealed class Overlay
     /// <param name="screens">How far this machine's screens reach.</param>
     /// <returns>The place to use, or null for none.</returns>
     private static (Point Corner, double Scale)? WhereItWasLeft(
-        Store remembered, Action<string> record, Func<Rect> screens)
+        DataStore remembered, Action<string> record, Func<Rect> screens)
     {
         string? across = remembered.Read(HowFarAcross);
         string? down = remembered.Read(HowFarDown);
@@ -321,7 +324,8 @@ internal sealed class Overlay
     /// </remarks>
     /// <param name="overlay">The overlay that has just been let go of.</param>
     /// <param name="remembered">Where to write it down.</param>
-    private static void WriteDownWhereItIs(IGameOverlay overlay, Store remembered)
+    private static void WriteDownWhereItIs(
+        IGameOverlay overlay, DataStore remembered)
     {
         Point corner = overlay.Position;
 

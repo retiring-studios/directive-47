@@ -3,10 +3,17 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace D47.Tier1.Tests.Panel;
+namespace D47.Tier1.Tests;
 
 /// <summary>
 /// A folder of its own, for a test about something that writes files.
+///
+/// <para>
+/// At the project's root rather than in one of its folders, because the folders
+/// name production projects and this belongs to two of them. Sitting in the
+/// enclosing namespace is what lets <c>Data</c> and <c>Panel</c> both see it
+/// without either one reaching into the other.
+/// </para>
 ///
 /// <para>
 /// One per instance rather than one shared, because the subject in both cases is

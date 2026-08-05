@@ -2,6 +2,7 @@
   "solution": {
     "path": "D47.slnx",
     "projects": [
+      "src\\D47.Audio\\D47.Audio.csproj",
       "src\\D47.GameOverlay\\D47.GameOverlay.csproj",
       "src\\D47.VrOverlay\\D47.VrOverlay.csproj",
       "tests\\D47.Tier2.Tests\\D47.Tier2.Tests.csproj",

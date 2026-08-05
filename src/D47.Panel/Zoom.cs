@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
+using D47.Data;
+
 namespace D47.Panel;
 
 /// <summary>
@@ -51,7 +53,7 @@ internal sealed class Zoom
     internal static readonly IReadOnlyList<double> Levels =
         [0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
 
-    private readonly Store _remembered;
+    private readonly DataStore _remembered;
     private int _level;
 
     /// <summary>
@@ -60,7 +62,7 @@ internal sealed class Zoom
     /// <param name="remembered">Where the last run wrote it down.</param>
     /// <param name="record">Where to say so when what was written cannot be used.</param>
     /// <exception cref="ArgumentNullException">Either argument is null.</exception>
-    public Zoom(Store remembered, Action<string> record)
+    public Zoom(DataStore remembered, Action<string> record)
     {
         ArgumentNullException.ThrowIfNull(remembered);
         ArgumentNullException.ThrowIfNull(record);
@@ -154,7 +156,7 @@ internal sealed class Zoom
     /// <param name="remembered">Where the last run wrote it down.</param>
     /// <param name="record">Where to say so when what was written cannot be used.</param>
     /// <returns>The level to start at.</returns>
-    private static int WhereItWasLeft(Store remembered, Action<string> record)
+    private static int WhereItWasLeft(DataStore remembered, Action<string> record)
     {
         int lifeSize = Nearest(Percentage(LifeSize));
 

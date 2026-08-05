@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 
-using D47.Panel;
+using D47.Data;
 
 using Shouldly;
 
 using Xunit;
 
-namespace D47.Tier1.Tests.Panel;
+namespace D47.Tier1.Tests.Data;
 
 /// <summary>
 /// Where Directive 47 keeps what it writes down.

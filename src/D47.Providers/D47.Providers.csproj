@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 1. The two things Directive 47 talks to over HTTP: the speech
+        service ([#9](https://github.com/retiring-studios/directive-47/issues/9))
+        and the model ([#10](https://github.com/retiring-studios/directive-47/issues/10)).
+        Both are adapters, both are tested against recorded responses, and
+        neither needs hardware — which is what makes them one project rather
+        than two.
+
+        One project rather than one per provider because the layout rule in
+        docs/decisions.md splits by tier and never by capability. Two thin
+        adapters over two remote APIs are the same tier and the same kind of
+        thing.
+
+        Empty until [#9](https://github.com/retiring-studios/directive-47/issues/9)
+        and [#10](https://github.com/retiring-studios/directive-47/issues/10),
+        and it takes no package until one of them needs it. It is here now
+        because D47.slnx, ci.slnf and hardware.slnf are on the run-alone list in
+        CLAUDE.md, so adding the wave's projects in one story is what lets C run
+        three-up.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>

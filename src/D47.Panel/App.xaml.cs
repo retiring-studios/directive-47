@@ -8,6 +8,8 @@ using System.Windows.Interop;
 using System.Windows.Resources;
 using System.Windows.Threading;
 
+using D47.Data;
+
 using D47.Capabilities;
 using D47.GameOverlay;
 using D47.Help;
@@ -209,7 +211,7 @@ internal sealed partial class App : Application, IDisposable
         // opens at the size it was last left drawing at, so the zoom has to have
         // been read before there is a window to apply it to — a window built
         // first would open at life size and jump.
-        var remembered = Store.Open(_log.Warning);
+        var remembered = DataStore.Open(_log.Warning);
 
         // Explicitly, rather than through StartupUri, because the window now
         // takes what it shows as an argument and StartupUri can only call a
@@ -279,7 +281,7 @@ internal sealed partial class App : Application, IDisposable
     /// </para>
     /// </remarks>
     /// <param name="remembered">What the last run left behind.</param>
-    private void ClaimTheHotkey(Store remembered) =>
+    private void ClaimTheHotkey(DataStore remembered) =>
         _hotkey = ChosenHotkey.From(remembered, _log.Warning, () => _overlay?.Toggle());
 
     /// <summary>

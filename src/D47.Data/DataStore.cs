@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 
-namespace D47.Panel;
+namespace D47.Data;
 
 /// <summary>
 /// Somewhere for Directive 47 to write things down and find them again next
@@ -27,10 +27,19 @@ namespace D47.Panel;
 /// </para>
 ///
 /// <para>
-/// Not a database. A handful of values that survive a restart.
+/// Not a database. A handful of values that survive a restart — which is also
+/// why it is <c>DataStore</c> rather than <c>Store</c>: "store" is what half the
+/// .NET world calls one, and this is a JSON file with a dictionary in it.
+/// </para>
+///
+/// <para>
+/// It was <c>internal</c> to <c>D47.Panel</c> until Wave 2. The panel is the
+/// executable and sits at the top of the dependency graph, so nothing below it
+/// could see this — and almost everything that needs to read something back is
+/// below it: the voice loop, the transcriber, the speech service, both overlays.
 /// </para>
 /// </summary>
-internal sealed class Store
+public sealed class DataStore
 {
     /// <summary>
     /// Named for what it holds rather than for what it is. Nobody opening
@@ -61,7 +70,7 @@ internal sealed class Store
     private readonly string _file;
     private readonly Dictionary<string, string> _remembered;
 
-    private Store(string file, Dictionary<string, string> remembered)
+    private DataStore(string file, Dictionary<string, string> remembered)
     {
         _file = file;
         _remembered = remembered;
@@ -72,7 +81,7 @@ internal sealed class Store
     /// </summary>
     /// <param name="record">Where to note a store that would not open, and why.</param>
     /// <returns>The store, holding whatever the last run left in it.</returns>
-    internal static Store Open(Action<string> record) =>
+    public static DataStore Open(Action<string> record) =>
         OpenAt(ApplicationData.File(FileName), record);
 
     /// <summary>
@@ -89,8 +98,17 @@ internal sealed class Store
     /// <param name="file">Where the store is, or will be.</param>
     /// <param name="record">Where to note a store that would not open, and why.</param>
     /// <returns>The store, holding whatever was readable.</returns>
-    internal static Store OpenAt(string file, Action<string> record) =>
-        new(file, ReadFrom(file, record));
+    /// <exception cref="ArgumentNullException">
+    /// There is nowhere to record to. Deciding that for the caller would mean
+    /// this class choosing where its own absences go, which is exactly what
+    /// taking the argument was meant to stop.
+    /// </exception>
+    public static DataStore OpenAt(string file, Action<string> record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        return new(file, ReadFrom(file, record));
+    }
 
     /// <summary>
     /// The file this store is kept in.
@@ -102,7 +120,7 @@ internal sealed class Store
     /// also the first thing anyone diagnosing one would want named.
     /// </para>
     /// </summary>
-    internal string Location => _file;
+    public string Location => _file;
 
     /// <summary>
     /// What was written down under a name, or <see langword="null"/> if nothing
@@ -110,7 +128,7 @@ internal sealed class Store
     /// </summary>
     /// <param name="key">The name it was written down under.</param>
     /// <returns>The value, or <see langword="null"/>.</returns>
-    internal string? Read(string key) =>
+    public string? Read(string key) =>
         _remembered.TryGetValue(key, out string? value) ? value : null;
 
     /// <summary>
@@ -134,7 +152,7 @@ internal sealed class Store
     /// </remarks>
     /// <param name="key">The name to write it down under.</param>
     /// <param name="value">What to remember.</param>
-    internal void Write(string key, string value)
+    public void Write(string key, string value)
     {
         _remembered[key] = value;
 

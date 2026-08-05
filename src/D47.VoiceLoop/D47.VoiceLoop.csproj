@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 0. The state machine one turn runs through — hold, capture,
+        transcribe, answer, speak, idle — and the transitions it publishes so
+        the surfaces can render from those and from nothing else.
+
+        Pure on purpose. What it orchestrates lives in D47.Audio and
+        D47.Providers behind contracts this project names, so a turn's shape can
+        be asserted in CI with no microphone, no network and no headset. That
+        split is the whole reason B is a separate step from C in
+        [#1](https://github.com/retiring-studios/directive-47/issues/1)'s build
+        order.
+
+        Empty until [#7](https://github.com/retiring-studios/directive-47/issues/7).
+        It is here now because D47.slnx, ci.slnf and hardware.slnf are on the
+        run-alone list in CLAUDE.md, so adding the wave's projects in one story
+        is what lets the stories after it run beside each other.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>
