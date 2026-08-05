@@ -17,12 +17,25 @@
         project cannot reference a Windows-targeted one, and D47.VoiceLoop is
         Tier 0 and will want this.
 
-        No package references and no project references. It knows about paths,
-        files and JSON, all of which are in the box.
+        No project references. It knows about paths, files and JSON, and about
+        asking Windows to scramble a key.
     -->
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
+
+    <!--
+        DPAPI. Not in the shared framework on either target, so it costs a
+        package — Directory.Packages.props says what was weighed against it.
+
+        The project stays net10.0 even though the call is Windows-only, for the
+        reason above. What satisfies CA1416 is a guard at the call site rather
+        than an attribute on it; an attribute would spread to every net10.0
+        caller, and D47.Providers and D47.VoiceLoop are both net10.0.
+    -->
+    <ItemGroup>
+        <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+    </ItemGroup>
 
 </Project>

@@ -9,6 +9,21 @@
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
         <!--
+            Windows DPAPI, for the keys the Commander hands over. Microsoft's
+            own, MIT, out of the same dotnet/runtime repository as the framework
+            — but not in the shared framework, which is what makes this line
+            necessary and is the one thing
+            https://github.com/retiring-studios/directive-47/issues/221 had
+            wrong. Checked on net10.0 and net10.0-windows alike; neither
+            resolves ProtectedData without it.
+
+            The alternative was CryptProtectData through LibraryImport, which
+            takes no package and does compile. Not taken: seventy lines of
+            marshalling and freeing that we would then own, in the one class
+            holding the Commander's keys.
+        -->
+        <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.10" />
+        <!--
             The updater. MIT, no dependencies. docs/decisions.md settles why it
             is Velopack and what taking it costs: the single-file publish, in
             exchange for per-file patches and a per-user install needing no
