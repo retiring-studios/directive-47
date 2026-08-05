@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-        Tier 0 · Pure. Parsers, planners, routing, state machines, display
-        models and capability descriptors — nothing that reaches a screen, a
+        Tier 0 Â· Pure. Parsers, planners, routing, state machines, display
+        models and capability descriptors â€” nothing that reaches a screen, a
         device, a network or a clock. Every fact in here fails the same way on
         every machine, so it runs in CI on every pull request.
 
@@ -11,7 +11,7 @@
         test live" answerable; the tier is what decides which project.
 
         net10.0, not net10.0-windows, and no UseWPF. Nothing here builds a
-        visual tree — that is what makes it Tier 0 — so it does not reference
+        visual tree â€” that is what makes it Tier 0 â€” so it does not reference
         D47.TestSupport either, whose whole contents are a WPF visual tree
         walker, an STA thread pump and a capability answer.
 
@@ -37,6 +37,7 @@
         <ProjectReference Include="..\..\src\D47.Composition\D47.Composition.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
         <ProjectReference Include="..\..\src\D47.Placement\D47.Placement.csproj" />
+        <ProjectReference Include="..\..\src\D47.VoiceLoop\D47.VoiceLoop.csproj" />
     </ItemGroup>
 
 </Project>

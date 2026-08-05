@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Resources;
@@ -13,6 +15,7 @@ using D47.Data;
 using D47.Composition;
 using D47.GameOverlay;
 using D47.Help;
+using D47.VoiceLoop;
 using D47.Render;
 using D47.VrOverlay;
 
@@ -126,7 +129,22 @@ internal sealed partial class App : Application, IDisposable
     private Zoom? _zoom;
     private Overlay? _overlay;
     private Headset? _headset;
+    /// <summary>
+    /// Where the turn says what it is doing.
+    ///
+    /// <para>
+    /// Built here and not by the turn, because it outlives any one of them and
+    /// because the surfaces subscribe to it rather than to whichever turn happens
+    /// to be in flight. Nothing subscribes yet —
+    /// [#72](https://github.com/retiring-studios/directive-47/issues/72) is what
+    /// puts a status and a live log in front of the Commander.
+    /// </para>
+    /// </summary>
+    private readonly Events _turns = new();
+
     private ChosenHotkey? _hotkey;
+    private PushToTalk? _pushToTalk;
+    private Turn? _turn;
     private ForegroundWatcher? _foreground;
     private Updates? _updates;
 
@@ -261,7 +279,7 @@ internal sealed partial class App : Application, IDisposable
 
         FollowTheForeground();
         ClaimTheHotkey(settings);
-
+        ClaimPushToTalk(settings);
     }
 
     /// <summary>
@@ -386,6 +404,92 @@ internal sealed partial class App : Application, IDisposable
     /// <param name="settings">What the Commander chose.</param>
     private void ClaimTheHotkey(SettingsStore settings) =>
         _hotkey = ChosenHotkey.From(settings, _log.Warning, () => _overlay?.Toggle());
+
+    /// <summary>
+    /// Claims the combination the Commander holds to talk, and builds the turn
+    /// that holding it runs.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Stand-ins behind all four contracts, which is what stage B of
+    /// [#1](https://github.com/retiring-studios/directive-47/issues/1) is: the
+    /// shape wired up and observable a wave before there is a microphone, a
+    /// model or a voice. Each of the three stories that follow is a swap here
+    /// and nothing else.
+    /// </para>
+    /// <para>
+    /// Losing the combination costs the same as losing the overlay's and is
+    /// handled the same way — recorded, and the application carries on. Every
+    /// other surface still works, and a Commander pressing a dead key has no
+    /// other way to find out why.
+    /// </para>
+    /// </remarks>
+    /// <param name="settings">What the Commander chose.</param>
+    private void ClaimPushToTalk(SettingsStore settings)
+    {
+        _turn = new Turn(
+            new StandIns.Microphone(),
+            new StandIns.Transcriber(),
+            new StandIns.Model(),
+            new StandIns.Voice(_log.Warning),
+            _turns);
+
+        _pushToTalk = PushToTalk.From(
+            settings, _log.Warning, () => _turn?.Held(), RunTheTurn);
+    }
+
+    /// <summary>
+    /// Runs the rest of the turn, off the thread the key came up on.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The release arrives on the UI thread, because that is where the message
+    /// loop is, and "no stage blocks the UI thread" is an invariant of
+    /// [#7](https://github.com/retiring-studios/directive-47/issues/7). So the
+    /// turn is started rather than awaited, and what would have been an
+    /// unobserved exception is written down instead.
+    /// </para>
+    /// <para>
+    /// Catching everything, deliberately. A turn is driven by whatever is behind
+    /// the four contracts, and by stage C that means a microphone, a network and
+    /// somebody else's service — none of which is worth ending the application
+    /// over.
+    /// <c>VoiceLoop_OnAProviderFailure_ReturnsToIdleWithoutCrashing</c> is the
+    /// story that makes that a fact rather than a catch block; this is what
+    /// stops it being a crash in the meantime.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification =
+            "Nothing is above this to catch anything. The turn runs on a task nobody awaits, "
+            + "so an exception that escapes is unobserved rather than handled, and by stage C "
+            + "the four contracts reach a microphone, a network and somebody else's service. "
+            + "None of those failing is worth ending the application over.")]
+    private void RunTheTurn()
+    {
+        Turn? turn = _turn;
+
+        if (turn is null)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await turn.Released(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception failed)
+            {
+                _log.Warning($"The turn ended badly: {failed.Message}");
+            }
+        });
+    }
 
     /// <summary>
     /// What every surface shows.
@@ -567,6 +671,9 @@ internal sealed partial class App : Application, IDisposable
         // leaving anything behind.
         _hotkey?.Dispose();
         _hotkey = null;
+
+        _pushToTalk?.Dispose();
+        _pushToTalk = null;
 
         // The hook holds a pointer to a callback of ours. Leaving it installed
         // past our own lifetime is how a shutdown turns into a crash.

@@ -103,6 +103,46 @@ public class HotkeyTests : DesktopTest
     }
 
     [Fact]
+    public void Hotkey_WhenHeldAndReleased_RunsBothOfWhatItWasGiven()
+    {
+        // Push-to-talk is the reason the release exists. The overlay's toggle
+        // only ever cared that the combination arrived, and the watching for the
+        // key coming up was there to re-arm the claim rather than to tell
+        // anybody — so this is the fact that the second callback is wired to the
+        // moment the Commander stops talking, and not to the moment they start.
+        using var pump = new MessagePump();
+        using var down = new ManualResetEventSlim();
+        using var up = new ManualResetEventSlim();
+
+        Hotkey hotkey = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), down.Set, up.Set)
+                .Or(_recorded.Add))
+            ?? throw new InvalidOperationException(
+                $"{Spelled} is already owned on this machine, so this test cannot run.");
+
+        try
+        {
+            Input.Hold(Held, Tapped);
+
+            down.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
+                "holding the combination should have fired the press");
+
+            up.IsSet.ShouldBeFalse("the key is still down, so nothing has been released yet");
+
+            Input.LetGo(Held, Tapped);
+
+            up.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
+                "letting go should have fired the release");
+        }
+        finally
+        {
+            // Whatever happened above, so a failure part way through does not
+            // leave the combination claimed for the rest of the run.
+            Input.LetGo(Held, Tapped);
+            pump.Invoke(hotkey.Dispose);
+        }
+    }
+
+    [Fact]
     public void Hotkey_WhenTappedTwice_FiresTwice()
     {
         // The case the maintainer found by using it: quick repeats did nothing,
