@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using D47.Data;
 using D47.Render;
@@ -112,6 +113,49 @@ internal sealed class SettingsPage : StackPanel
         _changed(setting, value);
     }
 
+    /// <summary>
+    /// Takes a combination the way the Commander pressed it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// On the key going down rather than on losing focus, which is how the rest
+    /// of the page works. A combination has no half-way state: it is complete
+    /// the moment a key that is not a modifier goes down with whatever
+    /// modifiers are being held.
+    ///
+    /// <para>
+    /// A modifier on its own is not one. Holding <c>Ctrl</c> on the way to
+    /// <c>Ctrl</c>+<c>Alt</c>+<c>E</c> would otherwise claim <c>Ctrl</c>, and
+    /// every combination is reached through its own modifiers going down first.
+    /// </para>
+    /// </remarks>
+    /// <param name="held">Whatever modifiers were down.</param>
+    /// <param name="pressed">The key that went down.</param>
+    internal void Pressed(ModifierKeys held, Key pressed)
+    {
+        if (IsAModifier(pressed))
+        {
+            return;
+        }
+
+        Change(ChosenHotkey.WhatItIsCalled, new Combination(held, pressed).ToString());
+    }
+
+    /// <summary>
+    /// The key itself, past the system-key wrapper WPF puts an Alt combination
+    /// in.
+    /// </summary>
+    /// <param name="pressed">What arrived.</param>
+    /// <returns>The key that was really pressed.</returns>
+    private static Key WhatWasActuallyPressed(KeyEventArgs pressed) =>
+        pressed.Key == Key.System ? pressed.SystemKey : pressed.Key;
+
+    private static bool IsAModifier(Key pressed) => pressed
+        is Key.LeftCtrl or Key.RightCtrl
+        or Key.LeftAlt or Key.RightAlt
+        or Key.LeftShift or Key.RightShift
+        or Key.LWin or Key.RWin;
+
     private static StackPanel Row(SettingsPage page, string setting, string chosen)
     {
         var label = new TextBlock
@@ -153,11 +197,26 @@ internal sealed class SettingsPage : StackPanel
         field.TextChanged += (_, _) => shipped.Visibility =
             field.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // On losing focus rather than on every keystroke. "Ctrl+Alt" is a
-        // prefix of a hotkey somebody is halfway through typing, and applying
-        // it would claim a combination they did not ask for and then release it
-        // again a keystroke later.
-        field.LostFocus += (_, _) => page._changed(setting, field.Text);
+        if (setting == ChosenHotkey.WhatItIsCalled)
+        {
+            // Captured, not typed. The alternative is teaching a parser every
+            // spelling a Commander might try — ctrl, control, Ctrl, CTRL, and
+            // the same again for every modifier — when the only speller that
+            // has to agree with the file is the one that writes it.
+            field.IsReadOnly = true;
+            field.PreviewKeyDown += (_, pressed) =>
+            {
+                pressed.Handled = true;
+                page.Pressed(Keyboard.Modifiers, WhatWasActuallyPressed(pressed));
+            };
+        }
+        else
+        {
+            // On losing focus rather than on every keystroke. A half-typed
+            // number is a number, and applying it would move the panel to a
+            // zoom nobody asked for on the way to the one they did.
+            field.LostFocus += (_, _) => page._changed(setting, field.Text);
+        }
 
         page._fields[setting] = field;
 
