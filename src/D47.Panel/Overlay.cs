@@ -50,7 +50,7 @@ internal sealed class Overlay
     /// page, the way this value is changed.
     /// </para>
     /// </summary>
-    private const string HowSeeThrough = "game overlay opacity";
+    internal const string HowSeeThrough = "game overlay opacity";
 
     /// <summary>
     /// What the store calls where the overlay was left, and how big.
@@ -112,8 +112,13 @@ internal sealed class Overlay
     /// <param name="overlays">Where an overlay comes from.</param>
     /// <param name="presented">What it should render.</param>
     /// <param name="remembered">
-    /// What the last run left behind — how see-through the overlay should be,
-    /// and eventually where it was put and what size it was left.
+    /// What the last run left behind: where the overlay was put and what size
+    /// it was left.
+    /// </param>
+    /// <param name="settings">
+    /// What the Commander chose. How see-through the overlay should be is a
+    /// setting and lives in the other file; where it happens to be sitting is
+    /// not, because there is no right answer to that until somebody drags it.
     /// </param>
     /// <param name="record">Where to note that there is no overlay, and why.</param>
     /// <param name="isTheGame">
@@ -127,18 +132,21 @@ internal sealed class Overlay
     /// </param>
     /// <returns>The overlay, or one that will quietly do nothing.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="overlays"/> or <paramref name="remembered"/> is null.
+    /// <paramref name="overlays"/>, <paramref name="remembered"/> or
+    /// <paramref name="settings"/> is null.
     /// </exception>
     internal static Overlay From(
         IGameOverlayFactory overlays,
         Presentation presented,
         DataStore remembered,
+        SettingsStore settings,
         Action<string> record,
         Func<IntPtr, bool>? isTheGame = null,
         Func<Rect>? whereTheScreensAre = null)
     {
         ArgumentNullException.ThrowIfNull(overlays);
         ArgumentNullException.ThrowIfNull(remembered);
+        ArgumentNullException.ThrowIfNull(settings);
 
         // The reason is composed here rather than asked of the factory, and the
         // contract is what makes that honest: null from Create means the
@@ -162,7 +170,7 @@ internal sealed class Overlay
             // Before it is ever shown. Setting either of these afterwards would
             // be a solid rectangle at the game's corner for as long as the first
             // frame lasts, which is the thing they are both for.
-            surface.Opacity = HowSeeThroughToBe(remembered, record);
+            surface.Opacity = HowSeeThroughToBe(settings, record);
 
             if (WhereItWasLeft(remembered, record, whereTheScreensAre ?? Desktop.Everything)
                 is { } place)
@@ -199,13 +207,13 @@ internal sealed class Overlay
     /// purpose is to be adjusted.
     /// </para>
     /// </remarks>
-    /// <param name="remembered">What the last run left behind.</param>
+    /// <param name="settings">What the Commander chose.</param>
     /// <param name="record">Where to note a setting that could not be used.</param>
     /// <returns>The opacity to use.</returns>
     private static double HowSeeThroughToBe(
-        DataStore remembered, Action<string> record)
+        SettingsStore settings, Action<string> record)
     {
-        if (remembered.Read(HowSeeThrough) is not { } written)
+        if (settings.Read(HowSeeThrough) is not { } written)
         {
             return SeeThroughEnough;
         }

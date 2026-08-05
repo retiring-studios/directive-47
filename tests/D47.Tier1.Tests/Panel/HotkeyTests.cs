@@ -186,10 +186,10 @@ public class HotkeyTests : DesktopTest
         using var remembered = new TemporaryStore();
         using var arrived = new ManualResetEventSlim();
 
-        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+        remembered.Settings().Write(WhatItIsCalled, AlsoSpelled);
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, arrived.Set));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, arrived.Set));
 
         try
         {
@@ -218,10 +218,10 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+        remembered.Settings().Write(WhatItIsCalled, AlsoSpelled);
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, () => { }));
 
         try
         {
@@ -250,10 +250,10 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+        remembered.Settings().Write(WhatItIsCalled, AlsoSpelled);
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, () => { }));
 
         try
         {
@@ -261,7 +261,7 @@ public class HotkeyTests : DesktopTest
                 .ShouldNotBeNull();
 
             // A second open is the next run.
-            remembered.Open().Read(WhatItIsCalled).ShouldBe(Spelled);
+            remembered.Settings().Read(WhatItIsCalled).ShouldBe(Spelled);
         }
         finally
         {
@@ -279,14 +279,14 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+        remembered.Settings().Write(WhatItIsCalled, AlsoSpelled);
 
         Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), () => { }).Or(_recorded.Add))
             ?? throw new InvalidOperationException(
                 $"{Spelled} is already owned on this machine, so this test cannot run.");
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, () => { }));
 
         List<string> toldTheCommander = [];
 
@@ -318,14 +318,14 @@ public class HotkeyTests : DesktopTest
         using var remembered = new TemporaryStore();
         using var arrived = new ManualResetEventSlim();
 
-        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+        remembered.Settings().Write(WhatItIsCalled, AlsoSpelled);
 
         Hotkey owner = pump.Invoke(() => Hotkey.TryRegister(new Combination(Held, Tapped), () => { }).Or(_recorded.Add))
             ?? throw new InvalidOperationException(
                 $"{Spelled} is already owned on this machine, so this test cannot run.");
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, arrived.Set));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, arrived.Set));
 
         try
         {
@@ -336,7 +336,7 @@ public class HotkeyTests : DesktopTest
             arrived.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
                 $"{AlsoSpelled} should still work after a refused attempt to change it");
 
-            remembered.Open().Read(WhatItIsCalled).ShouldBe(
+            remembered.Settings().Read(WhatItIsCalled).ShouldBe(
                 AlsoSpelled, "a combination that was never claimed is not worth remembering");
         }
         finally
@@ -357,10 +357,10 @@ public class HotkeyTests : DesktopTest
         using var pump = new MessagePump();
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, Spelled);
+        remembered.Settings().Write(WhatItIsCalled, Spelled);
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, () => { }));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, () => { }));
 
         try
         {
@@ -384,7 +384,7 @@ public class HotkeyTests : DesktopTest
         using var remembered = new TemporaryStore();
         using var arrived = new ManualResetEventSlim();
 
-        remembered.Open().Write(WhatItIsCalled, AlsoSpelled);
+        remembered.Settings().Write(WhatItIsCalled, AlsoSpelled);
 
         Hotkey squatter = pump.Invoke(
                 () => Hotkey.TryRegister(new Combination(Held, AlsoTapped), () => { }).Or(_recorded.Add))
@@ -392,7 +392,7 @@ public class HotkeyTests : DesktopTest
                 $"{AlsoSpelled} is already owned on this machine, so this test cannot run.");
 
         using ChosenHotkey chosen = pump.Invoke(
-            () => ChosenHotkey.From(remembered.Open(), _recorded.Add, arrived.Set));
+            () => ChosenHotkey.From(remembered.Settings(), _recorded.Add, arrived.Set));
 
         try
         {

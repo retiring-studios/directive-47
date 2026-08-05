@@ -39,10 +39,36 @@ internal sealed class TemporaryStore : IDisposable
     internal DataStore Open() => DataStore.OpenAt(File, _recorded.Add);
 
     /// <summary>
+    /// Where the settings file is: the same folder, the way the two sit on a
+    /// real machine.
+    /// </summary>
+    internal string SettingsFile => _folder.File("settings.json");
+
+    /// <summary>
+    /// Opens the settings, against the application's own schema.
+    ///
+    /// <para>
+    /// The real list of keys rather than one invented per test. A test that
+    /// declares its own schema keeps passing after somebody adds a setting and
+    /// forgets to register it.
+    /// </para>
+    /// </summary>
+    /// <returns>The settings store.</returns>
+    internal SettingsStore Settings() =>
+        SettingsStore.OpenAt(SettingsFile, D47.Panel.Settings.Known, _recorded.Add);
+
+    /// <summary>
     /// Puts something in the store's place that is not a store.
     /// </summary>
     /// <param name="content">Whatever the file should hold instead.</param>
     internal void Corrupt(string content) => System.IO.File.WriteAllText(File, content);
+
+    /// <summary>
+    /// Puts a settings file in place, whatever it says.
+    /// </summary>
+    /// <param name="content">Whatever the file should hold.</param>
+    internal void WriteSettings(string content) =>
+        System.IO.File.WriteAllText(SettingsFile, content);
 
     /// <summary>
     /// Every file in the folder, so a test can say what was left behind as well

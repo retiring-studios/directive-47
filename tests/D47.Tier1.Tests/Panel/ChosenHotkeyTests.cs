@@ -51,7 +51,7 @@ public class ChosenHotkeyTests
     {
         using var remembered = new TemporaryStore();
 
-        Combination chosen = ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        Combination chosen = ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         chosen.ToString().ShouldBe(TheDefault);
 
@@ -66,11 +66,11 @@ public class ChosenHotkeyTests
     {
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, "Ctrl+Shift+F9");
+        remembered.Settings().Write(WhatItIsCalled, "Ctrl+Shift+F9");
 
         // A second open is the next run. A chosen combination is only worth
         // having if it survives one.
-        Combination chosen = ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        Combination chosen = ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         chosen.Modifiers.ShouldBe(ModifierKeys.Control | ModifierKeys.Shift);
         chosen.Key.ShouldBe(Key.F9);
@@ -86,9 +86,9 @@ public class ChosenHotkeyTests
         // the first time the application writes it down again.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, "shift+CTRL+f9");
+        remembered.Settings().Write(WhatItIsCalled, "shift+CTRL+f9");
 
-        Combination chosen = ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        Combination chosen = ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         chosen.ToString().ShouldBe("Ctrl+Shift+F9");
         _recorded.ShouldBeEmpty();
@@ -113,9 +113,9 @@ public class ChosenHotkeyTests
         // the argument the overlay's opacity already settled.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, nonsense);
+        remembered.Settings().Write(WhatItIsCalled, nonsense);
 
-        Combination chosen = ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        Combination chosen = ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         chosen.ToString().ShouldBe(TheDefault);
 
@@ -133,9 +133,9 @@ public class ChosenHotkeyTests
         // the number behind it.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, "Ctrl+Alt+1");
+        remembered.Settings().Write(WhatItIsCalled, "Ctrl+Alt+1");
 
-        Combination chosen = ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        Combination chosen = ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         chosen.ToString().ShouldBe(TheDefault);
         _recorded.ShouldHaveSingleItem().ShouldContain(WhatItIsCalled);
@@ -151,9 +151,9 @@ public class ChosenHotkeyTests
         // is not what the setting means.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, "D");
+        remembered.Settings().Write(WhatItIsCalled, "D");
 
-        Combination chosen = ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        Combination chosen = ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         chosen.ToString().ShouldBe(TheDefault);
         _recorded.ShouldHaveSingleItem().ShouldContain(WhatItIsCalled);
@@ -166,9 +166,9 @@ public class ChosenHotkeyTests
         // cannot identify.
         using var remembered = new TemporaryStore();
 
-        remembered.Open().Write(WhatItIsCalled, "Hyper+D");
+        remembered.Settings().Write(WhatItIsCalled, "Hyper+D");
 
-        ChosenHotkey.ChosenIn(remembered.Open(), _recorded.Add);
+        ChosenHotkey.ChosenIn(remembered.Settings(), _recorded.Add);
 
         string said = _recorded.ShouldHaveSingleItem();
 

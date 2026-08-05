@@ -45,7 +45,8 @@ internal static class OpenedPanel
 
         return StaThread.Run(() =>
         {
-            var zoom = new Zoom(DataStore.OpenAt(file, Ignored), Ignored);
+            var zoom = new Zoom(
+                    SettingsStore.OpenAt(file, Settings.Known, Ignored), Ignored);
             var panel = new MainWindow(
                     Presentation.Of(Fixtures.HelpsAnswer()),
                     zoom,

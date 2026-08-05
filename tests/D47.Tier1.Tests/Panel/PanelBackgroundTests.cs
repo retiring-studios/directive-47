@@ -50,7 +50,8 @@ public class PanelBackgroundTests
 
         string named = StaThread.Run(() =>
         {
-            var zoom = new Zoom(DataStore.OpenAt(file, _ => { }), _ => { });
+            var zoom = new Zoom(
+                SettingsStore.OpenAt(file, Settings.Known, _ => { }), _ => { });
 
             object background = new MainWindow(
                 Presentation.Of(Fixtures.HelpsAnswer()),

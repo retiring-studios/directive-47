@@ -51,18 +51,6 @@ public sealed class DataStore
     private const string FileName = "remembered.json";
 
     /// <summary>
-    /// Where a half-written store lives for the moment it exists.
-    ///
-    /// <para>
-    /// Beside the real file rather than in the temporary folder, because the
-    /// move at the end of a save is only atomic within one volume. A temporary
-    /// folder on another drive would turn the one step that must not be
-    /// interruptible into a copy and a delete.
-    /// </para>
-    /// </summary>
-    private const string WhileWriting = ".writing";
-
-    /// <summary>
     /// What to say on a machine that cannot keep a key. The sentence is shared
     /// even though the guard that throws it cannot be — see
     /// <see cref="Scrambled"/>.
@@ -171,17 +159,33 @@ public sealed class DataStore
     {
         _remembered[key] = value;
 
-        Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
+        DurableFile.Write(_file, JsonSerializer.Serialize(_remembered, Layout));
+    }
 
-        // Somewhere else first, then one move. Writing over the real file in
-        // place means that anything interrupting the write — the machine going
-        // down, the process being killed — leaves a half-written store, which is
-        // precisely the unreadable file this class has to have an answer for.
-        // The cheapest way to handle that case is to stop causing it.
-        string half = _file + WhileWriting;
+    /// <summary>
+    /// Stops remembering something, and saves at once.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Here for <see cref="SettingsStore.MigrateFrom"/>, which is the only
+    /// caller and is itself temporary. A value moved to the settings file and
+    /// left here as well is a second answer to the same question, and the next
+    /// person to read this file finds it.
+    ///
+    /// <para>
+    /// Forgetting something that was never here is not an error. The caller's
+    /// intent is that it is gone afterwards, and it is.
+    /// </para>
+    /// </remarks>
+    /// <param name="key">The name to stop remembering.</param>
+    public void Forget(string key)
+    {
+        if (!_remembered.Remove(key))
+        {
+            return;
+        }
 
-        File.WriteAllText(half, JsonSerializer.Serialize(_remembered, Layout));
-        File.Move(half, _file, overwrite: true);
+        DurableFile.Write(_file, JsonSerializer.Serialize(_remembered, Layout));
     }
 
     /// <summary>

@@ -40,7 +40,7 @@ internal sealed class ChosenHotkey : IDisposable
     /// until there is a settings page, the way this value is changed.
     /// </para>
     /// </summary>
-    private const string WhatItIsCalled = "overlay hotkey";
+    internal const string WhatItIsCalled = "overlay hotkey";
 
     /// <summary>
     /// Where it starts on a machine that has never been told otherwise, and
@@ -55,7 +55,7 @@ internal sealed class ChosenHotkey : IDisposable
     private static readonly Combination Familiar =
         new(ModifierKeys.Control | ModifierKeys.Alt, Key.D);
 
-    private readonly DataStore _remembered;
+    private readonly SettingsStore _settings;
     private readonly Action<string> _record;
     private readonly Action _pressed;
 
@@ -64,13 +64,13 @@ internal sealed class ChosenHotkey : IDisposable
     private bool _disposed;
 
     private ChosenHotkey(
-        DataStore remembered,
+        SettingsStore settings,
         Action<string> record,
         Action pressed,
         Combination inForce,
         Hotkey? claimed)
     {
-        _remembered = remembered;
+        _settings = settings;
         _record = record;
         _pressed = pressed;
         _inForce = inForce;
@@ -96,19 +96,19 @@ internal sealed class ChosenHotkey : IDisposable
     /// line nobody looks at twice.
     /// </para>
     /// </remarks>
-    /// <param name="remembered">What the last run left behind.</param>
+    /// <param name="settings">What the Commander chose.</param>
     /// <param name="record">Where to note a choice that could not be used.</param>
     /// <returns>The combination to claim.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="remembered"/> or <paramref name="record"/> is null.
+    /// <paramref name="settings"/> or <paramref name="record"/> is null.
     /// </exception>
     internal static Combination ChosenIn(
-        DataStore remembered, Action<string> record)
+        SettingsStore settings, Action<string> record)
     {
-        ArgumentNullException.ThrowIfNull(remembered);
+        ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(record);
 
-        if (remembered.Read(WhatItIsCalled) is not { } written)
+        if (settings.Read(WhatItIsCalled) is not { } written)
         {
             return Familiar;
         }
@@ -134,7 +134,7 @@ internal sealed class ChosenHotkey : IDisposable
     /// that thread, so <see cref="Rebind"/> and <see cref="Dispose"/> have to
     /// come back to it.
     /// </remarks>
-    /// <param name="remembered">What the last run left behind.</param>
+    /// <param name="settings">What the Commander chose.</param>
     /// <param name="record">Where to note anything it had to carry on without.</param>
     /// <param name="pressed">What to do when the combination arrives.</param>
     /// <returns>The claim, which the caller owns and must dispose.</returns>
@@ -142,18 +142,18 @@ internal sealed class ChosenHotkey : IDisposable
     /// Any argument is null.
     /// </exception>
     internal static ChosenHotkey From(
-        DataStore remembered, Action<string> record, Action pressed)
+        SettingsStore settings, Action<string> record, Action pressed)
     {
         ArgumentNullException.ThrowIfNull(pressed);
 
-        Combination chosen = ChosenIn(remembered, record);
+        Combination chosen = ChosenIn(settings, record);
 
         // Unwrapping is what writes the reason down, so a claim nobody could
         // have cannot be lost silently here. Nobody is watching at startup —
         // that is the difference between this and Rebind, which hands the
         // reason back to whoever asked.
         return new ChosenHotkey(
-            remembered,
+            settings,
             record,
             pressed,
             chosen,
@@ -242,7 +242,7 @@ internal sealed class ChosenHotkey : IDisposable
         _claimed = claimed;
         _inForce = wanted;
 
-        _remembered.Write(WhatItIsCalled, wanted.ToString());
+        _settings.Write(WhatItIsCalled, wanted.ToString());
 
         return Perhaps<Combination>.Of(wanted);
     }
