@@ -156,7 +156,14 @@ internal partial class MainWindow : Window
     /// </remarks>
     private void DrawAtTheZoom()
     {
-        View.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
+        // Whatever the surface is showing, not the render by name. The settings
+        // page is a page in the panel, so the panel's zoom is its zoom too —
+        // scaling View while the page was in there left the one thing a
+        // Commander had just changed the zoom on as the only thing unaffected.
+        if (Surface.Content is FrameworkElement showing)
+        {
+            showing.LayoutTransform = new ScaleTransform(_zoom.Factor, _zoom.Factor);
+        }
 
         // The strip says where the zoom is and stops offering the direction it
         // cannot go. A control that stays enabled at the end of the range does
@@ -165,6 +172,67 @@ internal partial class MainWindow : Window
         Bigger.IsEnabled = _zoom.CanGoIn;
         Smaller.IsEnabled = _zoom.CanGoOut;
     }
+
+    /// <summary>
+    /// Asked for the settings page, and asked again to put it away.
+    ///
+    /// <para>
+    /// An event rather than the window building the page itself. What a
+    /// settings page needs — the store, and somewhere to send a change — is
+    /// the composition root's, and a window that reached for either would be a
+    /// second place that knows how the application is assembled.
+    /// </para>
+    /// </summary>
+    internal event Action? SettingsAsked;
+
+    /// <summary>
+    /// Puts a page in the panel in place of whatever it was showing.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Two pages today and no more built than that: what the panel shows, and
+    /// settings. [#72](https://github.com/retiring-studios/directive-47/issues/72)
+    /// assumes there are pages — its cancel button works from any of them — so
+    /// this is the seam that story arrives at rather than a general one built
+    /// in advance.
+    /// </remarks>
+    /// <param name="page">What to show, or null to go back to the render.</param>
+    internal void Showing(UIElement? page)
+    {
+        Surface.Content = page ?? View;
+
+        // The window is as big as what is in it, and a page is not the size of
+        // a render. Measured before the zoom goes on, because FitTo puts it
+        // back — the same unzoomed number the render's own size is.
+        Size wanted = page is null ? _controls : WhatItWants(page);
+
+        // The zoom is a property of the panel rather than of a page, so it
+        // follows whatever is in there. Applied here as well as at startup
+        // because the page arrives after the window did.
+        DrawAtTheZoom();
+
+        FitTo(wanted);
+    }
+
+    /// <summary>
+    /// Whether the panel is on its settings page right now.
+    /// </summary>
+    internal bool ShowingSettings => !ReferenceEquals(Surface.Content, View);
+
+    /// <summary>
+    /// What the surface is showing, so a test can ask what the zoom did to it.
+    /// </summary>
+    internal FrameworkElement? OnDisplay => Surface.Content as FrameworkElement;
+
+    /// <summary>
+    /// What a page is drawn on. The window names no background of its own —
+    /// see PanelBackgroundTests and #100 — so this is where the render's brush
+    /// reaches everything that is not the render.
+    /// </summary>
+    internal Brush SurfaceBackground => Surface.Background;
+
+    private void ShowOrHideSettings(object sender, RoutedEventArgs e) =>
+        SettingsAsked?.Invoke();
 
     /// <summary>
     /// The strip's own way in.
@@ -245,6 +313,29 @@ internal partial class MainWindow : Window
 
         TakeAwayMaximize();
 
+        FitTo(_controls);
+    }
+
+    /// <summary>
+    /// Sizes the window to what is in it, once, on being asked.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Called at startup and again whenever the page changes, which is the two
+    /// moments the content is a different size through no act of the
+    /// Commander's. Not <c>SizeToContent</c>: that refits on every change, so
+    /// the size a Commander dragged the window to stops being theirs the first
+    /// time anything inside moves. The note in the XAML records that it was
+    /// tried and why turning it off again does not work.
+    /// </remarks>
+    /// <param name="controls">How big the content wants to be, before zoom.</param>
+    private void FitTo(Size controls)
+    {
+        if (PresentationSource.FromVisual(this) is null)
+        {
+            return;
+        }
+
         DpiScale scale = VisualTreeHelper.GetDpi(this);
         Size frame = TheFrameWindowsDraws();
 
@@ -252,7 +343,7 @@ internal partial class MainWindow : Window
         // last left drawing at is a panel that fits what is actually in it,
         // which is what #96 asked for — fitting it to a render nobody is being
         // shown would open every zoomed panel scrolling.
-        double across = _controls.Width * _zoom.Factor;
+        double across = controls.Width * _zoom.Factor;
 
         // Plus the strip, which is one of the controls in the window and so is
         // one of the things it is the size of. Measured rather than declared:
@@ -260,10 +351,36 @@ internal partial class MainWindow : Window
         // window's to predict.
         ZoomStrip.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
-        double down = (_controls.Height * _zoom.Factor) + ZoomStrip.DesiredSize.Height;
+        double down = (controls.Height * _zoom.Factor) + ZoomStrip.DesiredSize.Height;
 
         Width = (WholePixels(across, scale.DpiScaleX) + frame.Width) / scale.DpiScaleX;
         Height = (WholePixels(down, scale.DpiScaleY) + frame.Height) / scale.DpiScaleY;
+    }
+
+    /// <summary>
+    /// How big something wants to be with the zoom taken off, which is what
+    /// <see cref="FitTo"/> expects and what <c>_controls</c> already holds for
+    /// the render.
+    /// </summary>
+    /// <param name="content">Whatever the surface is showing.</param>
+    /// <returns>Its unzoomed desired size.</returns>
+    private static Size WhatItWants(object content)
+    {
+        if (content is not FrameworkElement element)
+        {
+            return default;
+        }
+
+        Transform zoomed = element.LayoutTransform;
+
+        element.LayoutTransform = Transform.Identity;
+        element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        Size wanted = element.DesiredSize;
+
+        element.LayoutTransform = zoomed;
+
+        return wanted;
     }
 
     /// <summary>

@@ -1,3 +1,6 @@
+using System;
+using System.Globalization;
+
 namespace D47.Panel;
 
 /// <summary>
@@ -37,4 +40,35 @@ internal static class Settings
         Overlay.HowSeeThrough,
         Zoom.HowBig,
     ];
+
+    /// <summary>
+    /// What a setting is when the Commander has not chosen otherwise, written
+    /// the way the file would write it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Taken from each consumer's own constant rather than restated here. The
+    /// defaults live with the code that falls back to them — that is what
+    /// "defaults are never rewritten, overrides are a separate layer" means in
+    /// practice — and a second copy for the settings page to show would be a
+    /// second thing to keep in step.
+    ///
+    /// <para>
+    /// The page shows these behind an empty box rather than in it. A default
+    /// sitting in the box as text is a value the Commander can commit by
+    /// tabbing past it, which would write the shipped answer into the file as
+    /// an override and make the two layers one.
+    /// </para>
+    /// </remarks>
+    /// <param name="setting">The setting's key.</param>
+    /// <returns>The default, or empty for a setting that has none.</returns>
+    internal static string DefaultFor(string setting) => setting switch
+    {
+        ChosenHotkey.WhatItIsCalled => ChosenHotkey.Familiar.ToString(),
+        Overlay.HowSeeThrough =>
+            Overlay.SeeThroughEnough.ToString(CultureInfo.InvariantCulture),
+        Zoom.HowBig =>
+            Math.Round(Zoom.LifeSize * 100).ToString(CultureInfo.InvariantCulture),
+        _ => string.Empty,
+    };
 }

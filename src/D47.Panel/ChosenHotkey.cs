@@ -52,7 +52,7 @@ internal sealed class ChosenHotkey : IDisposable
     /// never asked for one.
     /// </para>
     /// </summary>
-    private static readonly Combination Familiar =
+    internal static readonly Combination Familiar =
         new(ModifierKeys.Control | ModifierKeys.Alt, Key.D);
 
     private readonly SettingsStore _settings;
