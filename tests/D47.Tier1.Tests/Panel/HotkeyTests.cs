@@ -261,7 +261,7 @@ public class HotkeyTests : DesktopTest
                 .ShouldNotBeNull();
 
             // A second open is the next run.
-            remembered.Open().Read(WhatItIsCalled).ShouldBe(Spelled);
+            remembered.Settings().Read(WhatItIsCalled).ShouldBe(Spelled);
         }
         finally
         {
@@ -336,7 +336,7 @@ public class HotkeyTests : DesktopTest
             arrived.Wait(LongEnoughToArrive, TestContext.Current.CancellationToken).ShouldBeTrue(
                 $"{AlsoSpelled} should still work after a refused attempt to change it");
 
-            remembered.Open().Read(WhatItIsCalled).ShouldBe(
+            remembered.Settings().Read(WhatItIsCalled).ShouldBe(
                 AlsoSpelled, "a combination that was never claimed is not worth remembering");
         }
         finally
