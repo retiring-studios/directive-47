@@ -97,14 +97,24 @@ points at.
 2. Edit the `<Version>` literal in `Directory.Build.props`. `P` bumps the patch;
    `M` bumps the minor and resets the patch to zero.
 3. Commit that edit on its own.
-4. Tag the commit that carries the version and push both:
-
-   ```powershell
-   git tag v0.1.1
-   ```
+4. Push it, then tag the commit that carries it:
 
    ```powershell
    git push origin main
+   ```
+
+   **A bare `git tag v0.1.1` fails here.** `tag.gpgsign` is true, so every tag
+   is annotated and signed, and an annotated tag with no message gets
+   `fatal: no tag message?` — after which the push fails too, with
+   `src refspec v0.1.1 does not match any`, because no tag was created. Give it
+   a message. Multi-line, so through the Bash tool with a heredoc rather than
+   PowerShell:
+
+   ```bash
+   git tag -m "Directive 47 0.1.1
+
+   One line on why this one was cut.
+   " v0.1.1
    ```
 
    ```powershell
@@ -114,6 +124,12 @@ points at.
    The tag must point at the commit whose `Directory.Build.props` matches it.
    The release job compares the two and throws if they disagree, so a tag pushed
    before the bump lands fails the run rather than releasing the wrong number.
+
+   **Pushing `main` directly works.** The remote answers `Required status check
+   "Build, test and publish" is expected`, which reads like a rejection and is
+   not — it is GitHub noting the check has not reported on that commit yet. The
+   push has already succeeded. Check `git log origin/main` before believing it
+   failed and inventing a branch to work around it.
 
 5. Watch the run and report the release URL.
 
