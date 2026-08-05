@@ -13,7 +13,7 @@ first-class surface, not an afterthought.
 |---|---|
 | `D47.slnx` | Solution, at the repo root |
 | `src/` | Production projects, `D47.*` |
-| `tests/` | One `.Tests.csproj` per production project, plus `D47.TestSupport` for machinery more than one of them needs |
+| `tests/` | One `.Tests.csproj` per tier — `D47.Tier0.Tests` through `D47.Tier3.Tests`, a folder per production project inside each — plus `D47.TestSupport` for machinery more than one of them needs |
 | `assets/` | Icons, images, audio, other media |
 | `docs/` | `decisions.md` and anything else written down |
 | `scripts/` | Provisioning, local automation, and checks CI runs |
@@ -23,10 +23,14 @@ disk. Every path in it exists.
 
 ## Building
 
-`dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI runs — every
-project that does not need real hardware. `hardware.slnf` selects the dev-PC-only
-projects, currently `D47.GameOverlay.Tests`, which needs Elite running, and
-`D47.VrOverlay.HardwareTests`, which needs SteamVR.
+`dotnet build` / `dotnet test` as usual. `ci.slnf` is everything CI **tests** —
+`D47.Tier0.Tests` and `D47.Tier1.Tests`, which need no real hardware.
+`hardware.slnf` selects the dev-PC-only projects: `D47.Tier2.Tests`, which needs
+SteamVR, and `D47.Tier3.Tests`, which needs Elite running.
+
+**CI builds the whole solution and tests only `ci.slnf`.** Building the filter
+alone meant nothing ever compiled Tier 2 or Tier 3, and both sat broken through
+a rename until somebody next picked up the headset.
 
 **CI is Windows only.** Directive 47 is a Windows product, so a Linux job was
 proving a portability claim nothing depends on, and Windows is what lets WPF

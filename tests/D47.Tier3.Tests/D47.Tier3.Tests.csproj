@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 3 · Game. Everything in here needs Elite Dangerous running, in
+        borderless windowed mode, so it is in hardware.slnf and in no other
+        filter. No hosted runner has a game on it.
+
+        One project for the tier rather than one per production project. A
+        folder per production project inside it is what keeps "where does this
+        test live" answerable; the tier is what decides which project.
+
+        These throw when Elite is not running rather than skipping, because
+        there is no stand-in for the game that would make their claims mean
+        anything — so a skip would be a green build that checked nothing, which
+        is the one result worse than a red one.
+
+        UseWPF because the overlay it drives is a WPF window and the tests build
+        one. D47.Help is referenced so the overlay is fed a real capability's
+        answer rather than a hand-built stand-in.
+
+        D47.Panel is referenced for its executable rather than for its types,
+        which are internal and stay that way. Referencing it is what puts
+        D47.Panel.exe beside these tests, and the end-to-end test starts that
+        exe as a process — the only way to assert that the composition root
+        wires the parts together, and the only way to assert that the overlay
+        leaves the foreground alone, since a test runner holds no foreground to
+        lose.
+
+        xUnit v3, not v2 — the SDK template still scaffolds v2, and v3 test
+        projects are executables.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.GameOverlay\D47.GameOverlay.csproj" />
+        <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
+        <ProjectReference Include="..\..\src\D47.Panel\D47.Panel.csproj" />
+        <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
+    </ItemGroup>
+
+</Project>

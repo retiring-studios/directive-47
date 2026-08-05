@@ -10,15 +10,10 @@
     <Project Path="src/D47.VrOverlay/D47.VrOverlay.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/D47.Capabilities.Tests/D47.Capabilities.Tests.csproj" />
-    <Project Path="tests/D47.GameOverlay.Tests/D47.GameOverlay.Tests.csproj" />
-    <Project Path="tests/D47.Help.Tests/D47.Help.Tests.csproj" />
-    <Project Path="tests/D47.Journal.Tests/D47.Journal.Tests.csproj" />
-    <Project Path="tests/D47.Panel.Tests/D47.Panel.Tests.csproj" />
-    <Project Path="tests/D47.Placement.Tests/D47.Placement.Tests.csproj" />
-    <Project Path="tests/D47.Render.Tests/D47.Render.Tests.csproj" />
     <Project Path="tests/D47.TestSupport/D47.TestSupport.csproj" />
-    <Project Path="tests/D47.VrOverlay.HardwareTests/D47.VrOverlay.HardwareTests.csproj" />
-    <Project Path="tests/D47.VrOverlay.Tests/D47.VrOverlay.Tests.csproj" />
+    <Project Path="tests/D47.Tier0.Tests/D47.Tier0.Tests.csproj" />
+    <Project Path="tests/D47.Tier1.Tests/D47.Tier1.Tests.csproj" />
+    <Project Path="tests/D47.Tier2.Tests/D47.Tier2.Tests.csproj" />
+    <Project Path="tests/D47.Tier3.Tests/D47.Tier3.Tests.csproj" />
   </Folder>
 </Solution>

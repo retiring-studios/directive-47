@@ -4,8 +4,8 @@
     "projects": [
       "src\\D47.GameOverlay\\D47.GameOverlay.csproj",
       "src\\D47.VrOverlay\\D47.VrOverlay.csproj",
-      "tests\\D47.GameOverlay.Tests\\D47.GameOverlay.Tests.csproj",
-      "tests\\D47.VrOverlay.HardwareTests\\D47.VrOverlay.HardwareTests.csproj"
+      "tests\\D47.Tier2.Tests\\D47.Tier2.Tests.csproj",
+      "tests\\D47.Tier3.Tests\\D47.Tier3.Tests.csproj"
     ]
   }
 }

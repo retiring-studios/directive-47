@@ -70,7 +70,7 @@
         for. The render is public and needs none of it.
     -->
     <ItemGroup>
-        <InternalsVisibleTo Include="D47.Panel.Tests" />
+        <InternalsVisibleTo Include="D47.Tier1.Tests" />
     </ItemGroup>
 
     <!--

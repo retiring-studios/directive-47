@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Tier 2 · Hardware. Everything in here needs a device no hosted runner
+        has — today a running SteamVR and a headset — so it is in hardware.slnf
+        and in no other filter.
+
+        One project for the tier rather than one per production project. A
+        folder per production project inside it is what keeps "where does this
+        test live" answerable; the tier is what decides which project.
+
+        These do not skip when the runtime is absent, the same rule Tier 3
+        follows: a skip would be a green build that checked nothing. See the
+        Test tiers section of docs/decisions.md. LookAtTheOverlayTests is the
+        exception and skips by default, because it asserts nothing and holds the
+        headset for half a minute.
+
+        What needs no runtime lives in D47.Tier1.Tests — that the vendored
+        binding loads and its entry points resolve, and what the render looks
+        like as bytes before the compositor ever sees it. Both are facts a
+        hosted runner can settle, and the binding tests were written precisely
+        so that a mis-copied native binary is caught away from the machine with
+        the headset attached.
+
+        UseWPF is kept although this project compiles without it. What is in
+        here reaches WPF only through D47.VrOverlay and D47.TestSupport, both of
+        which set it, so the framework reference would arrive transitively — in
+        theory. It was tried, and it built. Whether the exe still resolves the
+        WPF assemblies at run time cannot be settled without SteamVR and a
+        headset, and a change nobody can run is not one worth making for two
+        removed lines. Drop it the next time somebody is on the dev PC with the
+        runtime up and these are green.
+
+        xUnit v3, not v2 — the SDK template still scaffolds v2, and v3 test
+        projects are executables.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.VrOverlay\D47.VrOverlay.csproj" />
+        <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -10,14 +10,9 @@
       "src\\D47.Placement\\D47.Placement.csproj",
       "src\\D47.Render\\D47.Render.csproj",
       "src\\D47.VrOverlay\\D47.VrOverlay.csproj",
-      "tests\\D47.Capabilities.Tests\\D47.Capabilities.Tests.csproj",
-      "tests\\D47.Help.Tests\\D47.Help.Tests.csproj",
-      "tests\\D47.Journal.Tests\\D47.Journal.Tests.csproj",
-      "tests\\D47.Panel.Tests\\D47.Panel.Tests.csproj",
-      "tests\\D47.Placement.Tests\\D47.Placement.Tests.csproj",
-      "tests\\D47.Render.Tests\\D47.Render.Tests.csproj",
       "tests\\D47.TestSupport\\D47.TestSupport.csproj",
-      "tests\\D47.VrOverlay.Tests\\D47.VrOverlay.Tests.csproj"
+      "tests\\D47.Tier0.Tests\\D47.Tier0.Tests.csproj",
+      "tests\\D47.Tier1.Tests\\D47.Tier1.Tests.csproj"
     ]
   }
 }
