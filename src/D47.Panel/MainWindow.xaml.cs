@@ -219,6 +219,18 @@ internal partial class MainWindow : Window
     /// </summary>
     internal bool ShowingSettings => !ReferenceEquals(Surface.Content, View);
 
+    /// <summary>
+    /// What the surface is showing, so a test can ask what the zoom did to it.
+    /// </summary>
+    internal FrameworkElement? OnDisplay => Surface.Content as FrameworkElement;
+
+    /// <summary>
+    /// What a page is drawn on. The window names no background of its own —
+    /// see PanelBackgroundTests and #100 — so this is where the render's brush
+    /// reaches everything that is not the render.
+    /// </summary>
+    internal Brush SurfaceBackground => Surface.Background;
+
     private void ShowOrHideSettings(object sender, RoutedEventArgs e) =>
         SettingsAsked?.Invoke();
 
