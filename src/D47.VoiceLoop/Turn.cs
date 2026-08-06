@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -135,6 +136,15 @@ public sealed class Turn
     /// </remarks>
     /// <param name="stopping">Abandons the turn when this is signalled.</param>
     /// <returns>When the reply has been spoken.</returns>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification =
+            "The four contracts reach a microphone, a model and somebody else's speech "
+            + "service, and there is no list of what those can throw. Nothing awaits a turn, "
+            + "so an exception leaving here is unobserved rather than handled — the whole "
+            + "point of the story is that any of them failing ends at Idle instead of "
+            + "silently ending the loop.")]
     public async Task Released(CancellationToken stopping)
     {
         CancellationTokenSource running;
@@ -156,26 +166,45 @@ public sealed class Turn
             _running = running;
         }
 
+        // Where the turn has got to, so that a failure can say which stage gave
+        // up rather than only that one did. Tracked beside Enter rather than
+        // read back off the bus: the bus is where this is told, not a place to
+        // ask.
+        TurnState reached = TurnState.Listening;
+
+        void Reach(TurnState next)
+        {
+            reached = next;
+            Enter(next);
+        }
+
         try
         {
             Captured captured = _microphone.Close();
 
-            Enter(TurnState.Transcribing);
+            Reach(TurnState.Transcribing);
             string said = await _transcriber.Transcribe(captured, running.Token)
                 .ConfigureAwait(false);
 
-            Enter(TurnState.Thinking);
+            Reach(TurnState.Thinking);
             string reply = await _model.Answer(said, running.Token).ConfigureAwait(false);
 
-            Enter(TurnState.Speaking);
+            Reach(TurnState.Speaking);
             await _voice.Speak(reply, running.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             // Swallowed rather than thrown on. A cancelled turn is what the
             // Commander asked for by tapping the key, so it is an ordinary
-            // ending — and one that threw would reach whatever handles real
-            // failures and be reported as one.
+            // ending — and one that threw would be reported as a failure.
+        }
+        catch (Exception failed)
+        {
+            // Published rather than thrown, which is what makes returning to
+            // Idle a fact rather than a catch block somewhere above. Nothing
+            // awaits a turn, so an exception leaving here is unobserved instead
+            // of handled.
+            _events.Publish(new Failed(reached, failed));
         }
         finally
         {

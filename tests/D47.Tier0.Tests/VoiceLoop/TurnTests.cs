@@ -144,6 +144,58 @@ public class TurnTests
             $"the tap should not have run a turn of its own, but got {Named(entered)}");
     }
 
+    [Theory]
+    [InlineData(TurnState.Transcribing)]
+    [InlineData(TurnState.Thinking)]
+    [InlineData(TurnState.Speaking)]
+    public async Task VoiceLoop_OnAProviderFailure_ReturnsToIdleWithoutCrashing(TurnState stage)
+    {
+        var events = new Events();
+        List<TurnEvent> published = [];
+        using IDisposable _ = events.Subscribe(published.Add);
+
+        // Every stage, not just the first. All three reach somebody else's
+        // service by stage C, and a catch that happened to sit around only one
+        // of them would pass a test written against that one.
+        var broken = new InvalidOperationException("the provider fell over");
+
+        var turn = new Turn(
+            new StandInMicrophone(),
+            stage == TurnState.Transcribing
+                ? new FailingTranscriber(broken)
+                : new StandInTranscriber("what is my fuel"),
+            stage == TurnState.Thinking
+                ? new FailingModel(broken)
+                : new StandInModel("Seventy percent."),
+            stage == TurnState.Speaking ? new FailingVoice(broken) : new StandInVoice(),
+            events);
+
+        turn.Held();
+
+        // The whole assertion, and it is the absence of something: this does not
+        // throw. Nothing awaits the real one, so an exception escaping here is
+        // unobserved rather than handled.
+        await Should.NotThrowAsync(() => turn.Released(CancellationToken.None));
+
+        // Failure is an event, not a state. It says which stage, so a surface
+        // can say more than that something went wrong.
+        published.OfType<Failed>().ShouldHaveSingleItem().During.ShouldBe(stage);
+
+        published.OfType<Failed>().Single().Why.ShouldBe(broken);
+
+        // The states, all of them, spelled out. It stops at the stage that
+        // failed and then lands on Idle — so the next hold is a turn rather than
+        // a second one layered on a surface still showing Thinking, and no sixth
+        // state was invented on the way, which is the half of the decision a
+        // Failed event on its own would not hold to.
+        TurnState[] reached =
+            [.. published.OfType<Entered>().Select(published => published.State)];
+
+        reached.ShouldBe(
+            [.. UpToAndIncluding(stage), TurnState.Idle],
+            $"the turn should stop at {stage} and end idle, but went {Named(reached)}");
+    }
+
     /// <summary>
     /// Long enough that a slow machine is not a failure, short enough that a
     /// genuine hang is a failed test rather than a hung run.
@@ -157,6 +209,30 @@ public class TurnTests
     private static string Named(IEnumerable<TurnState> entered) =>
         string.Join(" then ", entered);
 
+    /// <summary>
+    /// Every state a turn passes through on the way to one, that one included.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Written out rather than derived from the enum's order. The enum is
+    /// declared in the order a turn happens to visit its members today, and a
+    /// test that leans on that is asserting the declaration rather than the
+    /// sequence.
+    /// </remarks>
+    private static TurnState[] UpToAndIncluding(TurnState stage) => stage switch
+    {
+        TurnState.Transcribing => [TurnState.Listening, TurnState.Transcribing],
+        TurnState.Thinking =>
+            [TurnState.Listening, TurnState.Transcribing, TurnState.Thinking],
+        _ =>
+        [
+            TurnState.Listening,
+            TurnState.Transcribing,
+            TurnState.Thinking,
+            TurnState.Speaking,
+        ],
+    };
+
     private sealed class StandInMicrophone : IMicrophone
     {
         public void Open()
@@ -164,6 +240,24 @@ public class TurnTests
         }
 
         public Captured Close() => new(new byte[] { 1, 2, 3 });
+    }
+
+    private sealed class FailingTranscriber(Exception broken) : ITranscriber
+    {
+        public Task<string> Transcribe(Captured captured, CancellationToken stopping) =>
+            Task.FromException<string>(broken);
+    }
+
+    private sealed class FailingModel(Exception broken) : IModel
+    {
+        public Task<string> Answer(string said, CancellationToken stopping) =>
+            Task.FromException<string>(broken);
+    }
+
+    private sealed class FailingVoice(Exception broken) : IVoice
+    {
+        public Task Speak(string reply, CancellationToken stopping) =>
+            Task.FromException(broken);
     }
 
     /// <summary>
