@@ -315,7 +315,6 @@ The tiers drive the project layout, not just test selection.
 
 - **Tiers 2 and 3 contain adapters only, with only the logic required to
   accomplish interaction with the external system.**
-  Unrecorded: predates any traceable discussion.
 - **One `.Tests.csproj` per production `.csproj`.** The production project's
   tier determines the kind of tests in its pair. A project whose tests would
   span two tiers is two projects. Unrecorded: predates any traceable discussion.
@@ -707,7 +706,7 @@ capability to save nothing.
 - Versioning: an epic bumps **at least** the minor version, a bug fix bumps the
   patch. Whether a given epic is major or minor is decided when the epic is
   defined, not inferred from its size afterwards. The MVP epic completing is
-  1.0.0. Unrecorded: predates any traceable discussion.
+  1.0.0.
 - **The version is one literal in `Directory.Build.props`, not derived from
   tags.** Deriving it means MinVer or Nerdbank.GitVersioning, and a package
   stops for the maintainer; a number in a file does not. Hand-maintaining it
