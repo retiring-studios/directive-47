@@ -122,8 +122,9 @@ public class QuadTests
         // It is not an error and nothing downstream will call it one:
         // Quaternion.CreateFromRotationMatrix on an all-zero matrix picks the
         // largest diagonal, finds sqrt(1), and produces a unit rotation — so
-        // Turn.Of normalises it happily and Pointing answers as if a real
-        // controller were sitting at the origin facing backwards.
+        // Turn.Of normalises it happily and Chrome answers about the board
+        // built on it as if a real controller were sitting at the origin
+        // facing backwards.
         //
         // Written down because it decides where the check goes: bPoseIsValid and
         // bDeviceIsConnected have to be read in the adapter, before this is
@@ -132,7 +133,7 @@ public class QuadTests
 
         read.Position.ShouldBe(Vector3.Zero);
 
-        Should.NotThrow(() => Pointing.At(read, new Board(read, 0.5f, 0.3f)));
+        Should.NotThrow(() => Chrome.On(new Board(read, 0.5f, 0.3f), 0, 0));
     }
 
     [Fact]

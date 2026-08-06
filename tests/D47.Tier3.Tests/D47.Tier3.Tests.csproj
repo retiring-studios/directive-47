@@ -18,6 +18,11 @@
         one. D47.Help is referenced so the overlay is fed a real capability's
         answer rather than a hand-built stand-in.
 
+        D47.VrOverlay is referenced although D47.Panel already brings it in
+        transitively. What is in VrOverlay/ tests it directly, and a folder whose
+        subject arrives as somebody else's dependency is one a reference removal
+        elsewhere can break for no reason a reader here would see.
+
         D47.Panel is referenced for its executable rather than for its types,
         which are internal and stay that way. Referencing it is what puts
         D47.Panel.exe beside these tests, and the end-to-end test starts that
@@ -47,6 +52,7 @@
         <ProjectReference Include="..\..\src\D47.GameOverlay\D47.GameOverlay.csproj" />
         <ProjectReference Include="..\..\src\D47.Help\D47.Help.csproj" />
         <ProjectReference Include="..\..\src\D47.Panel\D47.Panel.csproj" />
+        <ProjectReference Include="..\..\src\D47.VrOverlay\D47.VrOverlay.csproj" />
         <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
     </ItemGroup>
 
