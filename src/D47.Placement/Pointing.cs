@@ -8,33 +8,52 @@ namespace D47.Placement;
 /// </summary>
 ///
 /// <remarks>
+/// <para>
 /// The arithmetic and none of the runtime. Reading where a controller actually
 /// is belongs to the adapter, and needs SteamVR; deciding what being there means
 /// is this, and needs nothing. That is the same cut <c>Anchor</c> and
 /// <c>WorldLocked</c> already make, and it is why grabbing can be got right in
 /// CI before anybody puts a headset on.
+/// </para>
+/// <para>
+/// The chrome it describes — a bar under the panel, a handle at each corner —
+/// sits outside the content rather than over it. That is how Horizon OS does it,
+/// and it is also the only shape available: <c>PanelRender</c>'s invariant keeps
+/// anything VR-specific out of the shared render, so an affordance drawn on the
+/// panel would have had nowhere to live.
+/// </para>
 /// </remarks>
 public static class Pointing
 {
     /// <summary>
-    /// How much of each half is edge rather than body.
+    /// How tall the bar under the panel is, as a share of the panel's height.
     ///
     /// <para>
-    /// A fifth, which on the shipped half-metre quad is the outer five
-    /// centimetres of each side. A number to react to rather than a measured
-    /// one, in the same spirit as the quad's width and the overlay's opening
-    /// opacity — too small and scaling is a thing a Commander misses and moves
-    /// the overlay instead, too large and there is no middle left to move it by.
-    /// This is the one value to change if it feels wrong.
+    /// A share rather than a distance in metres, so the chrome stays the same
+    /// gesture once the overlay can be scaled — a fixed size would be most of a
+    /// small overlay and a sliver of a large one. On the shipped half-metre quad
+    /// this is a little over four centimetres, which is a comfortable thing to
+    /// point at from a seat.
     /// </para>
     ///
     /// <para>
-    /// A share rather than a distance in metres, so that it stays the same
-    /// gesture once the overlay can be scaled. A fixed margin would be most of a
-    /// small overlay and a sliver of a large one.
+    /// A number to react to rather than a measured one, in the same spirit as
+    /// the quad's width and the overlay's opening opacity.
     /// </para>
     /// </summary>
-    private const float EdgeShare = 0.2f;
+    private const float BarShare = 0.15f;
+
+    /// <summary>
+    /// How big a corner handle is, as a share of the panel's shorter side.
+    ///
+    /// <para>
+    /// The shorter side, so a wide, short panel does not get handles taller than
+    /// itself. Each handle straddles its corner rather than sitting inside or
+    /// outside it, which is what makes it reachable whether the Commander aims a
+    /// little high or a little wide.
+    /// </para>
+    /// </summary>
+    private const float CornerShare = 0.2f;
 
     /// <summary>
     /// What the controller is pointing at.
@@ -53,7 +72,7 @@ public static class Pointing
     /// </para>
     /// </remarks>
     /// <param name="controller">Where the controller is, and which way it points.</param>
-    /// <param name="board">The overlay, as something with edges.</param>
+    /// <param name="board">The panel, as something with edges.</param>
     /// <returns>What pulling the trigger would take hold of.</returns>
     /// <exception cref="ArgumentException">
     /// Some part of either pose is not a finite number, or an orientation is not
@@ -86,9 +105,9 @@ public static class Pointing
 
         // Parallel to the plane, so the ray never meets it. Checked rather than
         // left to the division below, which answers infinity and then carries it
-        // into a comparison that is false for every edge — the right answer by
+        // into comparisons that happen to be false — the right answer by
         // accident, which is the kind that stops being right when somebody
-        // rearranges the comparisons.
+        // rearranges them.
         if (closing == 0)
         {
             return Grabbed.Nothing;
@@ -112,73 +131,65 @@ public static class Pointing
         var local = Vector3.Transform(
             met - board.Where.Position, Quaternion.Conjugate(facing));
 
-        Grabbed across = Within(local.X, board.Width, Grabbed.LeftEdge, Grabbed.RightEdge);
-        Grabbed up = Within(local.Y, board.Height, Grabbed.BottomEdge, Grabbed.TopEdge);
-
-        if (across == Grabbed.Nothing || up == Grabbed.Nothing)
-        {
-            return Grabbed.Nothing;
-        }
-
-        return across == Grabbed.Body && up == Grabbed.Body
-            ? Grabbed.Body
-            : Nearer(local.X, board.Width, across, local.Y, board.Height, up);
+        return WhereThatLands(local.X, local.Y, board);
     }
 
     /// <summary>
-    /// Whereabouts along one axis a point landed: off the end, in the body, or in
-    /// one of the two edge zones.
-    /// </summary>
-    /// <param name="where">How far from the middle, in metres.</param>
-    /// <param name="size">The full extent of that axis.</param>
-    /// <param name="below">The edge in the negative direction.</param>
-    /// <param name="above">The edge in the positive direction.</param>
-    /// <returns>
-    /// <see cref="Grabbed.Nothing"/> past the end, <see cref="Grabbed.Body"/>
-    /// inside, or the edge it fell in.
-    /// </returns>
-    private static Grabbed Within(float where, float size, Grabbed below, Grabbed above)
-    {
-        float half = size / 2;
-        float reach = MathF.Abs(where);
-
-        if (reach > half)
-        {
-            return Grabbed.Nothing;
-        }
-
-        return reach < half * (1 - EdgeShare)
-            ? Grabbed.Body
-            : where < 0 ? below : above;
-    }
-
-    /// <summary>
-    /// Which of two answers to give for a point that is in both edge zones.
+    /// What a point in the board's own frame is on, measured from the middle of
+    /// the panel.
     /// </summary>
     ///
     /// <remarks>
-    /// A corner. Scaling keeps the contents' proportions whichever edge is
-    /// taken, so this only has to be decided and then stay decided — and
-    /// proportionally furthest out is the one a Commander was most likely aiming
-    /// for. Where only one axis is an edge, that axis wins by having a larger
-    /// share than a body's.
+    /// Corners first, because a handle straddles its corner: half of each is
+    /// over the panel and the lower pair reach down into the bar. Asking about
+    /// the content first would make the corners unreachable from three sides.
     /// </remarks>
-    private static Grabbed Nearer(
-        float across, float width, Grabbed horizontal, float up, float height, Grabbed vertical)
+    private static Grabbed WhereThatLands(float across, float up, Board board)
     {
-        if (horizontal == Grabbed.Body)
+        float halfWide = board.Width / 2;
+        float halfTall = board.Height / 2;
+
+        if (OnACorner(across, up, halfWide, halfTall, board) is { } corner)
         {
-            return vertical;
+            return corner;
         }
 
-        if (vertical == Grabbed.Body)
+        if (MathF.Abs(across) > halfWide)
         {
-            return horizontal;
+            return Grabbed.Nothing;
         }
 
-        return MathF.Abs(across) / (width / 2) >= MathF.Abs(up) / (height / 2)
-            ? horizontal
-            : vertical;
+        if (MathF.Abs(up) <= halfTall)
+        {
+            return Grabbed.Content;
+        }
+
+        // Beneath the panel and no further than the bar is tall. Only beneath:
+        // the same distance above is off the top, and a bar on both sides would
+        // be two things to grab that mean the same.
+        float bar = board.Height * BarShare;
+
+        return up < 0 && up >= -(halfTall + bar) ? Grabbed.Bar : Grabbed.Nothing;
+    }
+
+    /// <summary>
+    /// The corner handle a point is inside, if it is inside one.
+    /// </summary>
+    /// <returns>The corner, or <see langword="null"/> for anywhere else.</returns>
+    private static Grabbed? OnACorner(
+        float across, float up, float halfWide, float halfTall, Board board)
+    {
+        float reach = MathF.Min(board.Width, board.Height) * CornerShare / 2;
+
+        if (MathF.Abs(MathF.Abs(across) - halfWide) > reach
+            || MathF.Abs(MathF.Abs(up) - halfTall) > reach)
+        {
+            return null;
+        }
+
+        return up >= 0
+            ? across < 0 ? Grabbed.TopLeftCorner : Grabbed.TopRightCorner
+            : across < 0 ? Grabbed.BottomLeftCorner : Grabbed.BottomRightCorner;
     }
 
     private static void MustBeASize(float extent, string name)

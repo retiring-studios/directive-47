@@ -32,6 +32,20 @@ public readonly record struct Board(Pose Where, float Width, float Height);
 /// <summary>
 /// What pulling the trigger right now would take hold of.
 /// </summary>
+///
+/// <remarks>
+/// A bar to move and corners to scale, which is how Horizon OS does it and is
+/// the maintainer's decision of 5 August 2026 — recorded on
+/// [#235](https://github.com/retiring-studios/directive-47/issues/235), which
+/// had asked for the body to move and the edges to scale.
+///
+/// <para>
+/// The chrome that offers these sits outside the content rather than on top of
+/// it, and that is what makes the choice more than a preference:
+/// <c>PanelRender</c>'s invariant says nothing VR-specific may be painted into
+/// the shared render, so an affordance drawn over the panel had nowhere to live.
+/// </para>
+/// </remarks>
 public enum Grabbed
 {
     /// <summary>
@@ -41,27 +55,39 @@ public enum Grabbed
     Nothing,
 
     /// <summary>
-    /// The middle of it, which moves.
+    /// The panel itself, which grabs nothing.
+    ///
+    /// <para>
+    /// An answer rather than an absence: the Commander is pointing at the
+    /// overlay, and something will want to know that even while there is nothing
+    /// on it to press. Not moving is the point — the panel can be read and
+    /// pointed at without being dragged out of place by accident.
+    /// </para>
     /// </summary>
-    Body,
+    Content,
 
     /// <summary>
-    /// The left-hand edge, which scales.
+    /// The bar beneath the panel, which moves it.
     /// </summary>
-    LeftEdge,
+    Bar,
 
     /// <summary>
-    /// The right-hand edge, which scales.
+    /// The top left corner, which scales it.
     /// </summary>
-    RightEdge,
+    TopLeftCorner,
 
     /// <summary>
-    /// The top edge, which scales.
+    /// The top right corner, which scales it.
     /// </summary>
-    TopEdge,
+    TopRightCorner,
 
     /// <summary>
-    /// The bottom edge, which scales.
+    /// The bottom left corner, which scales it.
     /// </summary>
-    BottomEdge,
+    BottomLeftCorner,
+
+    /// <summary>
+    /// The bottom right corner, which scales it.
+    /// </summary>
+    BottomRightCorner,
 }

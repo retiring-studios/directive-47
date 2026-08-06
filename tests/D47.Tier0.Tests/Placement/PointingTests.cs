@@ -10,8 +10,8 @@ using Xunit;
 namespace D47.Tier0.Tests.Placement;
 
 /// <summary>
-/// What a controller is pointing at: the overlay's body, one of its edges, or
-/// nothing at all.
+/// What a controller is pointing at: the panel itself, the bar beneath it that
+/// moves it, one of the four corners that scale it, or nothing at all.
 ///
 /// <para>
 /// A pose, a ray and a rectangle — the same arithmetic as
@@ -23,52 +23,91 @@ namespace D47.Tier0.Tests.Placement;
 ///
 /// <para>
 /// OpenVR's seated space is X right, Y up, Z back. A controller points along its
-/// own negative Z, and an overlay quad faces along its own positive Z — so a
-/// controller at positive Z with no rotation, aimed at a board at the origin
-/// with no rotation, is somebody pointing straight at it.
+/// own negative Z and an overlay quad faces along its own positive Z — so two
+/// things with the same orientation are aimed at each other, and a controller at
+/// positive Z with no rotation is pointing straight at a board at the origin
+/// with no rotation.
 /// </para>
 /// </summary>
 public class PointingTests
 {
     /// <summary>
     /// Half a metre wide and a little over half as tall — the quad's shipped
-    /// width, at roughly the render's proportions.
+    /// width at roughly the render's proportions.
+    ///
+    /// <para>
+    /// So the content runs to 0.25 either side and 0.15 above and below. The bar
+    /// hangs from -0.15 down to -0.195, and each corner handle is a six
+    /// centimetre square straddling a content corner: the top right one covers x
+    /// from 0.22 to 0.28 and y from 0.12 to 0.18.
+    /// </para>
     /// </summary>
     private static readonly Board Facing =
         new(new Pose(Vector3.Zero, Quaternion.Identity), 0.5f, 0.3f);
 
     [Fact]
-    public void Pointing_AtTheMiddle_IsTheBody()
+    public void Pointing_AtTheMiddle_IsTheContent()
     {
-        Pointing.At(From(0, 0), Facing).ShouldBe(Grabbed.Body);
+        // The panel itself grabs nothing. Moving is the bar's job and scaling is
+        // a corner's, which is what makes a Commander able to point at what the
+        // overlay is showing without moving it by accident.
+        Pointing.At(From(0, 0), Facing).ShouldBe(Grabbed.Content);
     }
 
     [Theory]
-    [InlineData(-0.24f, 0f, Grabbed.LeftEdge)]
-    [InlineData(0.24f, 0f, Grabbed.RightEdge)]
-    [InlineData(0f, 0.14f, Grabbed.TopEdge)]
-    [InlineData(0f, -0.14f, Grabbed.BottomEdge)]
-    public void Pointing_NearABoundary_IsThatEdge(float across, float up, Grabbed expected)
+    [InlineData(0.2f, 0f)]
+    [InlineData(-0.2f, 0f)]
+    [InlineData(0f, 0.1f)]
+    [InlineData(0f, -0.1f)]
+    public void Pointing_AnywhereOnThePanel_IsStillTheContent(float across, float up)
+    {
+        Pointing.At(From(across, up), Facing).ShouldBe(Grabbed.Content);
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.15f)]
+    [InlineData(-0.15f)]
+    public void Pointing_AtTheBarBeneathIt_IsTheBar(float across)
+    {
+        Pointing.At(From(across, -0.17f), Facing).ShouldBe(Grabbed.Bar);
+    }
+
+    [Fact]
+    public void TheBar_IsBeneathThePanel_AndNotAboveIt()
+    {
+        // The same distance above the content is off the top and grabs nothing.
+        // Without this the bar is a band either side of the panel and the
+        // arithmetic would not say which.
+        Pointing.At(From(0, 0.17f), Facing).ShouldBe(Grabbed.Nothing);
+    }
+
+    [Theory]
+    [InlineData(-0.25f, 0.15f, Grabbed.TopLeftCorner)]
+    [InlineData(0.25f, 0.15f, Grabbed.TopRightCorner)]
+    [InlineData(-0.25f, -0.15f, Grabbed.BottomLeftCorner)]
+    [InlineData(0.25f, -0.15f, Grabbed.BottomRightCorner)]
+    public void Pointing_AtACorner_IsThatCorner(float across, float up, Grabbed expected)
     {
         Pointing.At(From(across, up), Facing).ShouldBe(expected);
     }
 
-    [Theory]
-    [InlineData(-0.1f, 0f)]
-    [InlineData(0.1f, 0f)]
-    [InlineData(0f, 0.05f)]
-    [InlineData(0f, -0.05f)]
-    public void Pointing_WellInsideTheBoundary_IsStillTheBody(float across, float up)
+    [Fact]
+    public void ACorner_BeatsTheContentAndTheBar_WhereTheyOverlap()
     {
-        Pointing.At(From(across, up), Facing).ShouldBe(Grabbed.Body);
+        // A handle straddles its corner, so half of it is over the panel and the
+        // bottom pair reach into the bar. The more specific target has to win or
+        // the corners are unreachable from three sides.
+        Pointing.At(From(0.235f, 0.135f), Facing).ShouldBe(Grabbed.TopRightCorner);
+        Pointing.At(From(0.235f, -0.165f), Facing).ShouldBe(Grabbed.BottomRightCorner);
     }
 
     [Theory]
-    [InlineData(-0.3f, 0f)]
-    [InlineData(0.3f, 0f)]
-    [InlineData(0f, 0.2f)]
-    [InlineData(0f, -0.2f)]
-    public void Pointing_PastTheBoundary_IsNothing(float across, float up)
+    [InlineData(0.4f, 0f)]
+    [InlineData(-0.4f, 0f)]
+    [InlineData(0f, 0.25f)]
+    [InlineData(0f, -0.25f)]
+    public void Pointing_PastAllOfIt_IsNothing(float across, float up)
     {
         // Aiming at nothing is a first-class answer, not a failure. A Commander
         // waving a controller around the cockpit is pointing at nothing most of
@@ -113,52 +152,16 @@ public class PointingTests
             0.5f,
             0.3f);
 
-        // A board turned a quarter turn about up now faces along positive X, so
-        // the controller has to be out there to be pointing at it.
-        //
         // The same rotation as the board, which reads wrong and is not: a board
         // faces along its own positive Z and a controller points along its own
         // negative Z, so two things with the same orientation are aimed at each
-        // other. The square-on case has exactly that shape and hides it, because
+        // other. The square-on case has that shape too and hides it, because
         // there both rotations are the identity.
         var pointing = new Pose(
             new Vector3(1, 0, 0),
             Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2));
 
-        Pointing.At(pointing, turned).ShouldBe(Grabbed.Body);
-    }
-
-    [Fact]
-    public void Pointing_AtACorner_IsWhicheverEdgeItIsFurthestAlong()
-    {
-        // Both axes in their edge zones at once, which is what makes this a
-        // corner — an earlier version of this test had one axis comfortably in
-        // the body both times and never reached the decision it was named for.
-        //
-        // Scaling keeps the contents' proportions whichever edge is taken, so
-        // this only has to be decided and then stay decided. Proportionally
-        // furthest out is the one a Commander was most likely reaching for.
-        Pointing.At(From(0.24f, 0.13f), Facing).ShouldBe(Grabbed.RightEdge);
-        Pointing.At(From(0.21f, 0.149f), Facing).ShouldBe(Grabbed.TopEdge);
-    }
-
-    [Fact]
-    public void Pointing_AtABoardWithNoOrientationAtAll_SaysSo()
-    {
-        // A quaternion of nothing is not a rotation, and normalising it answers
-        // NaN rather than saying so — the trap Turn.Of exists to close.
-        var nothing = new Board(
-            new Pose(Vector3.Zero, new Quaternion(0, 0, 0, 0)), 0.5f, 0.3f);
-
-        Should.Throw<ArgumentException>(() => Pointing.At(From(0, 0), nothing));
-    }
-
-    [Fact]
-    public void Pointing_FromAControllerWithNoOrientationAtAll_SaysSo()
-    {
-        var nothing = new Pose(new Vector3(0, 0, 1), new Quaternion(0, 0, 0, 0));
-
-        Should.Throw<ArgumentException>(() => Pointing.At(nothing, Facing));
+        Pointing.At(pointing, turned).ShouldBe(Grabbed.Content);
     }
 
     [Theory]
@@ -176,8 +179,7 @@ public class PointingTests
     [Fact]
     public void Pointing_WithAnOrientationThatIsNotNumbers_SaysSo()
     {
-        var dropped = new Pose(
-            new Vector3(0, 0, 1), new Quaternion(float.NaN, 0, 0, 1));
+        var dropped = new Pose(new Vector3(0, 0, 1), new Quaternion(float.NaN, 0, 0, 1));
 
         Should.Throw<ArgumentException>(() => Pointing.At(dropped, Facing));
     }
@@ -201,6 +203,25 @@ public class PointingTests
             new Pose(Vector3.Zero, new Quaternion(0, float.PositiveInfinity, 0, 1)), 0.5f, 0.3f);
 
         Should.Throw<ArgumentException>(() => Pointing.At(From(0, 0), nowhere));
+    }
+
+    [Fact]
+    public void Pointing_AtABoardWithNoOrientationAtAll_SaysSo()
+    {
+        // A quaternion of nothing is not a rotation, and normalising it answers
+        // NaN rather than saying so — the trap Turn.Of exists to close.
+        var nothing = new Board(
+            new Pose(Vector3.Zero, new Quaternion(0, 0, 0, 0)), 0.5f, 0.3f);
+
+        Should.Throw<ArgumentException>(() => Pointing.At(From(0, 0), nothing));
+    }
+
+    [Fact]
+    public void Pointing_FromAControllerWithNoOrientationAtAll_SaysSo()
+    {
+        var nothing = new Pose(new Vector3(0, 0, 1), new Quaternion(0, 0, 0, 0));
+
+        Should.Throw<ArgumentException>(() => Pointing.At(nothing, Facing));
     }
 
     [Theory]
