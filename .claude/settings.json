@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -File .claude/hooks/guard-git.ps1"
+            "command": "powershell -NoProfile -File \"$CLAUDE_PROJECT_DIR\\.claude\\hooks\\guard-git.ps1\""
           }
         ]
       }
