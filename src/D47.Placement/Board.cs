@@ -7,7 +7,7 @@ namespace D47.Placement;
 /// <remarks>
 /// <para>
 /// A <see cref="Pose"/> says where a thing is and which way it faces, which is
-/// everything the overlay needed while nobody could point at it. Pointing needs
+/// everything the overlay needed while nobody could point at it. Chrome needs
 /// to know where it stops, and a width and a height passed beside a pose are two
 /// numbers that can be swapped, half-defaulted, or disagreed about — the same
 /// argument <c>Combination</c> makes for keeping modifiers and a key together.

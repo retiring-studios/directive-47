@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Numerics;
 
 using D47.Placement;
 using D47.VrOverlay;
@@ -23,7 +22,7 @@ namespace D47.Tier2.Tests.VrOverlay;
 /// </para>
 ///
 /// <para>
-/// What a pose <em>means</em> is not here. That is <c>Pointing</c> in
+/// What a pose <em>means</em> is not here. That is <c>Chrome</c> in
 /// <c>D47.Placement</c>, it is Tier 0, and it is asserted in CI against numbers.
 /// </para>
 /// </summary>
@@ -47,14 +46,14 @@ public class ControllerTests : HeadsetTest
         // adapter. An untracked slot is all zeroes, and all zeroes reads back as
         // a unit rotation at the origin — perfectly valid-looking and completely
         // wrong. If the filtering is dropped, this is what notices, because a
-        // board built on such a pose is one Pointing will happily answer about.
-        var board = new Board(
-            new Pose(new Vector3(0, 0, -1.5f), Quaternion.Identity), 0.5f, 0.3f);
-
+        // board built on such a pose is one Chrome will happily answer about.
         foreach (Pose held in new Controllers().Tracked())
         {
+            // The pose put where a board's own pose goes, which is what puts it
+            // in front of the finite-number checks. Chrome validates the surface
+            // it is asked about rather than anything aimed at it.
             Should.NotThrow(
-                () => Pointing.At(held, board),
+                () => Chrome.On(new Board(held, 0.5f, 0.3f), 0, 0),
                 "a controller the adapter handed on should be one the arithmetic accepts");
 
             // Not at the origin facing backwards, which is exactly what an

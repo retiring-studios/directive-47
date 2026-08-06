@@ -12,10 +12,9 @@ namespace D47.Panel;
 ///
 /// <para>
 /// The loop between two things that already exist:
-/// <see cref="IControllers"/> says where the hands are,
-/// <see cref="Pointing"/> says what that means, and
-/// <see cref="IGrabChrome"/> shows it. None of them needs the others, which is
-/// why this is the only part that needs a thread.
+/// <see cref="IControllers"/> says where the hands are, and
+/// <see cref="IGrabChrome"/> asks what the laser is on and shows it. Neither
+/// needs the other, which is why this is the only part that needs a thread.
 /// </para>
 /// </summary>
 ///
