@@ -134,6 +134,51 @@ which is how invented obligations end up being treated as debt. Recording the
 *consequences* of his decision — what was built, what was measured, what failed
 — is fine and is most of what the file already is. Inventing the decision is not.
 
+**Every bullet says whose decision it was, and that is settled as it is
+written.** The rule above keeps decisions he never made out of the file. It does
+not separate the ones he did make from the engineering derived from them, and
+both read afterwards with the same authority — which is how a call made
+mid-story becomes a constraint nobody chose.
+
+Three states, and a bullet is in exactly one:
+
+| Mark | Means |
+|---|---|
+| *(unmarked)* | He decided it, or he approved it |
+| `Not his call:` | Claude settled it. Never put to him |
+| `Unrecorded:` | Predates any traceable discussion. Nobody knows |
+
+The mark is a trailing sentence on the bullet, the way bullets already carry
+`Revisit trigger:` — `Not his call: found while retiring the Wave 1 handoff,
+never put to him.` It says *why*, because "found while retiring a handoff" and
+"settled mid-story because the code needed an answer" are different debts and
+only one of them is urgent.
+
+**`Unrecorded:` is a claim about the record, not about who decided.** It needs
+no judgment and asserts nothing about him. Use it when the trail is gone, rather
+than picking whichever of the other two reads better — a guess about who decided
+something is the exact thing this file exists to keep out.
+
+**Attribution is captured while the conversation is still in the room, never
+reconstructed afterwards.** You know which of the three a bullet is at the moment
+you write it, and nobody can work it out later: every commit here carries a
+Claude co-author trailer, and every issue and pull request comment comes from the
+maintainer's account in Claude's voice. Neither says who decided anything. So the
+commit message that lands a bullet says which state it is and how it got there —
+the mark is the claim, the commit is the evidence. A bullet whose provenance has
+to be excavated is one already recorded wrong.
+
+**The mark is not permission.** A `Not his call:` bullet is still an
+architectural decision that should have been proposed, and the sentence is a debt
+to raise with him rather than a way to skip asking. Settling one deletes the
+sentence.
+
+Deleting it needs `Decided-By: maintainer` on the commit, because a bullet whose
+mark has been removed reads as new and unmarked to the check. That is intended
+rather than a false positive to be engineered away: the moment a debt is settled
+is exactly the moment the evidence is worth capturing, and it is the only moment
+anyone will still know.
+
 **If something requires manual testing, it gets tested manually before merging,
 and the `verified` label is that attestation.** `main` requires one check,
 `Build, test and publish`. Nothing reads either label and nothing blocks on
