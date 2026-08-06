@@ -41,7 +41,7 @@ public interface IGrabChrome : IDisposable
     /// </remarks>
     /// <param name="lit">What a trigger would take hold of right now.</param>
     /// <param name="shown">What the laser is near enough to be worth drawing.</param>
-    void Showing(Grabbed lit, Near shown);
+    void Showing(Grabbed lit, Shown shown);
 
     /// <summary>
     /// Looks at where the laser is and lights whatever it is on.
@@ -84,7 +84,7 @@ internal sealed class GrabChrome : IGrabChrome
     private Board _panel;
 
     private Grabbed _showing;
-    private Near _near;
+    private Shown _shown;
     private bool _disposed;
 
     private GrabChrome(SteamVrOverlay overlay, Board panel, Grabbed showing)
@@ -107,7 +107,7 @@ internal sealed class GrabChrome : IGrabChrome
         // Empty to begin with. Nobody is pointing at an overlay that has only
         // just appeared, and the chrome is invisible until they do.
         (byte[] pixels, int width, int height) =
-            ChromeRender.Take(panel, Grabbed.Nothing, Near.Nothing);
+            ChromeRender.Take(panel, Grabbed.Nothing, Shown.Nothing);
 
         var overlay = SteamVrOverlay.Showing(
             key, name, Chrome.Around(panel), pixels, width, height);
@@ -126,7 +126,7 @@ internal sealed class GrabChrome : IGrabChrome
     }
 
     /// <inheritdoc/>
-    public void Showing(Grabbed lit, Near shown)
+    public void Showing(Grabbed lit, Shown shown)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -136,15 +136,15 @@ internal sealed class GrabChrome : IGrabChrome
         // this feature for no visible difference.
         //
         // Both halves, because a laser moving off a handle changes what is drawn
-        // without changing what is lit. Comparing whole values is why Near is a
+        // without changing what is lit. Comparing whole values is why Shown is a
         // record struct rather than a set.
-        if (lit == _showing && shown == _near)
+        if (lit == _showing && shown == _shown)
         {
             return;
         }
 
         _showing = lit;
-        _near = shown;
+        _shown = shown;
 
         (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit, shown);
 
@@ -163,9 +163,9 @@ internal sealed class GrabChrome : IGrabChrome
         Grabbed lit = at is { } on ? Chrome.On(_panel, on.Across, on.Up) : Grabbed.Nothing;
 
         // Nothing near when the laser is elsewhere, which is an empty quad.
-        Near shown = at is { } close
-            ? Chrome.Nearby(_panel, close.Across, close.Up)
-            : Near.Nothing;
+        Shown shown = at is { } close
+            ? Chrome.Showing(_panel, close.Across, close.Up)
+            : Shown.Nothing;
 
         (bool held, uint hand) = _overlay.Trigger();
 

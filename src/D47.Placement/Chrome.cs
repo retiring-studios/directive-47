@@ -21,8 +21,7 @@ public readonly record struct Patch(
     Grabbed What, float Left, float Right, float Bottom, float Top);
 
 /// <summary>
-/// Which pieces of chrome the laser is close enough to that they are worth
-/// showing.
+/// Which pieces of chrome are worth drawing right now.
 /// </summary>
 ///
 /// <remarks>
@@ -42,13 +41,13 @@ public readonly record struct Patch(
 /// <param name="TopRight">Whether the top right handle is.</param>
 /// <param name="BottomLeft">Whether the bottom left handle is.</param>
 /// <param name="BottomRight">Whether the bottom right handle is.</param>
-public readonly record struct Near(
+public readonly record struct Shown(
     bool Bar, bool TopLeft, bool TopRight, bool BottomLeft, bool BottomRight)
 {
     /// <summary>
-    /// Nothing is near.
+    /// Nothing is drawn, which is a cockpit with no laser in it.
     /// </summary>
-    public static Near Nothing => default;
+    public static Shown Nothing => default;
 
     /// <summary>
     /// Whether one piece is worth showing.
@@ -288,58 +287,65 @@ public static class Chrome
     internal const float NearShare = 0.2f;
 
     /// <summary>
-    /// Which pieces the laser is near enough to be worth showing.
+    /// What to draw, given where the laser is on the chrome.
     /// </summary>
     ///
     /// <remarks>
     /// <para>
-    /// The chrome is invisible until a Commander points near it. That is a
-    /// deliberate trade against discoverability — the first version was faintly
-    /// present at all times so that somebody who had never been told the bar
-    /// exists would find it by seeing it. The maintainer looked at that in the
-    /// headset and chose calm over the hint.
+    /// <b>The bar whenever there is a laser at all; the corners only when it is
+    /// near them.</b> Moving the overlay is the thing a Commander does first and
+    /// most, so the bar is how they learn the panel can be moved — it appears the
+    /// moment they point at it. Scaling is rarer and four handles showing every
+    /// time somebody reads the panel is what made the chrome furniture.
+    /// </para>
+    /// <para>
+    /// Nothing at all when there is no laser, which is most of a session. An
+    /// earlier version was faintly present at all times, on the reasoning that
+    /// somebody never told the bar exists would find it by seeing it. The
+    /// maintainer looked at that in the headset; the bar rule above is what keeps
+    /// the discoverability without the clutter.
     /// </para>
     /// <para>
     /// Distance to the rectangle rather than to its middle. A handle is a
     /// six-centimetre square and the bar is the width of the panel, so distance
-    /// to a centre would bring the bar out from much further away at its ends
-    /// than in the middle.
+    /// to a centre would bring a piece out from much further away at its ends
+    /// than in its middle.
     /// </para>
     /// </remarks>
     /// <param name="panel">The panel the chrome goes around.</param>
     /// <param name="across">How far right of the chrome's middle, in metres.</param>
     /// <param name="up">How far above the chrome's middle, in metres.</param>
-    /// <returns>What is close enough to draw.</returns>
+    /// <returns>What to draw.</returns>
     /// <exception cref="ArgumentException">
     /// Some part of the panel's pose is not a finite number.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// The panel has no width or no height.
     /// </exception>
-    public static Near Nearby(Board panel, float across, float up)
+    public static Shown Showing(Board panel, float across, float up)
     {
         float within = MathF.Min(panel.Width, panel.Height) * NearShare;
 
-        Near near = Near.Nothing;
+        // There is a laser, or this would not have been asked.
+        var shown = new Shown(Bar: true, false, false, false, false);
 
         foreach (Patch patch in Parts(panel))
         {
-            if (HowFar(patch, across, up) > within)
+            if (patch.What == Grabbed.Bar || HowFar(patch, across, up) > within)
             {
                 continue;
             }
 
-            near = patch.What switch
+            shown = patch.What switch
             {
-                Grabbed.Bar => near with { Bar = true },
-                Grabbed.TopLeftCorner => near with { TopLeft = true },
-                Grabbed.TopRightCorner => near with { TopRight = true },
-                Grabbed.BottomLeftCorner => near with { BottomLeft = true },
-                _ => near with { BottomRight = true },
+                Grabbed.TopLeftCorner => shown with { TopLeft = true },
+                Grabbed.TopRightCorner => shown with { TopRight = true },
+                Grabbed.BottomLeftCorner => shown with { BottomLeft = true },
+                _ => shown with { BottomRight = true },
             };
         }
 
-        return near;
+        return shown;
     }
 
     /// <summary>

@@ -98,7 +98,7 @@ public class ChromeRenderTests
     [Fact]
     public void Chrome_WithTheLaserNowhereNear_IsNotThereAtAll()
     {
-        Chromed empty = Taken(Grabbed.Nothing, Near.Nothing);
+        Chromed empty = Taken(Grabbed.Nothing, Shown.Nothing);
 
         // The whole quad, sampled where each piece would be. Chrome that is
         // always faintly present is furniture in the cockpit; the maintainer
@@ -112,7 +112,7 @@ public class ChromeRenderTests
     public void APiece_TheLaserIsNear_ComesOutWithoutBringingTheOthersWithIt()
     {
         Chromed justTheBar = Taken(
-            Grabbed.Nothing, new Near(Bar: true, false, false, false, false));
+            Grabbed.Nothing, new Shown(Bar: true, false, false, false, false));
 
         justTheBar.Alpha(0.5, BarMiddleDown).ShouldBeGreaterThan((byte)0);
 
@@ -248,14 +248,14 @@ public class ChromeRenderTests
     /// </summary>
     private static Chromed Taken(Grabbed lit) => Taken(lit, Everything);
 
-    private static Chromed Taken(Grabbed lit, Near shown)
+    private static Chromed Taken(Grabbed lit, Shown shown)
     {
         (byte[] pixels, int width, int height) = ChromeRender.Take(Panel, lit, shown);
 
         return new Chromed(pixels, width, height);
     }
 
-    private static Near Everything => new(true, true, true, true, true);
+    private static Shown Everything => new(true, true, true, true, true);
 
     /// <summary>
     /// A chrome texture, with a way to ask what is at a spot on it.

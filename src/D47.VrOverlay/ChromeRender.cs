@@ -119,7 +119,7 @@ public static class ChromeRender
     /// <param name="lit">What the controller is aimed at, if anything.</param>
     /// <param name="shown">
     /// What the laser is near enough to be worth drawing. Nothing draws what is
-    /// not in here, so <c>Near.Nothing</c> is an empty quad.
+    /// not in here, so <c>Shown.Nothing</c> is an empty quad.
     /// </param>
     /// <returns>The pixels, and how wide and tall they are.</returns>
     /// <exception cref="ArgumentException">
@@ -129,7 +129,7 @@ public static class ChromeRender
     /// The panel has no width or no height.
     /// </exception>
     public static (byte[] Pixels, int Width, int Height) Take(
-        Board panel, Grabbed lit, Near shown)
+        Board panel, Grabbed lit, Shown shown)
     {
         Board around = Chrome.Around(panel);
 
