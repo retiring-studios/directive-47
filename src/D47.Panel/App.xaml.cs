@@ -12,11 +12,9 @@ using System.Windows.Threading;
 
 using D47.Data;
 
-using D47.Audio;
 using D47.Composition;
 using D47.GameOverlay;
 using D47.Help;
-using D47.VoiceLoop;
 using D47.Render;
 using D47.VrOverlay;
 
@@ -130,25 +128,21 @@ internal sealed partial class App : Application, IDisposable
     private Zoom? _zoom;
     private Overlay? _overlay;
     private Headset? _headset;
-    /// <summary>
-    /// Where the turn says what it is doing.
-    ///
-    /// <para>
-    /// Built here and not by the turn, because it outlives any one of them and
-    /// because the surfaces subscribe to it rather than to whichever turn happens
-    /// to be in flight. The log is the only subscriber so far —
-    /// [#72](https://github.com/retiring-studios/directive-47/issues/72) is what
-    /// puts a status and a live log in front of the Commander.
-    /// </para>
-    /// </summary>
-    private readonly Events _turns = new();
 
-    private IDisposable? _watchingTurns;
-    private IMicrophone? _microphone;
-    private CuePlayer? _cues;
+    /// <summary>
+    /// The voice loop and everything it holds — the microphone, the turn, the
+    /// bus it reports on, the log listening to that bus, and the cues.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// One field rather than five. See <see cref="Conversation"/> for why: they
+    /// arrived one story at a time and the composition root was accumulating a
+    /// field and a disposal for each.
+    /// </remarks>
+    private Conversation? _conversation;
+
     private ChosenHotkey? _hotkey;
     private PushToTalk? _pushToTalk;
-    private Turn? _turn;
     private IGrabChrome? _chrome;
     private Grabbing? _grabbing;
     private ForegroundWatcher? _foreground;
@@ -475,36 +469,10 @@ internal sealed partial class App : Application, IDisposable
     /// <param name="settings">What the Commander chose.</param>
     private void ClaimPushToTalk(SettingsStore settings)
     {
-        // The real one now, where there is a device to open. The other three are
-        // still stand-ins and stay that way until stage C.
-        _microphone = ChosenMicrophone.Available(Audio.Microphone.IsAvailable, _log.Warning);
-
-        _turn = new Turn(
-            _microphone,
-            new StandIns.Transcriber(),
-            new StandIns.Model(),
-            new StandIns.Voice(_log.Warning),
-            _turns);
-
-        // A turn no longer throws when a provider falls over — it publishes and
-        // returns to Idle. So the log has to listen for that, or the failure the
-        // catch below used to report becomes silent.
-        _watchingTurns = _turns.Subscribe(published =>
-        {
-            if (published is Failed gaveUp)
-            {
-                _log.Warning(
-                    $"The turn gave up during {gaveUp.During}: {gaveUp.Why.Message}");
-            }
-        });
-
-        // Random.Shared rather than one of our own. Nothing here wants a
-        // sequence it can reproduce, and a Commander who could tell which chime
-        // came next would be hearing a pattern rather than a set.
-        _cues = CuePlayer.Following(_turns, Random.Shared);
+        _conversation = Conversation.Assembled(_log.Warning);
 
         _pushToTalk = PushToTalk.From(
-            settings, _log.Warning, () => _turn?.Held(), RunTheTurn);
+            settings, _log.Warning, () => _conversation?.Held(), RunTheTurn);
     }
 
     /// <summary>
@@ -539,9 +507,7 @@ internal sealed partial class App : Application, IDisposable
             + "None of those failing is worth ending the application over.")]
     private void RunTheTurn()
     {
-        Turn? turn = _turn;
-
-        if (turn is null)
+        if (_conversation is not { } conversation)
         {
             return;
         }
@@ -550,7 +516,7 @@ internal sealed partial class App : Application, IDisposable
         {
             try
             {
-                await turn.Released(CancellationToken.None).ConfigureAwait(false);
+                await conversation.Released(CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception failed)
             {
@@ -743,21 +709,11 @@ internal sealed partial class App : Application, IDisposable
         _pushToTalk?.Dispose();
         _pushToTalk = null;
 
-        // The bus holds our callback until told otherwise, and it is a field of
-        // this object — an undisposed subscription is this application keeping
-        // itself alive. The cue player holds one of its own and an audio device
-        // besides.
-        _watchingTurns?.Dispose();
-        _watchingTurns = null;
-
-        _cues?.Dispose();
-        _cues = null;
-
-        // The real one holds a capture device. IMicrophone says nothing about
-        // disposing, because the stand-in has nothing to give back and the
-        // contract is about what a turn needs rather than what an adapter owns.
-        (_microphone as IDisposable)?.Dispose();
-        _microphone = null;
+        // After the key that drives it, so nothing can start a turn against a
+        // loop that is being given back. What is inside it and in what order is
+        // the loop's own business.
+        _conversation?.Dispose();
+        _conversation = null;
 
         // The hook holds a pointer to a callback of ours. Leaving it installed
         // past our own lifetime is how a shutdown turns into a crash.
