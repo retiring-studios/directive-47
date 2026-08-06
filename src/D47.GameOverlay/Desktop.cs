@@ -9,7 +9,7 @@ namespace D47.GameOverlay;
 ///
 /// <para>
 /// Here rather than in <c>D47.Panel</c> for the same reason
-/// <see cref="EliteWindow.IsTheGame"/> is: asking the operating system what the
+/// <see cref="EliteWindow.IsTheGame(nint)"/> is: asking the operating system what the
 /// machine looks like is an adapter's job, and what to do with the answer is
 /// not. The panel injects this and a test injects a rectangle, which is what
 /// lets a monitor disappearing be asserted in CI on a machine whose monitors
