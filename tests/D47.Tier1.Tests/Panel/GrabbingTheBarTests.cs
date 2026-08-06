@@ -21,6 +21,11 @@ namespace D47.Tier1.Tests.Panel;
 /// given a hand is <c>Grab</c> in <c>D47.Placement</c> and is Tier 0. What is
 /// here is when a grab starts, when it stops, and what moves while it lasts.
 /// </para>
+///
+/// <para>
+/// The stand-ins are shared with <c>GrabbingTests</c> and live in
+/// <c>GrabbingDoubles</c>.
+/// </para>
 /// </summary>
 public class GrabbingTheBarTests
 {
@@ -28,19 +33,25 @@ public class GrabbingTheBarTests
 
     private const uint TheHand = 3;
 
+    /// <summary>
+    /// Where the hand starts: off to one side of the overlay, which is where a
+    /// Commander's actually is.
+    /// </summary>
+    private static readonly Vector3 Beside = new(0.3f, -0.4f, -0.6f);
+
     [Fact]
     public void Grab_OnTheBar_MovesTheOverlay()
     {
-        var hand = new HandAt(new Vector3(0.3f, -0.4f, -0.6f));
-        using var chrome = new ChromeReporting(new Grip(Grabbed.Bar, Held: true, TheHand));
-        using var overlay = new OverlayAt(new Vector3(0, 0, -1.5f));
+        var hand = HandThatMoves.At(Beside);
+        using ChromeThatReports chrome = Holding(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
         using (Grabbing.Watching(chrome, overlay, hand, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 1, LongEnough).ShouldBeTrue();
 
             // The hand moves while the trigger is still down.
-            hand.MoveTo(new Vector3(0.5f, -0.4f, -0.6f));
+            hand.MoveTo(Beside + new Vector3(0.2f, 0, 0));
 
             Eventually.True(
                 () => overlay.Placed.Where.Position.X > 0.1f, LongEnough).ShouldBeTrue(
@@ -57,15 +68,15 @@ public class GrabbingTheBarTests
     [Fact]
     public void Grab_WhileItLasts_KeepsTheChromeAroundTheOverlayItIsMoving()
     {
-        var hand = new HandAt(new Vector3(0.3f, -0.4f, -0.6f));
-        using var chrome = new ChromeReporting(new Grip(Grabbed.Bar, Held: true, TheHand));
-        using var overlay = new OverlayAt(new Vector3(0, 0, -1.5f));
+        var hand = HandThatMoves.At(Beside);
+        using ChromeThatReports chrome = Holding(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
         using (Grabbing.Watching(chrome, overlay, hand, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 1, LongEnough).ShouldBeTrue();
 
-            hand.MoveTo(new Vector3(0.5f, -0.4f, -0.6f));
+            hand.MoveTo(Beside + new Vector3(0.2f, 0, 0));
 
             // The chrome is a second quad and does not move because the panel
             // did. Left out, the bar stays where the Commander first grabbed it
@@ -77,17 +88,17 @@ public class GrabbingTheBarTests
     }
 
     [Fact]
-    public void ApointerOnTheBar_WithNoTriggerPulled_MovesNothing()
+    public void APointerOnTheBar_WithNoTriggerPulled_MovesNothing()
     {
-        var hand = new HandAt(new Vector3(0.3f, -0.4f, -0.6f));
-        using var chrome = new ChromeReporting(new Grip(Grabbed.Bar, Held: false, TheHand));
-        using var overlay = new OverlayAt(new Vector3(0, 0, -1.5f));
+        var hand = HandThatMoves.At(Beside);
+        using var chrome = ChromeThatReports.PointingAt(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
         using (Grabbing.Watching(chrome, overlay, hand, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue();
 
-            hand.MoveTo(new Vector3(0.9f, -0.4f, -0.6f));
+            hand.MoveTo(Beside + new Vector3(0.6f, 0, 0));
 
             Thread.Sleep(200);
         }
@@ -100,15 +111,15 @@ public class GrabbingTheBarTests
     [Fact]
     public void AGrab_OnTheContent_MovesNothingEither()
     {
-        var hand = new HandAt(new Vector3(0.3f, -0.4f, -0.6f));
-        using var chrome = new ChromeReporting(new Grip(Grabbed.Content, Held: true, TheHand));
-        using var overlay = new OverlayAt(new Vector3(0, 0, -1.5f));
+        var hand = HandThatMoves.At(Beside);
+        using ChromeThatReports chrome = Holding(Grabbed.Content);
+        using var overlay = OverlayThatMoves.Somewhere();
 
         using (Grabbing.Watching(chrome, overlay, hand, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue();
 
-            hand.MoveTo(new Vector3(0.9f, -0.4f, -0.6f));
+            hand.MoveTo(Beside + new Vector3(0.6f, 0, 0));
 
             Thread.Sleep(200);
         }
@@ -122,15 +133,15 @@ public class GrabbingTheBarTests
     [Fact]
     public void AGrab_WhenTheTriggerIsLetGo_LeavesTheOverlayWhereItWasPut()
     {
-        var hand = new HandAt(new Vector3(0.3f, -0.4f, -0.6f));
-        using var chrome = new ChromeReporting(new Grip(Grabbed.Bar, Held: true, TheHand));
-        using var overlay = new OverlayAt(new Vector3(0, 0, -1.5f));
+        var hand = HandThatMoves.At(Beside);
+        using ChromeThatReports chrome = Holding(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
         using (Grabbing.Watching(chrome, overlay, hand, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 1, LongEnough).ShouldBeTrue();
 
-            hand.MoveTo(new Vector3(0.5f, -0.4f, -0.6f));
+            hand.MoveTo(Beside + new Vector3(0.2f, 0, 0));
 
             Eventually.True(
                 () => overlay.Placed.Where.Position.X > 0.1f, LongEnough).ShouldBeTrue();
@@ -144,7 +155,7 @@ public class GrabbingTheBarTests
             // Let go, then move the hand a long way. A grab that was not ended
             // would drag the overlay across the cockpit while the Commander
             // reaches for the stick.
-            hand.MoveTo(new Vector3(2.0f, -0.4f, -0.6f));
+            hand.MoveTo(Beside + new Vector3(1.7f, 0, 0));
 
             Thread.Sleep(200);
 
@@ -155,9 +166,9 @@ public class GrabbingTheBarTests
     [Fact]
     public void AGrab_WhenTheHandStopsBeingTracked_EndsRatherThanFollowingNothing()
     {
-        var hand = new HandAt(new Vector3(0.3f, -0.4f, -0.6f));
-        using var chrome = new ChromeReporting(new Grip(Grabbed.Bar, Held: true, TheHand));
-        using var overlay = new OverlayAt(new Vector3(0, 0, -1.5f));
+        var hand = HandThatMoves.At(Beside);
+        using ChromeThatReports chrome = Holding(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
         List<string> recorded = [];
 
@@ -178,164 +189,12 @@ public class GrabbingTheBarTests
             1.0f, "the overlay should not have been dragged to the Commander's feet");
     }
 
+    /// <summary>
+    /// A laser on something with the trigger down, which is what a grab looks
+    /// like from the adapter.
+    /// </summary>
+    private static ChromeThatReports Holding(Grabbed under) =>
+        new(new Grip(under, Held: true, TheHand));
+
     private static Action<string> Nowhere => _ => { };
-
-    /// <summary>
-    /// One controller, wherever the test last put it.
-    /// </summary>
-    ///
-    /// <remarks>
-    /// Locked rather than volatile, here and below. Everything being passed
-    /// between the test and the watching thread is a struct, and
-    /// <c>Volatile</c> does not take those — a lock is the cheap correct answer
-    /// and none of this is on a hot path.
-    /// </remarks>
-    private sealed class HandAt(Vector3 where) : IControllers
-    {
-        private readonly Lock _guard = new();
-
-        private Pose? _at = new(where, Quaternion.Identity);
-
-        internal void MoveTo(Vector3 moved)
-        {
-            lock (_guard)
-            {
-                _at = new Pose(moved, Quaternion.Identity);
-            }
-        }
-
-        internal void Vanish()
-        {
-            lock (_guard)
-            {
-                _at = null;
-            }
-        }
-
-        public IReadOnlyList<Pose> Tracked() => At(0) is { } at ? [at] : [];
-
-        public Pose? At(uint device)
-        {
-            lock (_guard)
-            {
-                return _at;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Chrome that reports whatever the test tells it to.
-    /// </summary>
-    private sealed class ChromeReporting(Grip reported) : IGrabChrome
-    {
-        private readonly Lock _guard = new();
-
-        private Grip _reported = reported;
-        private Board? _framed;
-        private int _followed;
-
-        internal int Followed => Volatile.Read(ref _followed);
-
-        internal Board? Framed
-        {
-            get
-            {
-                lock (_guard)
-                {
-                    return _framed;
-                }
-            }
-        }
-
-        internal void Reports(Grip next)
-        {
-            lock (_guard)
-            {
-                _reported = next;
-            }
-        }
-
-        public void Showing(Grabbed lit)
-        {
-        }
-
-        public Grip Follow()
-        {
-            Interlocked.Increment(ref _followed);
-
-            lock (_guard)
-            {
-                return _reported;
-            }
-        }
-
-        public void Frames(Board panel)
-        {
-            lock (_guard)
-            {
-                _framed = panel;
-            }
-        }
-
-        public void Dispose()
-        {
-        }
-    }
-
-    /// <summary>
-    /// A headset overlay that only remembers where it was put.
-    /// </summary>
-    private sealed class OverlayAt : IHeadsetOverlay
-    {
-        private readonly Lock _guard = new();
-
-        private Board _placed;
-        private int _moves;
-
-        internal OverlayAt(Vector3 where)
-        {
-            _placed = new Board(new Pose(where, Quaternion.Identity), 0.5f, 0.3f);
-        }
-
-        public bool IsVisible => true;
-
-        public Board Placed
-        {
-            get
-            {
-                lock (_guard)
-                {
-                    return _placed;
-                }
-            }
-        }
-
-        internal int Moves => Volatile.Read(ref _moves);
-
-        public void MoveTo(Pose where)
-        {
-            Interlocked.Increment(ref _moves);
-
-            lock (_guard)
-            {
-                _placed = _placed with { Where = where };
-            }
-        }
-
-        public void Show()
-        {
-        }
-
-        public void Hide()
-        {
-        }
-
-        public void Paint(D47.Render.Presentation presented)
-        {
-        }
-
-        public void Dispose()
-        {
-        }
-    }
 }
