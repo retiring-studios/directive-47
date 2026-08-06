@@ -135,13 +135,14 @@ internal sealed partial class App : Application, IDisposable
     /// <para>
     /// Built here and not by the turn, because it outlives any one of them and
     /// because the surfaces subscribe to it rather than to whichever turn happens
-    /// to be in flight. Nothing subscribes yet —
+    /// to be in flight. The log is the only subscriber so far —
     /// [#72](https://github.com/retiring-studios/directive-47/issues/72) is what
     /// puts a status and a live log in front of the Commander.
     /// </para>
     /// </summary>
     private readonly Events _turns = new();
 
+    private IDisposable? _watchingTurns;
     private ChosenHotkey? _hotkey;
     private PushToTalk? _pushToTalk;
     private Turn? _turn;
@@ -473,6 +474,18 @@ internal sealed partial class App : Application, IDisposable
             new StandIns.Voice(_log.Warning),
             _turns);
 
+        // A turn no longer throws when a provider falls over — it publishes and
+        // returns to Idle. So the log has to listen for that, or the failure the
+        // catch below used to report becomes silent.
+        _watchingTurns = _turns.Subscribe(published =>
+        {
+            if (published is Failed gaveUp)
+            {
+                _log.Warning(
+                    $"The turn gave up during {gaveUp.During}: {gaveUp.Why.Message}");
+            }
+        });
+
         _pushToTalk = PushToTalk.From(
             settings, _log.Warning, () => _turn?.Held(), RunTheTurn);
     }
@@ -490,13 +503,13 @@ internal sealed partial class App : Application, IDisposable
     /// unobserved exception is written down instead.
     /// </para>
     /// <para>
-    /// Catching everything, deliberately. A turn is driven by whatever is behind
-    /// the four contracts, and by stage C that means a microphone, a network and
-    /// somebody else's service — none of which is worth ending the application
-    /// over.
-    /// <c>VoiceLoop_OnAProviderFailure_ReturnsToIdleWithoutCrashing</c> is the
-    /// story that makes that a fact rather than a catch block; this is what
-    /// stops it being a crash in the meantime.
+    /// The catch is now a backstop rather than the mechanism.
+    /// <c>Turn.Released</c> handles a provider falling over itself — it publishes
+    /// <c>Failed</c> and returns to Idle, and the subscription in
+    /// <see cref="ClaimPushToTalk"/> is what writes that down. What is left here
+    /// catches anything the turn could throw around the outside of that, which
+    /// should be nothing and is not worth ending the application over if it ever
+    /// stops being nothing.
     /// </para>
     /// </remarks>
     [SuppressMessage(
@@ -712,6 +725,12 @@ internal sealed partial class App : Application, IDisposable
 
         _pushToTalk?.Dispose();
         _pushToTalk = null;
+
+        // The bus holds our callback until told otherwise, and it is a field of
+        // this object — an undisposed subscription is this application keeping
+        // itself alive.
+        _watchingTurns?.Dispose();
+        _watchingTurns = null;
 
         // The hook holds a pointer to a callback of ours. Leaving it installed
         // past our own lifetime is how a shutdown turns into a crash.

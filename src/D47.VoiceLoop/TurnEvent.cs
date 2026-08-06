@@ -1,3 +1,5 @@
+using System;
+
 namespace D47.VoiceLoop;
 
 /// <summary>
@@ -26,3 +28,26 @@ public abstract record TurnEvent;
 /// </remarks>
 /// <param name="State">The state just entered.</param>
 public sealed record Entered(TurnState State) : TurnEvent;
+
+/// <summary>
+/// A stage of a turn threw, and the turn gave up on it.
+/// </summary>
+///
+/// <remarks>
+/// <para>
+/// An event rather than a sixth <see cref="TurnState"/>. A state is what the
+/// Commander is waiting on, and nobody waits on a failure — it is a thing that
+/// happened, and what follows it is <see cref="TurnState.Idle"/> like the end of
+/// any other turn. A state would also have asked every surface a question with
+/// no answer: how long does it stay there.
+/// </para>
+/// <para>
+/// It carries the exception rather than a message made from one. What reads this
+/// today writes a line to the log and wants the message; a crash report or a
+/// diagnostics page wants the type and the stack, and neither can be got back
+/// once this has been flattened to a string.
+/// </para>
+/// </remarks>
+/// <param name="During">The state the turn was in when it gave up.</param>
+/// <param name="Why">What went wrong.</param>
+public sealed record Failed(TurnState During, Exception Why) : TurnEvent;
