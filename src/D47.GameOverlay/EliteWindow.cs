@@ -99,7 +99,27 @@ public sealed class EliteWindow
         }
 
         // A zero thread id means the window is gone, which is not the game.
-        if (GetWindowThreadProcessId(window, out uint owner) == 0)
+        return GetWindowThreadProcessId(window, out uint owner) != 0 && IsTheGame(owner);
+    }
+
+    /// <summary>
+    /// Whether a process is the running game.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The question the window overload was always asking underneath, given a
+    /// name of its own because not everything that wants it has a window to
+    /// start from. SteamVR names the scene application by process id and never
+    /// by handle, so asking whether Elite is what the headset is rendering means
+    /// asking this.
+    /// </remarks>
+    /// <param name="process">The process id to ask about.</param>
+    /// <returns>Whether it is the game.</returns>
+    public static bool IsTheGame(uint process)
+    {
+        // Zero is what the window lookup and SteamVR both answer with when there
+        // is nothing to name, and no real process has it.
+        if (process == 0)
         {
             return false;
         }
@@ -108,7 +128,7 @@ public sealed class EliteWindow
         {
             using (game)
             {
-                if (game.Id == owner)
+                if ((uint)game.Id == process)
                 {
                     return true;
                 }
