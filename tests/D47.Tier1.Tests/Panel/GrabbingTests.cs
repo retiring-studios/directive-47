@@ -146,7 +146,7 @@ public class GrabbingTests
 
         internal int Followed => Volatile.Read(ref _followed);
 
-        public void Showing(Grabbed lit)
+        public void Showing(Grabbed lit, Near shown)
         {
         }
 

@@ -196,7 +196,7 @@ internal sealed class ChromeThatReports : IGrabChrome
         }
     }
 
-    public void Showing(Grabbed lit)
+    public void Showing(Grabbed lit, Near shown)
     {
     }
 

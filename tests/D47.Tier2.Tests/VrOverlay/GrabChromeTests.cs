@@ -44,7 +44,7 @@ public class GrabChromeTests : HeadsetTest
         using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
 
-        chrome.Showing(Grabbed.Nothing);
+        chrome.Showing(Grabbed.Nothing, Near.Nothing);
 
         ulong itsPanel = 0;
         ulong itsChrome = 0;
@@ -72,7 +72,7 @@ public class GrabChromeTests : HeadsetTest
         using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
 
-        chrome.Showing(Grabbed.Nothing);
+        chrome.Showing(Grabbed.Nothing, Near.Nothing);
 
         ulong handle = 0;
 
@@ -155,7 +155,7 @@ public class GrabChromeTests : HeadsetTest
         using (IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr))
         {
-            chrome.Showing(Grabbed.Bar);
+            chrome.Showing(Grabbed.Bar, new Near(Bar: true, false, false, false, false));
         }
 
         ulong handle = 0;

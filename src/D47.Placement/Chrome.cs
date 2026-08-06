@@ -21,6 +21,52 @@ public readonly record struct Patch(
     Grabbed What, float Left, float Right, float Bottom, float Top);
 
 /// <summary>
+/// Which pieces of chrome the laser is close enough to that they are worth
+/// showing.
+/// </summary>
+///
+/// <remarks>
+/// <para>
+/// A value rather than a set, so "has what is worth showing changed?" is an
+/// equality check costing nothing. A collection would be an allocation every
+/// time the laser moved, which is thirty times a second for as long as a hand is
+/// up.
+/// </para>
+/// <para>
+/// Nothing at all is the ordinary answer, and what a cockpit looks like whenever
+/// nobody is pointing.
+/// </para>
+/// </remarks>
+/// <param name="Bar">Whether the bar is worth showing.</param>
+/// <param name="TopLeft">Whether the top left handle is.</param>
+/// <param name="TopRight">Whether the top right handle is.</param>
+/// <param name="BottomLeft">Whether the bottom left handle is.</param>
+/// <param name="BottomRight">Whether the bottom right handle is.</param>
+public readonly record struct Near(
+    bool Bar, bool TopLeft, bool TopRight, bool BottomLeft, bool BottomRight)
+{
+    /// <summary>
+    /// Nothing is near.
+    /// </summary>
+    public static Near Nothing => default;
+
+    /// <summary>
+    /// Whether one piece is worth showing.
+    /// </summary>
+    /// <param name="piece">The piece to ask about.</param>
+    /// <returns>Whether it should be drawn at all.</returns>
+    public bool Shows(Grabbed piece) => piece switch
+    {
+        Grabbed.Bar => Bar,
+        Grabbed.TopLeftCorner => TopLeft,
+        Grabbed.TopRightCorner => TopRight,
+        Grabbed.BottomLeftCorner => BottomLeft,
+        Grabbed.BottomRightCorner => BottomRight,
+        _ => false,
+    };
+}
+
+/// <summary>
 /// The overlay's chrome: the bar that moves it and the handles that scale it,
 /// as a shape in the cockpit.
 /// </summary>
@@ -229,6 +275,84 @@ public static class Chrome
         }
 
         return Grabbed.Content;
+    }
+
+    /// <summary>
+    /// How far from a piece of chrome the laser can be and still bring it out,
+    /// as a share of the panel's shorter side.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// On the shipped quad this is six centimetres, about a handle's width.
+    /// </remarks>
+    internal const float NearShare = 0.2f;
+
+    /// <summary>
+    /// Which pieces the laser is near enough to be worth showing.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The chrome is invisible until a Commander points near it. That is a
+    /// deliberate trade against discoverability — the first version was faintly
+    /// present at all times so that somebody who had never been told the bar
+    /// exists would find it by seeing it. The maintainer looked at that in the
+    /// headset and chose calm over the hint.
+    /// </para>
+    /// <para>
+    /// Distance to the rectangle rather than to its middle. A handle is a
+    /// six-centimetre square and the bar is the width of the panel, so distance
+    /// to a centre would bring the bar out from much further away at its ends
+    /// than in the middle.
+    /// </para>
+    /// </remarks>
+    /// <param name="panel">The panel the chrome goes around.</param>
+    /// <param name="across">How far right of the chrome's middle, in metres.</param>
+    /// <param name="up">How far above the chrome's middle, in metres.</param>
+    /// <returns>What is close enough to draw.</returns>
+    /// <exception cref="ArgumentException">
+    /// Some part of the panel's pose is not a finite number.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The panel has no width or no height.
+    /// </exception>
+    public static Near Nearby(Board panel, float across, float up)
+    {
+        float within = MathF.Min(panel.Width, panel.Height) * NearShare;
+
+        Near near = Near.Nothing;
+
+        foreach (Patch patch in Parts(panel))
+        {
+            if (HowFar(patch, across, up) > within)
+            {
+                continue;
+            }
+
+            near = patch.What switch
+            {
+                Grabbed.Bar => near with { Bar = true },
+                Grabbed.TopLeftCorner => near with { TopLeft = true },
+                Grabbed.TopRightCorner => near with { TopRight = true },
+                Grabbed.BottomLeftCorner => near with { BottomLeft = true },
+                _ => near with { BottomRight = true },
+            };
+        }
+
+        return near;
+    }
+
+    /// <summary>
+    /// How far a point is from a rectangle, and nought when it is inside one.
+    /// </summary>
+    private static float HowFar(Patch patch, float across, float up)
+    {
+        float sideways = MathF.Max(
+            MathF.Max(patch.Left - across, across - patch.Right), 0);
+
+        float updown = MathF.Max(MathF.Max(patch.Bottom - up, up - patch.Top), 0);
+
+        return MathF.Sqrt((sideways * sideways) + (updown * updown));
     }
 
     /// <summary>

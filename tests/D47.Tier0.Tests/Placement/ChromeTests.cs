@@ -54,6 +54,62 @@ public class ChromeTests
     }
 
     [Fact]
+    public void Nothing_IsNearALaserInTheMiddleOfThePanel()
+    {
+        // Reading the panel is not reaching for it. This is the state a
+        // Commander is in whenever they are actually using the overlay, and it
+        // is the whole point of the chrome keeping out of the way.
+        Chrome.Nearby(Panel, 0, 0).ShouldBe(Near.Nothing);
+    }
+
+    [Fact]
+    public void ALaser_OnAHandle_BringsOutThatHandleAndNoOther()
+    {
+        // The top right handle straddles (0.25, 0.1575) in the chrome's frame.
+        Near near = Chrome.Nearby(Panel, 0.25f, 0.1575f);
+
+        near.TopRight.ShouldBeTrue();
+
+        near.TopLeft.ShouldBeFalse("the far corner is half a metre away");
+        near.BottomRight.ShouldBeFalse();
+        near.BottomLeft.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ALaser_ShortOfAHandle_StillBringsItOut()
+    {
+        // Five centimetres inside the panel from the top right corner, which is
+        // within the six the share allows. "At or near it" is the requirement,
+        // and a handle that only appeared once the laser was already on it would
+        // be one nobody could find.
+        Chrome.Nearby(Panel, 0.20f, 0.1075f).TopRight.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ALaser_NearTheBottomEdge_BringsOutTheBar()
+    {
+        // Just inside the bottom of the panel, above where the bar hangs.
+        Near near = Chrome.Nearby(Panel, 0, -0.13f);
+
+        near.Bar.ShouldBeTrue();
+
+        // The bar spans the whole width, so its two ends reach the lower
+        // handles — but the middle of it does not.
+        near.BottomLeft.ShouldBeFalse();
+        near.BottomRight.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Nearby_MeasuresToThePieceRatherThanItsMiddle()
+    {
+        // The bar is the width of the panel. Measured to its centre, the left
+        // end would need the laser almost a whole panel away before it counted
+        // as near; measured to the rectangle, anywhere along it is close.
+        Chrome.Nearby(Panel, -0.24f, -0.13f).Bar.ShouldBeTrue();
+        Chrome.Nearby(Panel, 0.24f, -0.13f).Bar.ShouldBeTrue();
+    }
+
+    [Fact]
     public void Chrome_IsTallEnough_ForTheBarBeneathAndTheHandlesAbove()
     {
         // 0.3 of panel, plus 0.03 of handle above, plus 0.045 of bar below. The

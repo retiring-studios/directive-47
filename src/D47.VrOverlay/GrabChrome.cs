@@ -40,7 +40,8 @@ public interface IGrabChrome : IDisposable
     /// nothing has changed — which is nearly always.
     /// </remarks>
     /// <param name="lit">What a trigger would take hold of right now.</param>
-    void Showing(Grabbed lit);
+    /// <param name="shown">What the laser is near enough to be worth drawing.</param>
+    void Showing(Grabbed lit, Near shown);
 
     /// <summary>
     /// Looks at where the laser is and lights whatever it is on.
@@ -83,6 +84,7 @@ internal sealed class GrabChrome : IGrabChrome
     private Board _panel;
 
     private Grabbed _showing;
+    private Near _near;
     private bool _disposed;
 
     private GrabChrome(SteamVrOverlay overlay, Board panel, Grabbed showing)
@@ -102,7 +104,10 @@ internal sealed class GrabChrome : IGrabChrome
     /// <exception cref="InvalidOperationException">SteamVR refused something.</exception>
     internal static GrabChrome Around(string key, string name, Board panel)
     {
-        (byte[] pixels, int width, int height) = ChromeRender.Take(panel, Grabbed.Nothing);
+        // Empty to begin with. Nobody is pointing at an overlay that has only
+        // just appeared, and the chrome is invisible until they do.
+        (byte[] pixels, int width, int height) =
+            ChromeRender.Take(panel, Grabbed.Nothing, Near.Nothing);
 
         var overlay = SteamVrOverlay.Showing(
             key, name, Chrome.Around(panel), pixels, width, height);
@@ -121,7 +126,7 @@ internal sealed class GrabChrome : IGrabChrome
     }
 
     /// <inheritdoc/>
-    public void Showing(Grabbed lit)
+    public void Showing(Grabbed lit, Near shown)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -129,14 +134,19 @@ internal sealed class GrabChrome : IGrabChrome
         // still is the same answer every time it is looked at, and repainting a
         // texture thirty times a second to say so would be the whole cost of
         // this feature for no visible difference.
-        if (lit == _showing)
+        //
+        // Both halves, because a laser moving off a handle changes what is drawn
+        // without changing what is lit. Comparing whole values is why Near is a
+        // record struct rather than a set.
+        if (lit == _showing && shown == _near)
         {
             return;
         }
 
         _showing = lit;
+        _near = shown;
 
-        (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit);
+        (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit, shown);
 
         _overlay.Paint(pixels, width, height);
     }
@@ -148,13 +158,18 @@ internal sealed class GrabChrome : IGrabChrome
 
         // Pointed first, because it is the call that drains the queue — the
         // trigger is read out of what that drain left behind.
-        Grabbed lit = _overlay.Pointed() is { } at
-            ? Chrome.On(_panel, at.Across, at.Up)
-            : Grabbed.Nothing;
+        (float Across, float Up)? at = _overlay.Pointed();
+
+        Grabbed lit = at is { } on ? Chrome.On(_panel, on.Across, on.Up) : Grabbed.Nothing;
+
+        // Nothing near when the laser is elsewhere, which is an empty quad.
+        Near shown = at is { } close
+            ? Chrome.Nearby(_panel, close.Across, close.Up)
+            : Near.Nothing;
 
         (bool held, uint hand) = _overlay.Trigger();
 
-        Showing(lit);
+        Showing(lit, shown);
 
         return new Grip(lit, held, hand);
     }

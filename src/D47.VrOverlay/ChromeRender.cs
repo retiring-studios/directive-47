@@ -117,6 +117,10 @@ public static class ChromeRender
     /// </remarks>
     /// <param name="panel">The panel the chrome goes around.</param>
     /// <param name="lit">What the controller is aimed at, if anything.</param>
+    /// <param name="shown">
+    /// What the laser is near enough to be worth drawing. Nothing draws what is
+    /// not in here, so <c>Near.Nothing</c> is an empty quad.
+    /// </param>
     /// <returns>The pixels, and how wide and tall they are.</returns>
     /// <exception cref="ArgumentException">
     /// Some part of the panel's pose is not a finite number.
@@ -124,7 +128,8 @@ public static class ChromeRender
     /// <exception cref="ArgumentOutOfRangeException">
     /// The panel has no width or no height.
     /// </exception>
-    public static (byte[] Pixels, int Width, int Height) Take(Board panel, Grabbed lit)
+    public static (byte[] Pixels, int Width, int Height) Take(
+        Board panel, Grabbed lit, Near shown)
     {
         Board around = Chrome.Around(panel);
 
@@ -138,6 +143,11 @@ public static class ChromeRender
         // shares would be a second answer to the same question.
         foreach (Patch patch in Chrome.Parts(panel))
         {
+            if (!shown.Shows(patch.What))
+            {
+                continue;
+            }
+
             foreach (Patch ink in Drawn(patch))
             {
                 Fill(pixels, width, height, around, ink, patch.What == lit);
@@ -210,14 +220,34 @@ public static class ChromeRender
     }
 
     /// <summary>
-    /// Paints a rectangle given in the chrome's own metres.
+    /// Paints a rectangle with radiused ends, given in the chrome's own metres.
     /// </summary>
     ///
     /// <remarks>
+    /// <para>
     /// The colour is Elite's own HUD yellow, the one the render writes every line
     /// of body text in, dimmed rather than replaced. <c>Palette</c> says the five
     /// undeclared colours from the sampling pass stay undeclared because nothing
     /// draws with them, and this draws with none of them either.
+    /// </para>
+    /// <para>
+    /// Fully rounded: the radius is half the shorter side, so an arm is a stroke
+    /// with round caps and the bar is a pill. Two arms meeting at a corner share
+    /// that corner, so their union comes out radiused on the outside and square
+    /// on the inside, which is what a bracket looks like.
+    /// </para>
+    /// <para>
+    /// Antialiased by coverage rather than drawn hard and filtered by the
+    /// compositor. A radius stepped in whole pixels reads as a staircase at the
+    /// distance the overlay sits, and the compositor's filtering blurs a
+    /// staircase rather than removing it.
+    /// </para>
+    /// <para>
+    /// Written against alpha rather than blended into it. Nothing here overlaps
+    /// anything else except an arm meeting its own elbow, where both want the
+    /// same value — so the brighter of the two is the right answer and blending
+    /// would darken the join.
+    /// </para>
     /// </remarks>
     private static void Fill(
         byte[] pixels, int width, int height, Board around, Patch patch, bool lit)
@@ -225,31 +255,88 @@ public static class ChromeRender
         Color colour = Palette.BodyText.Color;
         byte alpha = lit ? Lit : Resting;
 
-        int fromX = ToPixelAcross(patch.Left, around, width);
-        int toX = ToPixelAcross(patch.Right, around, width);
+        float left = ToPixelAcross(patch.Left, around, width);
+        float right = ToPixelAcross(patch.Right, around, width);
 
         // Top and bottom swap on the way in, because a texture counts rows
         // downwards and the cockpit counts metres upwards.
-        int fromY = ToPixelDown(patch.Top, around, height);
-        int toY = ToPixelDown(patch.Bottom, around, height);
+        float top = ToPixelDown(patch.Top, around, height);
+        float bottom = ToPixelDown(patch.Bottom, around, height);
 
-        for (int y = Math.Max(fromY, 0); y < Math.Min(toY, height); y++)
+        float middleX = (left + right) / 2;
+        float middleY = (top + bottom) / 2;
+
+        float halfWide = (right - left) / 2;
+        float halfTall = (bottom - top) / 2;
+
+        float radius = MathF.Min(halfWide, halfTall);
+
+        // A pixel beyond the shape on every side, so the soft edge has somewhere
+        // to land.
+        int fromX = Math.Max((int)MathF.Floor(left) - 1, 0);
+        int toX = Math.Min((int)MathF.Ceiling(right) + 1, width);
+        int fromY = Math.Max((int)MathF.Floor(top) - 1, 0);
+        int toY = Math.Min((int)MathF.Ceiling(bottom) + 1, height);
+
+        for (int y = fromY; y < toY; y++)
         {
-            for (int x = Math.Max(fromX, 0); x < Math.Min(toX, width); x++)
+            for (int x = fromX; x < toX; x++)
             {
+                float covered = Covered(
+                    x + 0.5f, y + 0.5f, middleX, middleY, halfWide, halfTall, radius);
+
+                if (covered <= 0)
+                {
+                    continue;
+                }
+
+                byte here = (byte)(alpha * covered);
+
                 int at = ((y * width) + x) * 4;
+
+                if (here <= pixels[at + 3])
+                {
+                    continue;
+                }
 
                 pixels[at] = colour.R;
                 pixels[at + 1] = colour.G;
                 pixels[at + 2] = colour.B;
-                pixels[at + 3] = alpha;
+                pixels[at + 3] = here;
             }
         }
     }
 
-    private static int ToPixelAcross(float metres, Board around, int width) =>
-        (int)MathF.Round((metres + (around.Width / 2)) / around.Width * width);
+    /// <summary>
+    /// How much of a pixel a rounded rectangle covers, from nought to one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The distance from the pixel's middle to the shape, softened across one
+    /// pixel. Exact area would mean integrating the shape over the pixel; this
+    /// is the standard approximation and is indistinguishable at any size an
+    /// overlay is read at.
+    /// </remarks>
+    private static float Covered(
+        float x,
+        float y,
+        float middleX,
+        float middleY,
+        float halfWide,
+        float halfTall,
+        float radius)
+    {
+        float sideways = MathF.Max(MathF.Abs(x - middleX) - (halfWide - radius), 0);
+        float updown = MathF.Max(MathF.Abs(y - middleY) - (halfTall - radius), 0);
 
-    private static int ToPixelDown(float metres, Board around, int height) =>
-        (int)MathF.Round(((around.Height / 2) - metres) / around.Height * height);
+        float outside = MathF.Sqrt((sideways * sideways) + (updown * updown)) - radius;
+
+        return Math.Clamp(0.5f - outside, 0, 1);
+    }
+
+    private static float ToPixelAcross(float metres, Board around, int width) =>
+        (metres + (around.Width / 2)) / around.Width * width;
+
+    private static float ToPixelDown(float metres, Board around, int height) =>
+        ((around.Height / 2) - metres) / around.Height * height;
 }

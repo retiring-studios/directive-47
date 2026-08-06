@@ -96,6 +96,32 @@ public class ChromeRenderTests
     }
 
     [Fact]
+    public void Chrome_WithTheLaserNowhereNear_IsNotThereAtAll()
+    {
+        Chromed empty = Taken(Grabbed.Nothing, Near.Nothing);
+
+        // The whole quad, sampled where each piece would be. Chrome that is
+        // always faintly present is furniture in the cockpit; the maintainer
+        // looked at it in the headset and asked for it to keep out of the way
+        // until it is wanted.
+        empty.Alpha(0.5, BarMiddleDown).ShouldBe((byte)0);
+        empty.Alpha(CornerAcross, ArmDown).ShouldBe((byte)0);
+    }
+
+    [Fact]
+    public void APiece_TheLaserIsNear_ComesOutWithoutBringingTheOthersWithIt()
+    {
+        Chromed justTheBar = Taken(
+            Grabbed.Nothing, new Near(Bar: true, false, false, false, false));
+
+        justTheBar.Alpha(0.5, BarMiddleDown).ShouldBeGreaterThan((byte)0);
+
+        // A Commander reaching for the bar has not asked to see the corners.
+        justTheBar.Alpha(CornerAcross, ArmDown).ShouldBe(
+            (byte)0, "being near the bar should not light up the corners");
+    }
+
+    [Fact]
     public void TheBar_IsStillTheWholeWidthToAimAt()
     {
         // The same trade the brackets make: less ink, same target. Somebody
@@ -215,12 +241,21 @@ public class ChromeRenderTests
             around.Width / around.Height, 0.02);
     }
 
-    private static Chromed Taken(Grabbed lit)
+    /// <summary>
+    /// The chrome with everything close enough to draw, which is the state most
+    /// of these facts are about. What is drawn when the laser is elsewhere is
+    /// its own pair of tests below.
+    /// </summary>
+    private static Chromed Taken(Grabbed lit) => Taken(lit, Everything);
+
+    private static Chromed Taken(Grabbed lit, Near shown)
     {
-        (byte[] pixels, int width, int height) = ChromeRender.Take(Panel, lit);
+        (byte[] pixels, int width, int height) = ChromeRender.Take(Panel, lit, shown);
 
         return new Chromed(pixels, width, height);
     }
+
+    private static Near Everything => new(true, true, true, true, true);
 
     /// <summary>
     /// A chrome texture, with a way to ask what is at a spot on it.
