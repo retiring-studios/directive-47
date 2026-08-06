@@ -105,21 +105,9 @@ public sealed class Turn
     /// </remarks>
     public void Held()
     {
-        lock (_guard)
+        if (Interrupted())
         {
-            if (_running is { } inFlight)
-            {
-                // Remembered as well as acted on, because the release is a
-                // separate call arriving later and it has no other way to know
-                // this press was an interruption.
-                _cancelling = true;
-
-                inFlight.Cancel();
-
-                return;
-            }
-
-            _cancelling = false;
+            return;
         }
 
         _microphone.Open();
@@ -147,23 +135,9 @@ public sealed class Turn
             + "silently ending the loop.")]
     public async Task Released(CancellationToken stopping)
     {
-        CancellationTokenSource running;
-
-        lock (_guard)
+        if (Taking(stopping) is not { } running)
         {
-            if (_cancelling)
-            {
-                // The key coming up after an interruption. The turn it stopped
-                // is unwinding on its own thread and will publish Idle when it
-                // gets there; there is nothing for this release to do and
-                // nothing for it to say.
-                _cancelling = false;
-
-                return;
-            }
-
-            running = CancellationTokenSource.CreateLinkedTokenSource(stopping);
-            _running = running;
+            return;
         }
 
         // Where the turn has got to, so that a failure can say which stage gave
@@ -208,15 +182,86 @@ public sealed class Turn
         }
         finally
         {
-            lock (_guard)
+            Ended(running);
+        }
+    }
+
+    /// <summary>
+    /// Whether the key going down was an interruption, stopping the turn in
+    /// flight if it was.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Half of a protocol whose other half is <see cref="Taking"/>. A press and
+    /// the release after it are two calls arriving separately, and the release
+    /// has no way of its own to know the press was an interruption — so the
+    /// press writes that down. Both halves are here rather than inline so the
+    /// protocol can be read as one thing.
+    /// </remarks>
+    /// <returns>Whether the press cancelled something rather than starting it.</returns>
+    private bool Interrupted()
+    {
+        lock (_guard)
+        {
+            if (_running is not { } inFlight)
             {
-                _running = null;
+                _cancelling = false;
+
+                return false;
             }
 
-            running.Dispose();
+            _cancelling = true;
 
-            Enter(TurnState.Idle);
+            inFlight.Cancel();
+
+            return true;
         }
+    }
+
+    /// <summary>
+    /// Takes the turn, unless the key coming up is the end of an interruption.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The turn an interruption stopped is unwinding on its own thread and will
+    /// publish <see cref="TurnState.Idle"/> when it gets there, so there is
+    /// nothing for that release to do and nothing for it to say.
+    /// </remarks>
+    /// <param name="stopping">The caller's own reason to give up.</param>
+    /// <returns>
+    /// What the stages should run under, or <see langword="null"/> to do nothing.
+    /// </returns>
+    private CancellationTokenSource? Taking(CancellationToken stopping)
+    {
+        lock (_guard)
+        {
+            if (_cancelling)
+            {
+                _cancelling = false;
+
+                return null;
+            }
+
+            _running = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+
+            return _running;
+        }
+    }
+
+    /// <summary>
+    /// Gives the turn back, however it ended.
+    /// </summary>
+    /// <param name="running">What the stages ran under.</param>
+    private void Ended(CancellationTokenSource running)
+    {
+        lock (_guard)
+        {
+            _running = null;
+        }
+
+        running.Dispose();
+
+        Enter(TurnState.Idle);
     }
 
     private void Enter(TurnState state) => _events.Publish(new Entered(state));
