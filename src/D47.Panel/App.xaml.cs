@@ -12,6 +12,7 @@ using System.Windows.Threading;
 
 using D47.Data;
 
+using D47.Audio;
 using D47.Composition;
 using D47.GameOverlay;
 using D47.Help;
@@ -143,6 +144,7 @@ internal sealed partial class App : Application, IDisposable
     private readonly Events _turns = new();
 
     private IDisposable? _watchingTurns;
+    private CuePlayer? _cues;
     private ChosenHotkey? _hotkey;
     private PushToTalk? _pushToTalk;
     private Turn? _turn;
@@ -486,6 +488,11 @@ internal sealed partial class App : Application, IDisposable
             }
         });
 
+        // Random.Shared rather than one of our own. Nothing here wants a
+        // sequence it can reproduce, and a Commander who could tell which chime
+        // came next would be hearing a pattern rather than a set.
+        _cues = CuePlayer.Following(_turns, Random.Shared);
+
         _pushToTalk = PushToTalk.From(
             settings, _log.Warning, () => _turn?.Held(), RunTheTurn);
     }
@@ -728,9 +735,13 @@ internal sealed partial class App : Application, IDisposable
 
         // The bus holds our callback until told otherwise, and it is a field of
         // this object — an undisposed subscription is this application keeping
-        // itself alive.
+        // itself alive. The cue player holds one of its own and an audio device
+        // besides.
         _watchingTurns?.Dispose();
         _watchingTurns = null;
+
+        _cues?.Dispose();
+        _cues = null;
 
         // The hook holds a pointer to a callback of ours. Leaving it installed
         // past our own lifetime is how a shutdown turns into a crash.

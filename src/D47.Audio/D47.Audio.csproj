@@ -40,4 +40,33 @@
         <ProjectReference Include="..\D47.VoiceLoop\D47.VoiceLoop.csproj" />
     </ItemGroup>
 
+    <!--
+        The loop's sound cues, embedded rather than copied beside the exe. CI
+        publishes one self-contained file and attaches only that, so a folder of
+        WAVs next to it would not reach anybody — the same reason D47.Render
+        embeds its fonts and D47.Panel its icon.
+
+        EmbeddedResource rather than the Resource those two use: Resource is a
+        WPF build action and this project does not set UseWPF. The names come
+        out as D47.Audio.assets.cues.<state>.<file>.wav, which is what Cues
+        reads.
+
+        Linked, because assets/ is shared repository content rather than this
+        project's own, and the Link is what puts them at a stable resource name
+        instead of one built out of "..\..\".
+
+        A folder per TurnState, named for the state, so the mapping needs no
+        table to look at. Speaking has no folder on purpose: the reply is the
+        sound. Whether a Commander can supply their own is
+        https://github.com/retiring-studios/directive-47/issues/273 and is
+        undecided, so nothing here is shaped for it yet.
+
+        Taken from dseelinger/CovasPlusPlus, where they were the same cues doing
+        the same job.
+    -->
+    <ItemGroup>
+        <EmbeddedResource Include="..\..\assets\cues\**\*.wav"
+                          Link="assets\cues\%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
 </Project>
