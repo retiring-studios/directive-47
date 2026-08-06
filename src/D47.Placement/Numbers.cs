@@ -60,4 +60,26 @@ internal static class Numbers
                 name);
         }
     }
+
+    /// <summary>
+    /// Throws unless an extent is a size at all.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Here rather than on <see cref="Chrome"/>, where it was written. It went
+    /// with the chrome while the chrome was the only thing that measured a board;
+    /// <see cref="Stretch"/> measures one too, and a size check reached for
+    /// through the type that draws handles is one nobody finds.
+    /// </remarks>
+    /// <param name="extent">How wide or how tall.</param>
+    /// <param name="name">The argument it came from.</param>
+    /// <exception cref="ArgumentOutOfRangeException">It is not a size.</exception>
+    internal static void MustBeASize(float extent, string name)
+    {
+        if (!float.IsFinite(extent) || extent <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                name, extent, "A board with no size is not something anybody can point at.");
+        }
+    }
 }

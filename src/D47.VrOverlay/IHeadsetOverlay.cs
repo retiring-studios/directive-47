@@ -71,6 +71,27 @@ public interface IHeadsetOverlay : IDisposable
     void MoveTo(Pose where);
 
     /// <summary>
+    /// Makes the quad a different size, and puts it where that size leaves it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A whole board rather than a width, because scaling by a corner moves the
+    /// overlay as well as resizing it — the opposite corner stays nailed down, so
+    /// everything else including the middle ends up somewhere new. Handing over a
+    /// size and a pose separately would put the quad through a moment of being
+    /// the new size in the old place, once per look, for as long as the drag
+    /// lasted.
+    /// </para>
+    /// <para>
+    /// How big is decided in <c>D47.Placement</c> and arrives here already worked
+    /// out, which is the same split every other placement follows.
+    /// </para>
+    /// </remarks>
+    /// <param name="board">How big the quad should be, and where.</param>
+    void ResizeTo(Board board);
+
+    /// <summary>
     /// Puts the overlay in front of the Commander.
     /// </summary>
     void Show();

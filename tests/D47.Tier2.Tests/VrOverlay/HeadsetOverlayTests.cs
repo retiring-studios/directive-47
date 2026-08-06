@@ -160,6 +160,61 @@ public class HeadsetOverlayTests : HeadsetTest
     }
 
     [Fact]
+    public void Overlay_WhenResized_IsTheSizeItWasMadeAccordingToTheRuntime()
+    {
+        // The other half of the corner pull, and the half no arithmetic can
+        // settle. Stretch works out how big the panel should be and is asserted
+        // at Tier 0 against numbers; this is whether SteamVR actually made it
+        // that size, and put it where that size leaves it.
+        Answer answer = Fixtures.HelpsAnswer();
+
+        using IHeadsetOverlay overlay = StaThread.Run(
+            () => new HeadsetOverlayFactory().Create(Presentation.Of(answer)))
+            ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
+
+        // Twice as big, and somewhere else, which is what a corner pull produces
+        // — the pinned corner holding still is what moves the middle.
+        Board made = overlay.Placed with
+        {
+            Where = new Pose(new Vector3(0.1f, -0.3f, -1.2f), Quaternion.Identity),
+            Width = overlay.Placed.Width * 2,
+            Height = overlay.Placed.Height * 2,
+        };
+
+        overlay.ResizeTo(made);
+
+        overlay.Placed.Width.ShouldBe(made.Width, "the adapter should know how big it made the quad");
+
+        ulong handle = 0;
+
+        OpenVR.Overlay.FindOverlay(HeadsetOverlayFactory.Key, ref handle)
+            .ShouldBe(EVROverlayError.None);
+
+        float across = 0;
+
+        OpenVR.Overlay.GetOverlayWidthInMeters(handle, ref across)
+            .ShouldBe(EVROverlayError.None);
+
+        // Read back out of the compositor rather than trusted, for the same
+        // reason the move above is. A field remembering a number is not the same
+        // fact as the quad having changed size.
+        across.ShouldBe(made.Width, tolerance: 0.001f);
+
+        HmdMatrix34_t placed = default;
+        ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseSeated;
+
+        OpenVR.Overlay.GetOverlayTransformAbsolute(handle, ref origin, ref placed)
+            .ShouldBe(EVROverlayError.None);
+
+        // And it went where the new size put it. A resize that changed the width
+        // and left the transform alone would grow the overlay about its own
+        // middle, which is the gesture this is not.
+        placed.m3.ShouldBe(made.Where.Position.X, tolerance: 0.001);
+        placed.m7.ShouldBe(made.Where.Position.Y, tolerance: 0.001);
+        placed.m11.ShouldBe(made.Where.Position.Z, tolerance: 0.001);
+    }
+
+    [Fact]
     public void Overlay_WhenDisposed_LeavesNothingBehindInTheCompositor()
     {
         // A test that fails an assertion must not leave a quad floating in

@@ -92,6 +92,7 @@ internal sealed class OverlayThatMoves : IHeadsetOverlay
 
     private Board _placed;
     private int _moves;
+    private int _resizes;
 
     internal OverlayThatMoves(Vector3 where)
     {
@@ -122,6 +123,12 @@ internal sealed class OverlayThatMoves : IHeadsetOverlay
     /// </summary>
     internal int Moves => Volatile.Read(ref _moves);
 
+    /// <summary>
+    /// How many times it was asked to change size. Nought is the assertion for
+    /// every gesture that is not a corner pull.
+    /// </summary>
+    internal int Resizes => Volatile.Read(ref _resizes);
+
     public void MoveTo(Pose where)
     {
         Interlocked.Increment(ref _moves);
@@ -129,6 +136,16 @@ internal sealed class OverlayThatMoves : IHeadsetOverlay
         lock (_guard)
         {
             _placed = _placed with { Where = where };
+        }
+    }
+
+    public void ResizeTo(Board board)
+    {
+        Interlocked.Increment(ref _resizes);
+
+        lock (_guard)
+        {
+            _placed = board;
         }
     }
 

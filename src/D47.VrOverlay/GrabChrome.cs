@@ -56,16 +56,16 @@ public interface IGrabChrome : IDisposable
     Grip Follow();
 
     /// <summary>
-    /// Moves the chrome so it frames a panel that has been put somewhere else.
+    /// Puts the chrome back around a panel that has been moved or resized.
     /// </summary>
     ///
     /// <remarks>
-    /// The chrome is a second quad and does not move because the panel did.
-    /// Without this a dragged panel slides out from inside its own bar, which
-    /// looks like the chrome being broken rather than like nobody having moved
-    /// it.
+    /// The chrome is a second quad and does not follow the panel on its own.
+    /// Without this a dragged panel slides out from inside its own bar and a
+    /// scaled one swells out from behind its own handles, both of which look like
+    /// the chrome being broken rather than like nobody having moved it.
     /// </remarks>
-    /// <param name="panel">Where the panel is now.</param>
+    /// <param name="panel">Where the panel is now, and how big.</param>
     void Frames(Board panel);
 }
 
@@ -146,9 +146,7 @@ internal sealed class GrabChrome : IGrabChrome
         _showing = lit;
         _shown = shown;
 
-        (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit, shown);
-
-        _overlay.Paint(pixels, width, height);
+        Repaint();
     }
 
     /// <inheritdoc/>
@@ -179,9 +177,50 @@ internal sealed class GrabChrome : IGrabChrome
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
+        // The width alone, because a scale is uniform and the chrome's shares are
+        // all shares of the panel — so a panel that kept its width kept its
+        // height too, and the chrome around it is the shape it already was.
+        bool resized = panel.Width != _panel.Width;
+
         _panel = panel;
 
-        _overlay.MoveTo(Chrome.Around(panel).Where);
+        Board around = Chrome.Around(panel);
+
+        if (!resized)
+        {
+            // A drag is the common case by a wide margin and moves the quad
+            // thirty times a second. Resizing it to the size it already is would
+            // be two more runtime calls per look to say nothing changed.
+            _overlay.MoveTo(around.Where);
+
+            return;
+        }
+
+        _overlay.ResizeTo(around);
+
+        // And the texture after it. ChromeRender works its pixel size out from
+        // the quad's metres, so a chrome left on its old render would be the
+        // right shape at the wrong resolution — sharp at half a metre and soft
+        // at two.
+        Repaint();
+    }
+
+    /// <summary>
+    /// Draws the chrome as it currently stands and puts it on the quad.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Both callers pass the same three things, and they are all fields — what
+    /// changed before getting here is what differs. Written out twice, the second
+    /// copy is where somebody eventually paints against a panel that has been
+    /// replaced.
+    /// </remarks>
+    private void Repaint()
+    {
+        (byte[] pixels, int width, int height) =
+            ChromeRender.Take(_panel, _showing, _shown);
+
+        _overlay.Paint(pixels, width, height);
     }
 
     /// <summary>
