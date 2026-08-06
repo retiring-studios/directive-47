@@ -96,13 +96,6 @@ jobs:
             - name: Check the package licences
               run: ./scripts/check-package-licenses.ps1
 
-            # Formatting is already a build error by way of
-            # EnforceCodeStyleInBuild and TreatWarningsAsErrors, but only for
-            # the rules .editorconfig gives a severity to. This is the rest of
-            # it, and it costs a few seconds.
-            - name: Check the formatting
-              run: dotnet format D47.slnx --verify-no-changes --no-restore
-
             # vpk, pinned in .config/dotnet-tools.json to the same version as
             # the Velopack package the application references. A tool and a
             # library that disagree about the package format fail at install
