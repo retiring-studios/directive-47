@@ -31,8 +31,12 @@ internal static class StandIns
     /// </summary>
     ///
     /// <remarks>
-    /// Replaced by [#8](https://github.com/retiring-studios/directive-47/issues/8),
-    /// which brings WASAPI capture and the audio format that goes with it.
+    /// No longer what the application uses. <c>D47.Audio.Microphone</c> is, and
+    /// <see cref="ChosenMicrophone"/> decides between the two — this is what a
+    /// machine with no capture device gets, which
+    /// [#228](https://github.com/retiring-studios/directive-47/issues/228) says
+    /// has to keep working. A shipped fallback rather than scaffolding waiting
+    /// to be deleted, unlike the three below it.
     /// </remarks>
     internal sealed class Microphone : IMicrophone
     {

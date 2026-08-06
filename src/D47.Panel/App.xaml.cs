@@ -144,6 +144,7 @@ internal sealed partial class App : Application, IDisposable
     private readonly Events _turns = new();
 
     private IDisposable? _watchingTurns;
+    private IMicrophone? _microphone;
     private CuePlayer? _cues;
     private ChosenHotkey? _hotkey;
     private PushToTalk? _pushToTalk;
@@ -469,8 +470,12 @@ internal sealed partial class App : Application, IDisposable
     /// <param name="settings">What the Commander chose.</param>
     private void ClaimPushToTalk(SettingsStore settings)
     {
+        // The real one now, where there is a device to open. The other three are
+        // still stand-ins and stay that way until stage C.
+        _microphone = ChosenMicrophone.Available(Audio.Microphone.IsAvailable, _log.Warning);
+
         _turn = new Turn(
-            new StandIns.Microphone(),
+            _microphone,
             new StandIns.Transcriber(),
             new StandIns.Model(),
             new StandIns.Voice(_log.Warning),
@@ -742,6 +747,12 @@ internal sealed partial class App : Application, IDisposable
 
         _cues?.Dispose();
         _cues = null;
+
+        // The real one holds a capture device. IMicrophone says nothing about
+        // disposing, because the stand-in has nothing to give back and the
+        // contract is about what a turn needs rather than what an adapter owns.
+        (_microphone as IDisposable)?.Dispose();
+        _microphone = null;
 
         // The hook holds a pointer to a callback of ours. Leaving it installed
         // past our own lifetime is how a shutdown turns into a crash.
