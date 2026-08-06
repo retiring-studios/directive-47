@@ -33,6 +33,18 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// </remarks>
     private (float Across, float Up)? _pointed;
 
+    /// <summary>
+    /// Whether the trigger is down, for the same reason as above: the runtime
+    /// reports the press and the release, not the state in between.
+    /// </summary>
+    private bool _held;
+
+    /// <summary>
+    /// Which device the laser belongs to. Remembered so that a grab can ask for
+    /// that controller's pose rather than guessing which hand is pointing.
+    /// </summary>
+    private uint _hand = OpenVR.k_unTrackedDeviceIndexInvalid;
+
     private bool _disposed;
 
     private SteamVrOverlay(ulong handle, Board placed)
@@ -42,7 +54,7 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     }
 
     /// <inheritdoc/>
-    public Board Placed { get; }
+    public Board Placed { get; private set; }
 
     /// <inheritdoc/>
     public bool IsVisible => !_disposed && OpenVR.Overlay.IsOverlayVisible(_handle);
@@ -249,13 +261,36 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
                     _pointed = (
                         arrived.data.mouse.x - (Placed.Width / 2),
                         arrived.data.mouse.y - (Placed.Height / 2));
+                    _hand = arrived.trackedDeviceIndex;
+                    break;
+
+                // The trigger, arriving as a mouse button because the overlay
+                // asked for VROverlayInputMethod.Mouse. This is why grabbing
+                // needs no action manifest and no input focus: those are for
+                // IVRInput actions, and overlay mouse input is a different road
+                // to the same finger. #235's note about shipping a manifest
+                // inside a single-file exe never had to be answered.
+                case EVREventType.VREvent_MouseButtonDown:
+                    _held = true;
+                    _hand = arrived.trackedDeviceIndex;
+                    break;
+
+                case EVREventType.VREvent_MouseButtonUp:
+                    _held = false;
+                    _hand = arrived.trackedDeviceIndex;
                     break;
 
                 // The laser left. Without this the highlight stays wherever it
                 // was last seen, which reads as a stuck cursor rather than as a
                 // hand that moved away.
+                //
+                // The trigger is dropped with it. A Commander who aims away
+                // mid-drag gets no button-up on this overlay, and a hold nobody
+                // ever ends is one that carries the panel around for the rest of
+                // the session.
                 case EVREventType.VREvent_FocusLeave:
                     _pointed = null;
+                    _held = false;
                     break;
 
                 default:
@@ -264,6 +299,44 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
         }
 
         return _pointed;
+    }
+
+    /// <summary>
+    /// Whether the trigger is down, and on which device, as of the last
+    /// <see cref="Pointed"/>.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Read after <see cref="Pointed"/> rather than polling again. One drain of
+    /// the queue produces both answers, and a second drain would find nothing
+    /// and report a trigger that had already been dealt with.
+    /// </remarks>
+    internal (bool Held, uint Hand) Trigger() => (_held, _hand);
+
+    /// <summary>
+    /// Puts the quad somewhere else.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Absolute and in the seated universe, the same as when it was created —
+    /// placement is decided in <c>D47.Placement</c> and arrives here already
+    /// worked out.
+    /// </remarks>
+    /// <param name="where">Where the quad should be.</param>
+    /// <exception cref="ArgumentException">
+    /// The pose is not something a transform can be built from.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">SteamVR refused the move.</exception>
+    public void MoveTo(Pose where)
+    {
+        HmdMatrix34_t placed = Quad.At(where);
+
+        Insist(
+            OpenVR.Overlay.SetOverlayTransformAbsolute(
+                _handle, ETrackingUniverseOrigin.TrackingUniverseSeated, ref placed),
+            "move the overlay");
+
+        Placed = Placed with { Where = where };
     }
 
     /// <inheritdoc/>

@@ -28,6 +28,23 @@ public interface IControllers
     /// </remarks>
     /// <returns>Their poses, in no particular order.</returns>
     IReadOnlyList<Pose> Tracked();
+
+    /// <summary>
+    /// One controller, named the way the runtime names it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// By device rather than by hand, because a grab has to keep following the
+    /// controller that started it and SteamVR identifies that one by the index
+    /// on the event. The index means nothing on its own — which slot a
+    /// controller lands in depends on the order they woke up — so it is only
+    /// ever useful carried back from something the runtime said.
+    /// </remarks>
+    /// <param name="device">The slot the runtime used.</param>
+    /// <returns>
+    /// Its pose, or <see langword="null"/> when that slot holds nothing tracked.
+    /// </returns>
+    Pose? At(uint device);
 }
 
 /// <summary>
@@ -100,5 +117,36 @@ public sealed class Controllers : IControllers
         }
 
         return held;
+    }
+
+    /// <inheritdoc/>
+    public Pose? At(uint device)
+    {
+        if (OpenVR.System is not { } runtime
+            || device >= OpenVR.k_unMaxTrackedDeviceCount)
+        {
+            return null;
+        }
+
+        var found = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
+
+        runtime.GetDeviceToAbsoluteTrackingPose(
+            ETrackingUniverseOrigin.TrackingUniverseSeated, RightNow, found);
+
+        // The same two checks Tracked makes, and for the same reason: an
+        // untracked slot is all zeroes, and all zeroes reads back as a unit
+        // rotation at the origin rather than as anything invalid. Missing it
+        // here would drag a grabbed overlay to the Commander's feet the moment a
+        // controller went to sleep.
+        if (!found[device].bPoseIsValid || !found[device].bDeviceIsConnected)
+        {
+            return null;
+        }
+
+        // Not asked whether it is a controller. The caller got this index off an
+        // event the runtime raised about its own pointer, so second-guessing what
+        // kind of device that was would be this code disagreeing with SteamVR
+        // about which thing is doing the pointing.
+        return Quad.From(found[device].mDeviceToAbsoluteTracking);
     }
 }

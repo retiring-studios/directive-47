@@ -53,6 +53,18 @@ internal sealed class Headset : IDisposable
     internal Board? Placed => _overlay?.Placed;
 
     /// <summary>
+    /// The quad itself, for the one caller that has to move it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Grabbing drags the panel, and that is the only thing that changes where
+    /// the quad is once it has been created. This class is about showing, hiding
+    /// and carrying on when SteamVR is absent, so wrapping <c>MoveTo</c> here
+    /// would be a passthrough and a second place for placement to live.
+    /// </remarks>
+    internal IHeadsetOverlay? Quad => _overlay;
+
+    /// <summary>
     /// What the quad is currently carrying, so that a new presented can be
     /// compared with it rather than drawn over it.
     /// </summary>

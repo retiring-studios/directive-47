@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Threading;
 
 using D47.Panel;
@@ -30,7 +31,7 @@ public class GrabbingTests
     {
         using var chrome = new ChromeThatIs(Grabbed.Bar);
 
-        using (Grabbing.Watching(chrome, Nowhere))
+        using (Watch(chrome, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 $"it should keep following, and it asked {chrome.Followed} times");
@@ -45,7 +46,7 @@ public class GrabbingTests
         // arriving is what it is waiting for — but it must not spin.
         using var chrome = new ChromeThatIs(Grabbed.Nothing);
 
-        using (Grabbing.Watching(chrome, Nowhere))
+        using (Watch(chrome, Nowhere))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 "it should keep looking for a laser that arrives");
@@ -63,8 +64,8 @@ public class GrabbingTests
         using var busy = new ChromeThatIs(Grabbed.Bar);
         using var idle = new ChromeThatIs(Grabbed.Nothing);
 
-        using (Grabbing.Watching(busy, Nowhere))
-        using (Grabbing.Watching(idle, Nowhere))
+        using (Watch(busy, Nowhere))
+        using (Watch(idle, Nowhere))
         {
             Thread.Sleep(1000);
         }
@@ -84,7 +85,7 @@ public class GrabbingTests
         List<string> recorded = [];
         using var chrome = new ChromeThatThrowsOnce();
 
-        using (Grabbing.Watching(chrome, recorded.Add))
+        using (Watch(chrome, recorded.Add))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 "it should have carried on to the next look");
@@ -98,7 +99,7 @@ public class GrabbingTests
     {
         using var chrome = new ChromeThatIs(Grabbed.Bar);
 
-        var watching = Grabbing.Watching(chrome, Nowhere);
+        Grabbing watching = Watch(chrome, Nowhere);
 
         Eventually.True(() => chrome.Followed >= 1, LongEnough).ShouldBeTrue();
 
@@ -116,6 +117,55 @@ public class GrabbingTests
     /// </summary>
     private static Action<string> Nowhere => _ => { };
 
+    /// <summary>
+    /// Watching, with stand-ins for the two things these tests say nothing
+    /// about. Nothing here holds a trigger, so no drag ever starts and the
+    /// overlay is never moved.
+    /// </summary>
+    private static Grabbing Watch(IGrabChrome chrome, Action<string> record) =>
+        Grabbing.Watching(chrome, NoOverlay, new NoHands(), record);
+
+    /// <summary>
+    /// One of them, shared. It holds nothing and does nothing, so a fresh one
+    /// per test would be an object to dispose for no reason — and disposing it
+    /// is not <c>Grabbing</c>'s job, since it did not create it.
+    /// </summary>
+    private static readonly OverlayGoingNowhere NoOverlay = new();
+
+    private sealed class NoHands : IControllers
+    {
+        public IReadOnlyList<Pose> Tracked() => [];
+
+        public Pose? At(uint device) => null;
+    }
+
+    private sealed class OverlayGoingNowhere : IHeadsetOverlay
+    {
+        public bool IsVisible => true;
+
+        public Board Placed { get; } =
+            new(new Pose(new Vector3(0, 0, -1.5f), Quaternion.Identity), 0.5f, 0.3f);
+
+        public void MoveTo(Pose where) =>
+            throw new InvalidOperationException("nothing in here should move the overlay");
+
+        public void Show()
+        {
+        }
+
+        public void Hide()
+        {
+        }
+
+        public void Paint(D47.Render.Presentation presented)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
     private sealed class ChromeThatIs(Grabbed under) : IGrabChrome
     {
         private int _followed;
@@ -126,10 +176,17 @@ public class GrabbingTests
         {
         }
 
-        public Grabbed Follow()
+        // No trigger. These tests are about the looking, and a held one would
+        // start a drag they say nothing about — GrabbingTheBarTests is where
+        // that belongs.
+        public Grip Follow()
         {
             Interlocked.Increment(ref _followed);
-            return under;
+            return new Grip(under, Held: false, Hand: 0);
+        }
+
+        public void Frames(Board panel)
+        {
         }
 
         public void Dispose()
@@ -147,14 +204,18 @@ public class GrabbingTests
         {
         }
 
-        public Grabbed Follow()
+        public Grip Follow()
         {
             if (Interlocked.Increment(ref _followed) == 1)
             {
                 throw new InvalidOperationException("the runtime went away");
             }
 
-            return Grabbed.Content;
+            return new Grip(Grabbed.Content, Held: false, Hand: 0);
+        }
+
+        public void Frames(Board panel)
+        {
         }
 
         public void Dispose()

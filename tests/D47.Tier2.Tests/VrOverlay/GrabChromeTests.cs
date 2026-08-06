@@ -137,11 +137,11 @@ public class GrabChromeTests : HeadsetTest
         using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
 
-        chrome.Follow().ShouldBe(Grabbed.Nothing);
+        chrome.Follow().On.ShouldBe(Grabbed.Nothing);
 
         // And again, because a first call that primes something and a second
         // that reads it back differently is the shape of a bug here.
-        chrome.Follow().ShouldBe(Grabbed.Nothing);
+        chrome.Follow().On.ShouldBe(Grabbed.Nothing);
     }
 
     [Fact]

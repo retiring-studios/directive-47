@@ -5,6 +5,21 @@ using D47.Placement;
 namespace D47.VrOverlay;
 
 /// <summary>
+/// What the laser is on, whether the trigger is down, and which hand is doing
+/// it.
+/// </summary>
+///
+/// <remarks>
+/// The three together rather than three calls, because they are one answer taken
+/// from one poll of the runtime's event queue. Asked separately they could come
+/// from different moments and describe a hand that was never in that state.
+/// </remarks>
+/// <param name="On">What pulling the trigger would take hold of.</param>
+/// <param name="Held">Whether the trigger is down now.</param>
+/// <param name="Hand">Which device the laser belongs to, as SteamVR numbers them.</param>
+public readonly record struct Grip(Grabbed On, bool Held, uint Hand);
+
+/// <summary>
 /// The bar and the handles, floating around the panel.
 /// </summary>
 ///
@@ -37,7 +52,20 @@ public interface IGrabChrome : IDisposable
     /// to change.
     /// </remarks>
     /// <returns>What is being pointed at, for whoever wants to know.</returns>
-    Grabbed Follow();
+    Grip Follow();
+
+    /// <summary>
+    /// Moves the chrome so it frames a panel that has been put somewhere else.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The chrome is a second quad and does not move because the panel did.
+    /// Without this a dragged panel slides out from inside its own bar, which
+    /// looks like the chrome being broken rather than like nobody having moved
+    /// it.
+    /// </remarks>
+    /// <param name="panel">Where the panel is now.</param>
+    void Frames(Board panel);
 }
 
 /// <summary>
@@ -46,7 +74,13 @@ public interface IGrabChrome : IDisposable
 internal sealed class GrabChrome : IGrabChrome
 {
     private readonly SteamVrOverlay _overlay;
-    private readonly Board _panel;
+
+    /// <summary>
+    /// The panel this chrome frames. Not readonly since the panel can be
+    /// dragged, and chrome measured against where it used to be would put every
+    /// grab target somewhere the Commander is not aiming.
+    /// </summary>
+    private Board _panel;
 
     private Grabbed _showing;
     private bool _disposed;
@@ -108,17 +142,31 @@ internal sealed class GrabChrome : IGrabChrome
     }
 
     /// <inheritdoc/>
-    public Grabbed Follow()
+    public Grip Follow()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
+        // Pointed first, because it is the call that drains the queue — the
+        // trigger is read out of what that drain left behind.
         Grabbed lit = _overlay.Pointed() is { } at
             ? Chrome.On(_panel, at.Across, at.Up)
             : Grabbed.Nothing;
 
+        (bool held, uint hand) = _overlay.Trigger();
+
         Showing(lit);
 
-        return lit;
+        return new Grip(lit, held, hand);
+    }
+
+    /// <inheritdoc/>
+    public void Frames(Board panel)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        _panel = panel;
+
+        _overlay.MoveTo(Chrome.Around(panel).Where);
     }
 
     /// <summary>

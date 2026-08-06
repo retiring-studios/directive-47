@@ -1,5 +1,7 @@
 using System;
+using System.Numerics;
 
+using D47.Placement;
 using D47.Render;
 using D47.TestSupport;
 using D47.VrOverlay;
@@ -112,6 +114,49 @@ public class HeadsetOverlayTests : HeadsetTest
             tolerance: 0.001,
             customMessage: "the quad should be the size the adapter asked for, which is what "
                 + "says the overlay was configured rather than merely created");
+    }
+
+    [Fact]
+    public void Overlay_WhenMoved_IsWhereItWasPutAccordingToTheRuntime()
+    {
+        // The other half of the grab, and the half no arithmetic can settle.
+        // Grab works out where the panel should go and is asserted at Tier 0
+        // against numbers; this is whether SteamVR actually put it there.
+        Answer answer = Fixtures.HelpsAnswer();
+
+        using IHeadsetOverlay overlay = StaThread.Run(
+            () => new HeadsetOverlayFactory().Create(Presentation.Of(answer)))
+            ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
+
+        var put = new Pose(new Vector3(0.4f, -0.2f, -1.1f), Quaternion.Identity);
+
+        overlay.MoveTo(put);
+
+        overlay.Placed.Where.Position.ShouldBe(
+            put.Position, "the adapter should know where it put the quad");
+
+        ulong handle = 0;
+
+        OpenVR.Overlay.FindOverlay(HeadsetOverlayFactory.Key, ref handle)
+            .ShouldBe(EVROverlayError.None);
+
+        HmdMatrix34_t placed = default;
+        ETrackingUniverseOrigin origin = ETrackingUniverseOrigin.TrackingUniverseSeated;
+
+        OpenVR.Overlay.GetOverlayTransformAbsolute(handle, ref origin, ref placed)
+            .ShouldBe(EVROverlayError.None);
+
+        // Read back out of the compositor rather than trusted. The adapter
+        // remembering where it put something is not the same fact as the
+        // runtime having moved it, and only one of those is what a Commander
+        // sees.
+        placed.m3.ShouldBe(put.Position.X, tolerance: 0.001);
+        placed.m7.ShouldBe(put.Position.Y, tolerance: 0.001);
+        placed.m11.ShouldBe(put.Position.Z, tolerance: 0.001);
+
+        origin.ShouldBe(
+            ETrackingUniverseOrigin.TrackingUniverseSeated,
+            "a moved quad must stay in the universe the placement arithmetic speaks");
     }
 
     [Fact]

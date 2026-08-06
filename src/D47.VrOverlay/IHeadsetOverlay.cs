@@ -58,6 +58,19 @@ public interface IHeadsetOverlay : IDisposable
     Board Placed { get; }
 
     /// <summary>
+    /// Puts the quad somewhere else, keeping its size.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// A pose rather than a board, because moving is not resizing and the two
+    /// arrive from different gestures — the bar drags and the corners scale.
+    /// Where to move to is decided in <c>D47.Placement</c> and arrives here
+    /// already worked out, which is the same split every other placement follows.
+    /// </remarks>
+    /// <param name="where">Where the quad should be.</param>
+    void MoveTo(Pose where);
+
+    /// <summary>
     /// Puts the overlay in front of the Commander.
     /// </summary>
     void Show();

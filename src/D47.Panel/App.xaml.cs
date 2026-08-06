@@ -309,10 +309,12 @@ internal sealed partial class App : Application, IDisposable
     /// </remarks>
     private void WatchForHands()
     {
-        if (_headset?.Placed is not { } panel)
+        if (_headset?.Quad is not { } quad)
         {
             return;
         }
+
+        Placement.Board panel = quad.Placed;
 
         _chrome = HeadsetOverlayFactory.Around(panel);
 
@@ -321,7 +323,10 @@ internal sealed partial class App : Application, IDisposable
             return;
         }
 
-        _grabbing = Grabbing.Watching(_chrome, _log.Warning);
+        // The headset overlay as well as the chrome, because a drag moves the
+        // panel and the chrome has to be moved after it. Both quads or neither —
+        // moving one leaves the panel sliding out of its own bar.
+        _grabbing = Grabbing.Watching(_chrome, quad, new Controllers(), _log.Warning);
     }
 
     /// <summary>
