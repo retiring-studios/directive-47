@@ -45,6 +45,14 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// </summary>
     private uint _hand = OpenVR.k_unTrackedDeviceIndexInvalid;
 
+    /// <summary>
+    /// Whether this quad was ever given a pointer. Only the chrome asks for one,
+    /// and a resize has to re-measure the pointer for whichever quad has it —
+    /// telling the runtime the mouse scale of an overlay nobody can aim at is a
+    /// call per resize saying nothing.
+    /// </summary>
+    private bool _pointing;
+
     private bool _disposed;
 
     private SteamVrOverlay(ulong handle, Board placed)
@@ -220,6 +228,24 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
                 _handle, VROverlayFlags.MakeOverlaysInteractiveIfVisible, true),
             "make the overlay interactive outside the dashboard");
 
+        _pointing = true;
+
+        MeasureThePointer();
+    }
+
+    /// <summary>
+    /// Tells SteamVR how many metres across the quad it is reporting a pointer
+    /// on, so <see cref="Pointed"/> comes back in the units everything else uses.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Its own method because a resize has to say it again. The scale is the
+    /// quad's extents, and a quad that changed size with the old scale still
+    /// standing would report every laser position against the size it used to be
+    /// — so the handles would answer to a laser aimed somewhere they are not.
+    /// </remarks>
+    private void MeasureThePointer()
+    {
         var inMetres = new HmdVector2_t { v0 = Placed.Width, v1 = Placed.Height };
 
         Insist(
@@ -337,6 +363,29 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
             "move the overlay");
 
         Placed = Placed with { Where = where };
+    }
+
+    /// <inheritdoc/>
+    ///
+    /// <remarks>
+    /// The width only, because OpenVR works the height out from the texture's
+    /// shape. That is safe here for the reason it is safe at creation: a scale is
+    /// uniform, so the board arriving has the proportions the render already has.
+    /// </remarks>
+    public void ResizeTo(Board board)
+    {
+        Insist(
+            OpenVR.Overlay.SetOverlayWidthInMeters(_handle, board.Width),
+            "resize the overlay");
+
+        Placed = board;
+
+        MoveTo(board.Where);
+
+        if (_pointing)
+        {
+            MeasureThePointer();
+        }
     }
 
     /// <inheritdoc/>

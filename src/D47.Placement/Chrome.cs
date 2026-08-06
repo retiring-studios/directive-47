@@ -141,8 +141,8 @@ public static class Chrome
         Numbers.MustBeFinite(panel.Where.Position, nameof(panel));
         Numbers.MustBeFinite(panel.Where.Orientation, nameof(panel));
 
-        MustBeASize(panel.Width, nameof(panel));
-        MustBeASize(panel.Height, nameof(panel));
+        Numbers.MustBeASize(panel.Width, nameof(panel));
+        Numbers.MustBeASize(panel.Height, nameof(panel));
 
         float overhang = Reach(panel);
         float bar = panel.Height * BarShare;
@@ -373,16 +373,4 @@ public static class Chrome
     /// </summary>
     internal static float Reach(Board panel) =>
         MathF.Min(panel.Width, panel.Height) * CornerShare / 2;
-
-    /// <summary>
-    /// Throws unless an extent is a size at all.
-    /// </summary>
-    internal static void MustBeASize(float extent, string name)
-    {
-        if (!float.IsFinite(extent) || extent <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                name, extent, "A board with no size is not something anybody can point at.");
-        }
-    }
 }

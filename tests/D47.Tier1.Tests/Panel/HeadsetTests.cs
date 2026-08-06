@@ -268,11 +268,16 @@ public class HeadsetTests
 
         /// <summary>
         /// Nothing here drags the panel. Showing and hiding is what
-        /// <see cref="Headset"/> does, and moving is grabbing's.
+        /// <see cref="Headset"/> does, and moving and sizing are grabbing's.
         /// </summary>
         public void MoveTo(Pose where) =>
             throw new System.InvalidOperationException(
                 "these facts are not about moving the quad");
+
+        /// <inheritdoc cref="MoveTo"/>
+        public void ResizeTo(Board board) =>
+            throw new System.InvalidOperationException(
+                "these facts are not about sizing the quad");
 
         /// <summary>
         /// How many times it was asked to paint. Counted rather than flagged,

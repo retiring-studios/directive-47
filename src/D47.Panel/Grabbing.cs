@@ -63,7 +63,21 @@ internal sealed class Grabbing : IDisposable
     /// The drag in progress, or nothing. Touched only from the watching thread,
     /// which is why it needs no guard.
     /// </summary>
-    private Grab? _held;
+    private Grab? _moving;
+
+    /// <summary>
+    /// The scale in progress, or nothing. Never set at the same time as
+    /// <see cref="_moving"/> — one gesture starts on the bar and the other on a
+    /// corner, and the laser is only ever on one of them.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// A second field rather than one holding both. They answer different
+    /// questions — a drag says where the overlay goes and a scale says how big it
+    /// is and therefore where its middle ends up — and a shared abstraction over
+    /// the two would be a type whose only job is to be two types.
+    /// </remarks>
+    private Stretch? _sizing;
 
     private bool _disposed;
 
@@ -189,16 +203,17 @@ internal sealed class Grabbing : IDisposable
     ///
     /// <remarks>
     /// <para>
-    /// A grab starts on the bar and nowhere else. Pointing at the panel itself
-    /// grabs nothing — the decision in <c>docs/decisions.md</c> — so a Commander
-    /// can read it without shoving it out of the way, and the corners are
-    /// scaling rather than moving.
+    /// A grab starts on the bar or on a corner and nowhere else. Pointing at the
+    /// panel itself grabs nothing — the decision in <c>docs/decisions.md</c> — so
+    /// a Commander can read it without shoving it out of the way. The bar moves
+    /// it and a corner scales it.
     /// </para>
     /// <para>
-    /// Once it has started, what the laser is on stops mattering. A hand
-    /// dragging the panel takes the panel with it, so the laser sits wherever
-    /// the geometry puts it, and a grab that needed to stay over the bar would
-    /// let go the moment it began to work.
+    /// Once it has started, what the laser is on stops mattering. A hand dragging
+    /// the panel takes the panel with it, so the laser sits wherever the geometry
+    /// puts it, and a grab that needed to stay over the bar would let go the
+    /// moment it began to work. It goes double for a corner, which the panel
+    /// grows out from under.
     /// </para>
     /// </remarks>
     /// <param name="grip">What the laser is on and whether the trigger is down.</param>
@@ -209,40 +224,79 @@ internal sealed class Grabbing : IDisposable
             // Includes the release, and also the laser leaving the quad, which
             // the adapter reports as the trigger being up because no button-up
             // is coming for an overlay nobody is aiming at any more.
-            _held = null;
+            LetGo();
 
             return;
         }
 
-        if (_held is null)
+        if (_moving is null && _sizing is null)
         {
-            if (grip.On != Grabbed.Bar || _controllers.At(grip.Hand) is not { } took)
-            {
-                return;
-            }
-
-            _held = Grab.Started(took, _overlay.Placed.Where);
+            TakeHold(grip);
 
             return;
         }
 
-        if (_controllers.At(grip.Hand) is not { } moved)
+        if (_controllers.At(grip.Hand) is not { } hand)
         {
             // The hand stopped being tracked mid-drag — put down without letting
-            // go. The overlay stays where it was rather than following a pose
-            // nobody has, and the grab ends so that picking the controller up
-            // again does not resume a drag the Commander has forgotten about.
-            _held = null;
+            // go. The overlay stays as it was rather than following a pose nobody
+            // has, and the grab ends so that picking the controller up again does
+            // not resume a drag the Commander has forgotten about.
+            LetGo();
 
             return;
         }
 
-        Pose put = _held.Follows(moved);
+        if (_moving is { } moving)
+        {
+            _overlay.MoveTo(moving.Follows(hand));
+        }
+        else if (_sizing is { } sizing)
+        {
+            // A board rather than a pose and then a size: the pinned corner
+            // holding still is what moves the middle, so the two are one answer.
+            _overlay.ResizeTo(sizing.Follows(hand.Position));
+        }
 
-        _overlay.MoveTo(put);
-
-        // And the chrome after it. It is a second quad, so it does not move
-        // because the panel did — the panel would slide out of its own bar.
+        // And the chrome after it. It is a second quad, so it does not follow the
+        // panel on its own — the panel would slide out of its own bar, or swell
+        // out from behind its own handles.
         _chrome.Frames(_overlay.Placed);
+    }
+
+    /// <summary>
+    /// Starts a drag or a scale, if the laser is on something that offers one.
+    /// </summary>
+    /// <param name="grip">What the laser is on, and which hand is on it.</param>
+    private void TakeHold(Grip grip)
+    {
+        if (_controllers.At(grip.Hand) is not { } took)
+        {
+            return;
+        }
+
+        if (grip.On == Grabbed.Bar)
+        {
+            _moving = Grab.Started(took, _overlay.Placed.Where);
+        }
+        else if (Stretch.Scales(grip.On))
+        {
+            _sizing = Stretch.Started(grip.On, took.Position, _overlay.Placed);
+        }
+    }
+
+    /// <summary>
+    /// Ends whichever gesture was in progress.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Both, unconditionally, rather than the one that is set. Only ever one of
+    /// them is, and a release that cleared the wrong field would leave the
+    /// overlay following a hand that had let go of it.
+    /// </remarks>
+    private void LetGo()
+    {
+        _moving = null;
+        _sizing = null;
     }
 }
