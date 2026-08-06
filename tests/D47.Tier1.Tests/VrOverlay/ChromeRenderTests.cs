@@ -79,6 +79,36 @@ public class ChromeRenderTests
     }
 
     [Fact]
+    public void TheBar_IsAShortPillRatherThanASlabTheWidthOfThePanel()
+    {
+        Chromed chrome = Taken(Grabbed.Nothing);
+
+        // Inked in the middle and clear towards the ends. A band the full width
+        // of the panel is more ink than all four corners together, and it is
+        // what read as a slab across the bottom of the cockpit.
+        chrome.Alpha(0.5, BarMiddleDown).ShouldBeGreaterThan((byte)0);
+
+        chrome.Alpha(0.2, BarMiddleDown).ShouldBe(
+            (byte)0, "the bar should not reach the left of the panel");
+
+        chrome.Alpha(0.8, BarMiddleDown).ShouldBe(
+            (byte)0, "nor the right");
+    }
+
+    [Fact]
+    public void TheBar_IsStillTheWholeWidthToAimAt()
+    {
+        // The same trade the brackets make: less ink, same target. Somebody
+        // aiming near the end of the bar is aiming at the bar.
+        Board around = Chrome.Around(Panel);
+
+        float across = (0.2f - 0.5f) * around.Width;
+        float up = (0.5f - (float)BarMiddleDown) * around.Height;
+
+        Chrome.On(Panel, across, up).ShouldBe(Grabbed.Bar);
+    }
+
+    [Fact]
     public void Chrome_WhereACornerHandleIs_IsSomethingYouCanSee()
     {
         Taken(Grabbed.Nothing).Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan((byte)0);

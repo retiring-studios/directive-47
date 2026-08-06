@@ -84,6 +84,28 @@ public static class ChromeRender
     private const float ArmShare = 0.2f;
 
     /// <summary>
+    /// How much of the bar's width is actually inked, centred.
+    ///
+    /// <para>
+    /// A short pill rather than a band the full width of the panel. The bar was
+    /// the largest single piece of chrome by a wide margin — more ink than all
+    /// four corners together — and it is the one the maintainer's screenshot
+    /// showed as a slab across the bottom of the cockpit.
+    /// </para>
+    ///
+    /// <para>
+    /// This is Horizon OS's shape, which is the idiom
+    /// <c>docs/decisions.md</c> already says the chrome follows.
+    /// </para>
+    /// </summary>
+    private const float BarInkAcross = 0.3f;
+
+    /// <summary>
+    /// How much of the bar's height is inked, centred in it.
+    /// </summary>
+    private const float BarInkDown = 0.35f;
+
+    /// <summary>
     /// The chrome for a panel, with whatever is being pointed at picked out.
     /// </summary>
     ///
@@ -149,7 +171,19 @@ public static class ChromeRender
     {
         if (piece.What == Grabbed.Bar)
         {
-            yield return piece;
+            float across = (piece.Right - piece.Left) * BarInkAcross / 2;
+            float down = (piece.Top - piece.Bottom) * BarInkDown / 2;
+
+            float middleAcross = (piece.Left + piece.Right) / 2;
+            float middleDown = (piece.Bottom + piece.Top) / 2;
+
+            yield return piece with
+            {
+                Left = middleAcross - across,
+                Right = middleAcross + across,
+                Bottom = middleDown - down,
+                Top = middleDown + down,
+            };
 
             yield break;
         }
