@@ -59,8 +59,20 @@ jobs:
             #
             # Before restore for the same reason it is cheap: a syntax error
             # should not cost a build first.
-            - name: Check the workflow's PowerShell parses
-              run: ./scripts/check-workflow-powershell.ps1
+            - name: Check the PowerShell parses
+              run: ./scripts/check-powershell.ps1
+
+            # Facts two files have to agree on, each of which was guarded by a
+            # comment asking the next person to remember. Velopack and vpk
+            # disagreeing is invisible to everything else here — CI packs with
+            # the tool and installs what the tool produced, so a mismatched
+            # pair agrees with itself all the way through a green build and
+            # disagrees only with the copy already on a Commander's machine.
+            #
+            # Also before restore, and for the same reason: it reads files and
+            # compares strings.
+            - name: Check the repository's invariants
+              run: ./scripts/check-repo-invariants.ps1
 
             # Reads global.json, so the pinned SDK band is stated in exactly one
             # place and CI cannot drift from the dev machine.
@@ -70,6 +82,26 @@ jobs:
 
             - name: Restore
               run: dotnet restore D47.slnx
+
+            # The licence allowlist, which docs/decisions.md agreed and nothing
+            # built. Until now the enforcement was Directory.Packages.props
+            # sitting in permissions.ask: a new package stopped for the
+            # maintainer and he read the licence. That prompt has been removed
+            # so an unattended session does not stall on it, and this is what
+            # takes over — the same rule, one tier down, where it fails the
+            # build instead of waiting for someone to be awake.
+            #
+            # After restore because it reads each nuspec out of the global
+            # packages folder rather than asking the network.
+            - name: Check the package licences
+              run: ./scripts/check-package-licenses.ps1
+
+            # Formatting is already a build error by way of
+            # EnforceCodeStyleInBuild and TreatWarningsAsErrors, but only for
+            # the rules .editorconfig gives a severity to. This is the rest of
+            # it, and it costs a few seconds.
+            - name: Check the formatting
+              run: dotnet format D47.slnx --verify-no-changes --no-restore
 
             # vpk, pinned in .config/dotnet-tools.json to the same version as
             # the Velopack package the application references. A tool and a
