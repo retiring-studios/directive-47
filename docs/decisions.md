@@ -17,6 +17,7 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
 ## Platform
 
 - **.NET 10, Windows.** Future upgrades are possible.
+  Unrecorded: predates any traceable discussion.
 - **WPF for the desktop panel and both overlays** — not WinUI 3, not Avalonia.
   Three reasons, in the order they actually bind:
   - **The game overlay is the constraint, not the panel.** It needs per-pixel
@@ -58,6 +59,7 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
 - **SteamVR only.** OpenXR is a someday nice-to-have and appears in no
   definition of done. One `IHeadsetOverlay` interface with a single SteamVR
   implementation keeps the door open without paying for it now.
+  Unrecorded: predates any traceable discussion.
 
 ## Architecture
 
@@ -68,7 +70,7 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   schema still lands with the LLM integration; the examples arrived earlier,
   with help's "try saying…" level. Every surface consumes the descriptor, so no
   capability references a UI assembly and none of them contains feature-specific
-  rendering code.
+  rendering code. Unrecorded: predates any traceable discussion.
 - **A descriptor is the declaration of a function, as data — never a variable.**
   It is registered once at startup and never mutates. What a capability
   *returns* is a separate per-invocation result conforming to the shape the
@@ -224,11 +226,13 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   earned.
 
 - **`TimeProvider` and `FakeTimeProvider`**, not a hand-rolled `IClock`.
+  Unrecorded: predates any traceable discussion.
 - **Interfaces at every process boundary.** NSubstitute for stubs; hand-written
   fakes for stateful things such as the journal source and the audio device.
   NSubstitute is not in `Directory.Packages.props` yet and nothing has needed it
   — every double so far is a hand-written nested class in the test that uses it.
   It is a decision about what to reach for, not a package that has been taken.
+  Unrecorded: predates any traceable discussion.
 
 - **Application data lives in `%LOCALAPPDATA%\Directive 47\`.** Two things
   needed somewhere to write before anything needed a settings page: the log, and
@@ -313,7 +317,7 @@ The tiers drive the project layout, not just test selection.
   accomplish interaction with the external system.**
 - **One `.Tests.csproj` per production `.csproj`.** The production project's
   tier determines the kind of tests in its pair. A project whose tests would
-  span two tiers is two projects.
+  span two tiers is two projects. Unrecorded: predates any traceable discussion.
 - **One `.Tests.csproj` per production `.csproj` is a guideline, not a law.**
   Where a differently shaped test project makes sense, make one.
   `D47.TestSupport` pairs with nothing and holds machinery more than one test
@@ -332,7 +336,7 @@ The tiers drive the project layout, not just test selection.
   guessing a bucket name before there is anything to generalise from is how
   `D47.Core` gets recreated under a different spelling.
 - **Selection via solution filters** (`ci.slnf`, `hardware.slnf`), not
-  per-test traits.
+  per-test traits. Unrecorded: predates any traceable discussion.
 - **CI is Windows only, and the tier boundary is hardware rather than operating
   system.** Directive 47 is a Windows product — WPF, SteamVR, and a game that
   runs nowhere else — so a Linux job was enforcing a portability claim nothing
@@ -414,11 +418,12 @@ The tiers drive the project layout, not just test selection.
 ## Fixtures
 
 - Two journal corpora: sanitized real captures, and synthetic ones built through
-  a `JournalBuilder` fluent API.
+  a `JournalBuilder` fluent API. Unrecorded: predates any traceable discussion.
 - **Real journals carry the Commander name and play history.** They are scrubbed
   into `tests/` before anything lands in this public repo. Raw captures are
-  gitignored.
+  gitignored. Unrecorded: predates any traceable discussion.
 - Recorded HTTP responses back the provider tests.
+  Unrecorded: predates any traceable discussion.
 
 ## Quality gates
 
@@ -429,7 +434,7 @@ The tiers drive the project layout, not just test selection.
   (S104) — and adapters get numbers tighter than those, set once the first Tier
   2 adapter exists to calibrate against. Only cyclomatic complexity gets a
   carve-out, and only per-construct (flat dispatch and mappers), never
-  per-directory.
+  per-directory. Unrecorded: predates any traceable discussion.
 - **Coverage is a floor per tier, never a global percentage.** A global number
   produces tests written for the number: the fastest route to 80% is executing
   code without asserting anything. Per tier the question is answerable, because
@@ -462,6 +467,7 @@ The tiers drive the project layout, not just test selection.
 
   Tier 1's 80 is the mainstream number rather than a measured one. Revisit
   trigger: the first CI run that reports it.
+  Unrecorded: predates any traceable discussion.
 
 - **The built-in .NET analyzers cannot deliver the size rule above.** There is no
   "method too long" rule in the box, so `AnalysisLevel=latest-all` alone will
@@ -555,8 +561,9 @@ capability to save nothing.
 - Acceptance criteria are written before code and phrased so they become test
   names. They live in the issue body, where each criterion is a checkbox to tick
   off as tests land — not in a custom field, which would flatten them to a blob.
+  Unrecorded: predates any traceable discussion.
 - One story, one branch, one PR (`Closes #N`). Review starts at the tests, then
-  the diff.
+  the diff. Unrecorded: predates any traceable discussion.
 - **Work breaks down Epic → Feature → User Story → Task**, using GitHub's issue
   types and sub-issues. Where the boundaries fall is decided by the acceptance
   criteria, not by feel:
@@ -645,7 +652,7 @@ capability to save nothing.
 - **Manual test steps are per-PR only**, never an accumulating file. Regression
   is the automated hardware tier's job; the human pass is for new behavior and
   judgment calls. A manual test that keeps recurring is a hole in automation —
-  promote it, do not list it.
+  promote it, do not list it. Unrecorded: predates any traceable discussion.
 - CI publishes an installer on every PR, so manual passes install and test what
   ships rather than running `dotnet run`. Built at
   [#63](https://github.com/retiring-studios/directive-47/issues/63): the
