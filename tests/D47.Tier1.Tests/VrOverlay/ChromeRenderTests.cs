@@ -46,10 +46,23 @@ public class ChromeRenderTests
     private const double BarMiddleDown = 0.94;
 
     /// <summary>
-    /// The top right corner handle: 94.6% across, 8% down.
+    /// The middle of the top right corner handle: 94.6% across, 8% down.
+    ///
+    /// <para>
+    /// Inside the grab target and outside the ink, which is the whole of what a
+    /// bracket changed. <c>Chrome.On</c> still answers <c>TopRightCorner</c>
+    /// here.
+    /// </para>
     /// </summary>
     private const double CornerAcross = 0.946;
     private const double CornerDown = 0.08;
+
+    /// <summary>
+    /// On the top arm of that handle's bracket: the same place across, but up
+    /// against the top edge of the quad, which is where the handle's outer edge
+    /// sits.
+    /// </summary>
+    private const double ArmDown = 0.016;
 
     [Fact]
     public void Chrome_WhereThePanelShowsThrough_IsTransparent()
@@ -68,7 +81,36 @@ public class ChromeRenderTests
     [Fact]
     public void Chrome_WhereACornerHandleIs_IsSomethingYouCanSee()
     {
-        Taken(Grabbed.Nothing).Alpha(CornerAcross, CornerDown).ShouldBeGreaterThan((byte)0);
+        Taken(Grabbed.Nothing).Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan((byte)0);
+    }
+
+    [Fact]
+    public void ACornerHandle_IsABracketRatherThanABlock()
+    {
+        Chromed chrome = Taken(Grabbed.Nothing);
+
+        // Ink on the arm, nothing in the middle. A solid handle is a fifth of
+        // the panel's height in ink at each corner, which is four blocks around
+        // something meant to be read.
+        chrome.Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan((byte)0);
+
+        chrome.Alpha(CornerAcross, CornerDown).ShouldBe(
+            (byte)0, "the middle of a handle should be empty, not filled");
+    }
+
+    [Fact]
+    public void ACornerHandle_IsStillTheWholeSquareToAimAt()
+    {
+        // The point of a bracket rather than a smaller handle: less ink, same
+        // target. If this ever disagrees with the test above, the drawing and
+        // the hit test have drifted apart — which is the thing Chrome.Parts
+        // exists to prevent.
+        Board around = Chrome.Around(Panel);
+
+        float across = ((float)CornerAcross - 0.5f) * around.Width;
+        float up = (0.5f - (float)CornerDown) * around.Height;
+
+        Chrome.On(Panel, across, up).ShouldBe(Grabbed.TopRightCorner);
     }
 
     [Fact]
@@ -94,8 +136,8 @@ public class ChromeRenderTests
         Chromed lit = Taken(Grabbed.TopRightCorner);
         Chromed dim = Taken(Grabbed.Nothing);
 
-        lit.Alpha(CornerAcross, CornerDown).ShouldBeGreaterThan(
-            dim.Alpha(CornerAcross, CornerDown));
+        lit.Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan(
+            dim.Alpha(CornerAcross, ArmDown));
 
         // The bar is not the corner, so it stays as it was. Lighting the whole
         // chrome would tell the Commander they were holding all of it.
@@ -111,8 +153,8 @@ public class ChromeRenderTests
         Chromed nothing = Taken(Grabbed.Nothing);
 
         content.Alpha(0.5, BarMiddleDown).ShouldBe(nothing.Alpha(0.5, BarMiddleDown));
-        content.Alpha(CornerAcross, CornerDown).ShouldBe(
-            nothing.Alpha(CornerAcross, CornerDown));
+        content.Alpha(CornerAcross, ArmDown).ShouldBe(
+            nothing.Alpha(CornerAcross, ArmDown));
     }
 
     [Fact]

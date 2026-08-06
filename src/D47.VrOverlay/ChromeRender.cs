@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Media;
 
 using D47.Placement;
@@ -59,6 +60,30 @@ public static class ChromeRender
     private const byte Lit = 255;
 
     /// <summary>
+    /// How thick a corner bracket's arm is, as a share of the handle's side.
+    ///
+    /// <para>
+    /// A bracket rather than a filled square, which is what a handle was until
+    /// the maintainer saw one in the headset. On the shipped quad a handle is six
+    /// centimetres across, so a solid one is a fifth of the panel's height in
+    /// ink at each corner — four blocks around something meant to be read.
+    /// </para>
+    ///
+    /// <para>
+    /// It changes the drawing and not the target. The handle is still the whole
+    /// six-centimetre square as far as <c>Chrome.On</c> is concerned, so this
+    /// makes the chrome quieter without making it harder to hit — which is the
+    /// opposite trade from simply shrinking the handles.
+    /// </para>
+    ///
+    /// <para>
+    /// A number to react to rather than a measured one. A fifth leaves about a
+    /// third of the ink a solid handle had.
+    /// </para>
+    /// </summary>
+    private const float ArmShare = 0.2f;
+
+    /// <summary>
     /// The chrome for a panel, with whatever is being pointed at picked out.
     /// </summary>
     ///
@@ -91,10 +116,63 @@ public static class ChromeRender
         // shares would be a second answer to the same question.
         foreach (Patch patch in Chrome.Parts(panel))
         {
-            Fill(pixels, width, height, around, patch, patch.What == lit);
+            foreach (Patch ink in Drawn(patch))
+            {
+                Fill(pixels, width, height, around, ink, patch.What == lit);
+            }
         }
 
         return (pixels, width, height);
+    }
+
+    /// <summary>
+    /// What actually gets painted for a piece of chrome: the bar as it is, and a
+    /// corner handle as the two arms of a bracket.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Derived from the piece rather than worked out from the shares, so
+    /// <c>Chrome.Parts</c> stays the one answer to where a grab target is. This
+    /// only decides how much of that target is inked, which is a question about
+    /// drawing and belongs in the thing that draws.
+    /// </para>
+    /// <para>
+    /// The two outer edges, not the two inner ones. A handle straddles its
+    /// corner, so the arms furthest from the panel trace the corner from outside
+    /// it — the inner pair would draw a bracket lying across the render.
+    /// </para>
+    /// </remarks>
+    /// <param name="piece">One piece of chrome, as <c>Chrome.Parts</c> gives it.</param>
+    /// <returns>The rectangles to fill for it.</returns>
+    private static IEnumerable<Patch> Drawn(Patch piece)
+    {
+        if (piece.What == Grabbed.Bar)
+        {
+            yield return piece;
+
+            yield break;
+        }
+
+        float arm = (piece.Right - piece.Left) * ArmShare;
+
+        bool alongTheTop =
+            piece.What is Grabbed.TopLeftCorner or Grabbed.TopRightCorner;
+
+        bool downTheLeft =
+            piece.What is Grabbed.TopLeftCorner or Grabbed.BottomLeftCorner;
+
+        yield return piece with
+        {
+            Bottom = alongTheTop ? piece.Top - arm : piece.Bottom,
+            Top = alongTheTop ? piece.Top : piece.Bottom + arm,
+        };
+
+        yield return piece with
+        {
+            Left = downTheLeft ? piece.Left : piece.Right - arm,
+            Right = downTheLeft ? piece.Left + arm : piece.Right,
+        };
     }
 
     /// <summary>
