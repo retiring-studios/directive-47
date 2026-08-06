@@ -53,15 +53,29 @@ internal sealed class Grabbing : IDisposable
     private static readonly TimeSpan WhileTheyAreNot = TimeSpan.FromMilliseconds(500);
 
     private readonly IGrabChrome _chrome;
+    private readonly IHeadsetOverlay _overlay;
+    private readonly IControllers _controllers;
     private readonly Action<string> _record;
     private readonly CancellationTokenSource _stopping = new();
     private readonly Thread _watching;
 
+    /// <summary>
+    /// The drag in progress, or nothing. Touched only from the watching thread,
+    /// which is why it needs no guard.
+    /// </summary>
+    private Grab? _held;
+
     private bool _disposed;
 
-    private Grabbing(IGrabChrome chrome, Action<string> record)
+    private Grabbing(
+        IGrabChrome chrome,
+        IHeadsetOverlay overlay,
+        IControllers controllers,
+        Action<string> record)
     {
         _chrome = chrome;
+        _overlay = overlay;
+        _controllers = controllers;
         _record = record;
 
         _watching = new Thread(Watch)
@@ -75,15 +89,23 @@ internal sealed class Grabbing : IDisposable
     /// Starts watching.
     /// </summary>
     /// <param name="chrome">What shows the Commander their answer.</param>
+    /// <param name="overlay">The panel a drag moves.</param>
+    /// <param name="controllers">Where the hands are.</param>
     /// <param name="record">Where to note anything it had to carry on past.</param>
     /// <returns>The watch, which the caller owns and must dispose.</returns>
     /// <exception cref="ArgumentNullException">Any argument is null.</exception>
-    internal static Grabbing Watching(IGrabChrome chrome, Action<string> record)
+    internal static Grabbing Watching(
+        IGrabChrome chrome,
+        IHeadsetOverlay overlay,
+        IControllers controllers,
+        Action<string> record)
     {
         ArgumentNullException.ThrowIfNull(chrome);
+        ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(controllers);
         ArgumentNullException.ThrowIfNull(record);
 
-        var grabbing = new Grabbing(chrome, record);
+        var grabbing = new Grabbing(chrome, overlay, controllers, record);
 
         grabbing._watching.Start();
 
@@ -129,17 +151,18 @@ internal sealed class Grabbing : IDisposable
 
             try
             {
-                // SteamVR draws the laser and works out where it meets the quad;
-                // this asks what is there. Reading controller poses ourselves
-                // would be a second answer to a question the runtime is already
-                // answering, and it would need input focus we do not have while
-                // the game is the scene application.
-                Grabbed lit = _chrome.Follow();
+                // SteamVR draws the laser, works out where it meets the quad,
+                // and reports the trigger as a mouse button because the overlay
+                // asked for pointer input. Reading any of that ourselves would
+                // be a second answer to a question the runtime already answers.
+                Grip grip = _chrome.Follow();
+
+                Dragging(grip);
 
                 // Faster while a hand is on it, because that is when the answer
                 // can change from one look to the next. Pointing at nothing is
                 // the state a Commander spends hours in.
-                next = lit == Grabbed.Nothing ? WhileTheyAreNot : WhileTheyAreThere;
+                next = grip.On == Grabbed.Nothing ? WhileTheyAreNot : WhileTheyAreThere;
             }
             catch (Exception failed)
             {
@@ -158,5 +181,68 @@ internal sealed class Grabbing : IDisposable
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// Starts, continues or ends a drag, given what the laser is doing.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// A grab starts on the bar and nowhere else. Pointing at the panel itself
+    /// grabs nothing — the decision in <c>docs/decisions.md</c> — so a Commander
+    /// can read it without shoving it out of the way, and the corners are
+    /// scaling rather than moving.
+    /// </para>
+    /// <para>
+    /// Once it has started, what the laser is on stops mattering. A hand
+    /// dragging the panel takes the panel with it, so the laser sits wherever
+    /// the geometry puts it, and a grab that needed to stay over the bar would
+    /// let go the moment it began to work.
+    /// </para>
+    /// </remarks>
+    /// <param name="grip">What the laser is on and whether the trigger is down.</param>
+    private void Dragging(Grip grip)
+    {
+        if (!grip.Held)
+        {
+            // Includes the release, and also the laser leaving the quad, which
+            // the adapter reports as the trigger being up because no button-up
+            // is coming for an overlay nobody is aiming at any more.
+            _held = null;
+
+            return;
+        }
+
+        if (_held is null)
+        {
+            if (grip.On != Grabbed.Bar || _controllers.At(grip.Hand) is not { } took)
+            {
+                return;
+            }
+
+            _held = Grab.Started(took, _overlay.Placed.Where);
+
+            return;
+        }
+
+        if (_controllers.At(grip.Hand) is not { } moved)
+        {
+            // The hand stopped being tracked mid-drag — put down without letting
+            // go. The overlay stays where it was rather than following a pose
+            // nobody has, and the grab ends so that picking the controller up
+            // again does not resume a drag the Commander has forgotten about.
+            _held = null;
+
+            return;
+        }
+
+        Pose put = _held.Follows(moved);
+
+        _overlay.MoveTo(put);
+
+        // And the chrome after it. It is a second quad, so it does not move
+        // because the panel did — the panel would slide out of its own bar.
+        _chrome.Frames(_overlay.Placed);
     }
 }

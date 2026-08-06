@@ -44,7 +44,7 @@ public class GrabChromeTests : HeadsetTest
         using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
 
-        chrome.Showing(Grabbed.Nothing);
+        chrome.Showing(Grabbed.Nothing, Shown.Nothing);
 
         ulong itsPanel = 0;
         ulong itsChrome = 0;
@@ -72,7 +72,7 @@ public class GrabChromeTests : HeadsetTest
         using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
 
-        chrome.Showing(Grabbed.Nothing);
+        chrome.Showing(Grabbed.Nothing, Shown.Nothing);
 
         ulong handle = 0;
 
@@ -137,11 +137,11 @@ public class GrabChromeTests : HeadsetTest
         using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
 
-        chrome.Follow().ShouldBe(Grabbed.Nothing);
+        chrome.Follow().On.ShouldBe(Grabbed.Nothing);
 
         // And again, because a first call that primes something and a second
         // that reads it back differently is the shape of a bug here.
-        chrome.Follow().ShouldBe(Grabbed.Nothing);
+        chrome.Follow().On.ShouldBe(Grabbed.Nothing);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class GrabChromeTests : HeadsetTest
         using (IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
             ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr))
         {
-            chrome.Showing(Grabbed.Bar);
+            chrome.Showing(Grabbed.Bar, new Shown(Bar: true, false, false, false, false));
         }
 
         ulong handle = 0;

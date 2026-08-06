@@ -54,6 +54,63 @@ public class ChromeTests
     }
 
     [Fact]
+    public void TheBar_IsThereWheneverThereIsALaserAtAll()
+    {
+        // Even reading the middle of the panel, which is as far from the bar as
+        // a laser on this overlay gets. Moving the overlay is what a Commander
+        // does first and most, and the bar appearing the moment they point is
+        // how they learn it can be moved.
+        Chrome.Showing(Panel, 0, 0).Bar.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void TheCorners_AreNotThere_ForALaserInTheMiddleOfThePanel()
+    {
+        // Reading the panel is not reaching for a corner. Four handles out every
+        // time somebody reads the overlay is what made the chrome furniture.
+        Shown shown = Chrome.Showing(Panel, 0, 0);
+
+        shown.TopLeft.ShouldBeFalse();
+        shown.TopRight.ShouldBeFalse();
+        shown.BottomLeft.ShouldBeFalse();
+        shown.BottomRight.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ALaser_OnAHandle_BringsOutThatHandleAndNoOther()
+    {
+        // The top right handle straddles (0.25, 0.1575) in the chrome's frame.
+        Shown shown = Chrome.Showing(Panel, 0.25f, 0.1575f);
+
+        shown.TopRight.ShouldBeTrue();
+
+        shown.TopLeft.ShouldBeFalse("the far corner is half a metre away");
+        shown.BottomRight.ShouldBeFalse();
+        shown.BottomLeft.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ALaser_ShortOfAHandle_StillBringsItOut()
+    {
+        // Five centimetres inside the panel from the top right corner, which is
+        // within the six the share allows. "At or near it" is the requirement,
+        // and a handle that only appeared once the laser was already on it would
+        // be one nobody could find.
+        Chrome.Showing(Panel, 0.20f, 0.1075f).TopRight.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ALaser_NearTheBottomCorner_BringsOutThatHandleAndNotTheOther()
+    {
+        // Distance to the rectangle rather than to its middle. Measured to a
+        // centre, the near end of a full-width piece would count as far away.
+        Shown shown = Chrome.Showing(Panel, -0.24f, -0.13f);
+
+        shown.BottomLeft.ShouldBeTrue();
+        shown.BottomRight.ShouldBeFalse("the other end of the panel is half a metre off");
+    }
+
+    [Fact]
     public void Chrome_IsTallEnough_ForTheBarBeneathAndTheHandlesAbove()
     {
         // 0.3 of panel, plus 0.03 of handle above, plus 0.045 of bar below. The

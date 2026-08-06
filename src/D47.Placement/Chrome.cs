@@ -21,6 +21,51 @@ public readonly record struct Patch(
     Grabbed What, float Left, float Right, float Bottom, float Top);
 
 /// <summary>
+/// Which pieces of chrome are worth drawing right now.
+/// </summary>
+///
+/// <remarks>
+/// <para>
+/// A value rather than a set, so "has what is worth showing changed?" is an
+/// equality check costing nothing. A collection would be an allocation every
+/// time the laser moved, which is thirty times a second for as long as a hand is
+/// up.
+/// </para>
+/// <para>
+/// Nothing at all is the ordinary answer, and what a cockpit looks like whenever
+/// nobody is pointing.
+/// </para>
+/// </remarks>
+/// <param name="Bar">Whether the bar is worth showing.</param>
+/// <param name="TopLeft">Whether the top left handle is.</param>
+/// <param name="TopRight">Whether the top right handle is.</param>
+/// <param name="BottomLeft">Whether the bottom left handle is.</param>
+/// <param name="BottomRight">Whether the bottom right handle is.</param>
+public readonly record struct Shown(
+    bool Bar, bool TopLeft, bool TopRight, bool BottomLeft, bool BottomRight)
+{
+    /// <summary>
+    /// Nothing is drawn, which is a cockpit with no laser in it.
+    /// </summary>
+    public static Shown Nothing => default;
+
+    /// <summary>
+    /// Whether one piece is worth showing.
+    /// </summary>
+    /// <param name="piece">The piece to ask about.</param>
+    /// <returns>Whether it should be drawn at all.</returns>
+    public bool Shows(Grabbed piece) => piece switch
+    {
+        Grabbed.Bar => Bar,
+        Grabbed.TopLeftCorner => TopLeft,
+        Grabbed.TopRightCorner => TopRight,
+        Grabbed.BottomLeftCorner => BottomLeft,
+        Grabbed.BottomRightCorner => BottomRight,
+        _ => false,
+    };
+}
+
+/// <summary>
 /// The overlay's chrome: the bar that moves it and the handles that scale it,
 /// as a shape in the cockpit.
 /// </summary>
@@ -229,6 +274,91 @@ public static class Chrome
         }
 
         return Grabbed.Content;
+    }
+
+    /// <summary>
+    /// How far from a piece of chrome the laser can be and still bring it out,
+    /// as a share of the panel's shorter side.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// On the shipped quad this is six centimetres, about a handle's width.
+    /// </remarks>
+    internal const float NearShare = 0.2f;
+
+    /// <summary>
+    /// What to draw, given where the laser is on the chrome.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// <b>The bar whenever there is a laser at all; the corners only when it is
+    /// near them.</b> Moving the overlay is the thing a Commander does first and
+    /// most, so the bar is how they learn the panel can be moved — it appears the
+    /// moment they point at it. Scaling is rarer and four handles showing every
+    /// time somebody reads the panel is what made the chrome furniture.
+    /// </para>
+    /// <para>
+    /// Nothing at all when there is no laser, which is most of a session. An
+    /// earlier version was faintly present at all times, on the reasoning that
+    /// somebody never told the bar exists would find it by seeing it. The
+    /// maintainer looked at that in the headset; the bar rule above is what keeps
+    /// the discoverability without the clutter.
+    /// </para>
+    /// <para>
+    /// Distance to the rectangle rather than to its middle. A handle is a
+    /// six-centimetre square and the bar is the width of the panel, so distance
+    /// to a centre would bring a piece out from much further away at its ends
+    /// than in its middle.
+    /// </para>
+    /// </remarks>
+    /// <param name="panel">The panel the chrome goes around.</param>
+    /// <param name="across">How far right of the chrome's middle, in metres.</param>
+    /// <param name="up">How far above the chrome's middle, in metres.</param>
+    /// <returns>What to draw.</returns>
+    /// <exception cref="ArgumentException">
+    /// Some part of the panel's pose is not a finite number.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The panel has no width or no height.
+    /// </exception>
+    public static Shown Showing(Board panel, float across, float up)
+    {
+        float within = MathF.Min(panel.Width, panel.Height) * NearShare;
+
+        // There is a laser, or this would not have been asked.
+        var shown = new Shown(Bar: true, false, false, false, false);
+
+        foreach (Patch patch in Parts(panel))
+        {
+            if (patch.What == Grabbed.Bar || HowFar(patch, across, up) > within)
+            {
+                continue;
+            }
+
+            shown = patch.What switch
+            {
+                Grabbed.TopLeftCorner => shown with { TopLeft = true },
+                Grabbed.TopRightCorner => shown with { TopRight = true },
+                Grabbed.BottomLeftCorner => shown with { BottomLeft = true },
+                _ => shown with { BottomRight = true },
+            };
+        }
+
+        return shown;
+    }
+
+    /// <summary>
+    /// How far a point is from a rectangle, and nought when it is inside one.
+    /// </summary>
+    private static float HowFar(Patch patch, float across, float up)
+    {
+        float sideways = MathF.Max(
+            MathF.Max(patch.Left - across, across - patch.Right), 0);
+
+        float updown = MathF.Max(MathF.Max(patch.Bottom - up, up - patch.Top), 0);
+
+        return MathF.Sqrt((sideways * sideways) + (updown * updown));
     }
 
     /// <summary>

@@ -46,10 +46,23 @@ public class ChromeRenderTests
     private const double BarMiddleDown = 0.94;
 
     /// <summary>
-    /// The top right corner handle: 94.6% across, 8% down.
+    /// The middle of the top right corner handle: 94.6% across, 8% down.
+    ///
+    /// <para>
+    /// Inside the grab target and outside the ink, which is the whole of what a
+    /// bracket changed. <c>Chrome.On</c> still answers <c>TopRightCorner</c>
+    /// here.
+    /// </para>
     /// </summary>
     private const double CornerAcross = 0.946;
     private const double CornerDown = 0.08;
+
+    /// <summary>
+    /// On the top arm of that handle's bracket: the same place across, but up
+    /// against the top edge of the quad, which is where the handle's outer edge
+    /// sits.
+    /// </summary>
+    private const double ArmDown = 0.016;
 
     [Fact]
     public void Chrome_WhereThePanelShowsThrough_IsTransparent()
@@ -66,9 +79,94 @@ public class ChromeRenderTests
     }
 
     [Fact]
+    public void TheBar_IsAShortPillRatherThanASlabTheWidthOfThePanel()
+    {
+        Chromed chrome = Taken(Grabbed.Nothing);
+
+        // Inked in the middle and clear towards the ends. A band the full width
+        // of the panel is more ink than all four corners together, and it is
+        // what read as a slab across the bottom of the cockpit.
+        chrome.Alpha(0.5, BarMiddleDown).ShouldBeGreaterThan((byte)0);
+
+        chrome.Alpha(0.2, BarMiddleDown).ShouldBe(
+            (byte)0, "the bar should not reach the left of the panel");
+
+        chrome.Alpha(0.8, BarMiddleDown).ShouldBe(
+            (byte)0, "nor the right");
+    }
+
+    [Fact]
+    public void Chrome_WithTheLaserNowhereNear_IsNotThereAtAll()
+    {
+        Chromed empty = Taken(Grabbed.Nothing, Shown.Nothing);
+
+        // The whole quad, sampled where each piece would be. Chrome that is
+        // always faintly present is furniture in the cockpit; the maintainer
+        // looked at it in the headset and asked for it to keep out of the way
+        // until it is wanted.
+        empty.Alpha(0.5, BarMiddleDown).ShouldBe((byte)0);
+        empty.Alpha(CornerAcross, ArmDown).ShouldBe((byte)0);
+    }
+
+    [Fact]
+    public void APiece_TheLaserIsNear_ComesOutWithoutBringingTheOthersWithIt()
+    {
+        Chromed justTheBar = Taken(
+            Grabbed.Nothing, new Shown(Bar: true, false, false, false, false));
+
+        justTheBar.Alpha(0.5, BarMiddleDown).ShouldBeGreaterThan((byte)0);
+
+        // A Commander reaching for the bar has not asked to see the corners.
+        justTheBar.Alpha(CornerAcross, ArmDown).ShouldBe(
+            (byte)0, "being near the bar should not light up the corners");
+    }
+
+    [Fact]
+    public void TheBar_IsStillTheWholeWidthToAimAt()
+    {
+        // The same trade the brackets make: less ink, same target. Somebody
+        // aiming near the end of the bar is aiming at the bar.
+        Board around = Chrome.Around(Panel);
+
+        float across = (0.2f - 0.5f) * around.Width;
+        float up = (0.5f - (float)BarMiddleDown) * around.Height;
+
+        Chrome.On(Panel, across, up).ShouldBe(Grabbed.Bar);
+    }
+
+    [Fact]
     public void Chrome_WhereACornerHandleIs_IsSomethingYouCanSee()
     {
-        Taken(Grabbed.Nothing).Alpha(CornerAcross, CornerDown).ShouldBeGreaterThan((byte)0);
+        Taken(Grabbed.Nothing).Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan((byte)0);
+    }
+
+    [Fact]
+    public void ACornerHandle_IsABracketRatherThanABlock()
+    {
+        Chromed chrome = Taken(Grabbed.Nothing);
+
+        // Ink on the arm, nothing in the middle. A solid handle is a fifth of
+        // the panel's height in ink at each corner, which is four blocks around
+        // something meant to be read.
+        chrome.Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan((byte)0);
+
+        chrome.Alpha(CornerAcross, CornerDown).ShouldBe(
+            (byte)0, "the middle of a handle should be empty, not filled");
+    }
+
+    [Fact]
+    public void ACornerHandle_IsStillTheWholeSquareToAimAt()
+    {
+        // The point of a bracket rather than a smaller handle: less ink, same
+        // target. If this ever disagrees with the test above, the drawing and
+        // the hit test have drifted apart — which is the thing Chrome.Parts
+        // exists to prevent.
+        Board around = Chrome.Around(Panel);
+
+        float across = ((float)CornerAcross - 0.5f) * around.Width;
+        float up = (0.5f - (float)CornerDown) * around.Height;
+
+        Chrome.On(Panel, across, up).ShouldBe(Grabbed.TopRightCorner);
     }
 
     [Fact]
@@ -94,8 +192,8 @@ public class ChromeRenderTests
         Chromed lit = Taken(Grabbed.TopRightCorner);
         Chromed dim = Taken(Grabbed.Nothing);
 
-        lit.Alpha(CornerAcross, CornerDown).ShouldBeGreaterThan(
-            dim.Alpha(CornerAcross, CornerDown));
+        lit.Alpha(CornerAcross, ArmDown).ShouldBeGreaterThan(
+            dim.Alpha(CornerAcross, ArmDown));
 
         // The bar is not the corner, so it stays as it was. Lighting the whole
         // chrome would tell the Commander they were holding all of it.
@@ -111,8 +209,8 @@ public class ChromeRenderTests
         Chromed nothing = Taken(Grabbed.Nothing);
 
         content.Alpha(0.5, BarMiddleDown).ShouldBe(nothing.Alpha(0.5, BarMiddleDown));
-        content.Alpha(CornerAcross, CornerDown).ShouldBe(
-            nothing.Alpha(CornerAcross, CornerDown));
+        content.Alpha(CornerAcross, ArmDown).ShouldBe(
+            nothing.Alpha(CornerAcross, ArmDown));
     }
 
     [Fact]
@@ -143,12 +241,21 @@ public class ChromeRenderTests
             around.Width / around.Height, 0.02);
     }
 
-    private static Chromed Taken(Grabbed lit)
+    /// <summary>
+    /// The chrome with everything close enough to draw, which is the state most
+    /// of these facts are about. What is drawn when the laser is elsewhere is
+    /// its own pair of tests below.
+    /// </summary>
+    private static Chromed Taken(Grabbed lit) => Taken(lit, Everything);
+
+    private static Chromed Taken(Grabbed lit, Shown shown)
     {
-        (byte[] pixels, int width, int height) = ChromeRender.Take(Panel, lit);
+        (byte[] pixels, int width, int height) = ChromeRender.Take(Panel, lit, shown);
 
         return new Chromed(pixels, width, height);
     }
+
+    private static Shown Everything => new(true, true, true, true, true);
 
     /// <summary>
     /// A chrome texture, with a way to ask what is at a spot on it.

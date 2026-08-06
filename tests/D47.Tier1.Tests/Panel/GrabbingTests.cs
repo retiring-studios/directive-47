@@ -20,6 +20,12 @@ namespace D47.Tier1.Tests.Panel;
 /// on are SteamVR's and <c>Chrome.On</c>'s respectively; this is the loop in
 /// between, and it is the part with the timing bug in it if there is one.
 /// </para>
+///
+/// <para>
+/// Nothing here pulls a trigger, so no drag ever starts. That is
+/// <c>GrabbingTheBarTests</c>, and the doubles both use are in
+/// <c>GrabbingDoubles</c>.
+/// </para>
 /// </summary>
 public class GrabbingTests
 {
@@ -28,13 +34,19 @@ public class GrabbingTests
     [Fact]
     public void Grabbing_KeepsAskingTheChromeWhatIsUnderThePointer()
     {
-        using var chrome = new ChromeThatIs(Grabbed.Bar);
+        using var chrome = ChromeThatReports.PointingAt(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
-        using (Grabbing.Watching(chrome, Nowhere))
+        using (Watch(chrome, overlay))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 $"it should keep following, and it asked {chrome.Followed} times");
         }
+
+        // Pointing is not grabbing. Worth asserting here rather than only in the
+        // drag tests, because this is the loop that runs for hours while a
+        // Commander reads the panel.
+        overlay.Moves.ShouldBe(0);
     }
 
     [Fact]
@@ -43,9 +55,10 @@ public class GrabbingTests
         // Pointing at nothing is the state a Commander spends hours in, and
         // #235 asks for it to cost nothing. It must keep looking — a laser
         // arriving is what it is waiting for — but it must not spin.
-        using var chrome = new ChromeThatIs(Grabbed.Nothing);
+        using var chrome = ChromeThatReports.PointingAt(Grabbed.Nothing);
+        using var overlay = OverlayThatMoves.Somewhere();
 
-        using (Grabbing.Watching(chrome, Nowhere))
+        using (Watch(chrome, overlay))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 "it should keep looking for a laser that arrives");
@@ -60,11 +73,13 @@ public class GrabbingTests
     {
         // The other half of the throttle, and the one that says the two
         // intervals are not the same number written twice.
-        using var busy = new ChromeThatIs(Grabbed.Bar);
-        using var idle = new ChromeThatIs(Grabbed.Nothing);
+        using var busy = ChromeThatReports.PointingAt(Grabbed.Bar);
+        using var idle = ChromeThatReports.PointingAt(Grabbed.Nothing);
+        using var one = OverlayThatMoves.Somewhere();
+        using var another = OverlayThatMoves.Somewhere();
 
-        using (Grabbing.Watching(busy, Nowhere))
-        using (Grabbing.Watching(idle, Nowhere))
+        using (Watch(busy, one))
+        using (Watch(idle, another))
         {
             Thread.Sleep(1000);
         }
@@ -83,8 +98,9 @@ public class GrabbingTests
         // whatever it happened to be showing.
         List<string> recorded = [];
         using var chrome = new ChromeThatThrowsOnce();
+        using var overlay = OverlayThatMoves.Somewhere();
 
-        using (Grabbing.Watching(chrome, recorded.Add))
+        using (Watch(chrome, overlay, recorded.Add))
         {
             Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 "it should have carried on to the next look");
@@ -96,9 +112,10 @@ public class GrabbingTests
     [Fact]
     public void Grabbing_WhenItStops_StopsLooking()
     {
-        using var chrome = new ChromeThatIs(Grabbed.Bar);
+        using var chrome = ChromeThatReports.PointingAt(Grabbed.Bar);
+        using var overlay = OverlayThatMoves.Somewhere();
 
-        var watching = Grabbing.Watching(chrome, Nowhere);
+        Grabbing watching = Watch(chrome, overlay);
 
         Eventually.True(() => chrome.Followed >= 1, LongEnough).ShouldBeTrue();
 
@@ -112,49 +129,39 @@ public class GrabbingTests
     }
 
     /// <summary>
-    /// Where this test's absences go when it does not care about them.
+    /// Watching, with a hand nobody is holding — none of this is about where the
+    /// controllers are.
     /// </summary>
-    private static Action<string> Nowhere => _ => { };
+    private static Grabbing Watch(
+        IGrabChrome chrome, IHeadsetOverlay overlay, Action<string>? record = null) =>
+        Grabbing.Watching(chrome, overlay, HandThatMoves.Asleep(), record ?? (_ => { }));
 
-    private sealed class ChromeThatIs(Grabbed under) : IGrabChrome
-    {
-        private int _followed;
-
-        internal int Followed => Volatile.Read(ref _followed);
-
-        public void Showing(Grabbed lit)
-        {
-        }
-
-        public Grabbed Follow()
-        {
-            Interlocked.Increment(ref _followed);
-            return under;
-        }
-
-        public void Dispose()
-        {
-        }
-    }
-
+    /// <summary>
+    /// Fault injection rather than a duplicate of <see cref="ChromeThatReports"/>,
+    /// which is why this one stayed local.
+    /// </summary>
     private sealed class ChromeThatThrowsOnce : IGrabChrome
     {
         private int _followed;
 
         internal int Followed => Volatile.Read(ref _followed);
 
-        public void Showing(Grabbed lit)
+        public void Showing(Grabbed lit, Shown shown)
         {
         }
 
-        public Grabbed Follow()
+        public Grip Follow()
         {
             if (Interlocked.Increment(ref _followed) == 1)
             {
                 throw new InvalidOperationException("the runtime went away");
             }
 
-            return Grabbed.Content;
+            return new Grip(Grabbed.Content, Held: false, Hand: 0);
+        }
+
+        public void Frames(Board panel)
+        {
         }
 
         public void Dispose()

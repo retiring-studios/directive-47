@@ -5,6 +5,21 @@ using D47.Placement;
 namespace D47.VrOverlay;
 
 /// <summary>
+/// What the laser is on, whether the trigger is down, and which hand is doing
+/// it.
+/// </summary>
+///
+/// <remarks>
+/// The three together rather than three calls, because they are one answer taken
+/// from one poll of the runtime's event queue. Asked separately they could come
+/// from different moments and describe a hand that was never in that state.
+/// </remarks>
+/// <param name="On">What pulling the trigger would take hold of.</param>
+/// <param name="Held">Whether the trigger is down now.</param>
+/// <param name="Hand">Which device the laser belongs to, as SteamVR numbers them.</param>
+public readonly record struct Grip(Grabbed On, bool Held, uint Hand);
+
+/// <summary>
 /// The bar and the handles, floating around the panel.
 /// </summary>
 ///
@@ -25,7 +40,8 @@ public interface IGrabChrome : IDisposable
     /// nothing has changed — which is nearly always.
     /// </remarks>
     /// <param name="lit">What a trigger would take hold of right now.</param>
-    void Showing(Grabbed lit);
+    /// <param name="shown">What the laser is near enough to be worth drawing.</param>
+    void Showing(Grabbed lit, Shown shown);
 
     /// <summary>
     /// Looks at where the laser is and lights whatever it is on.
@@ -37,7 +53,20 @@ public interface IGrabChrome : IDisposable
     /// to change.
     /// </remarks>
     /// <returns>What is being pointed at, for whoever wants to know.</returns>
-    Grabbed Follow();
+    Grip Follow();
+
+    /// <summary>
+    /// Moves the chrome so it frames a panel that has been put somewhere else.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// The chrome is a second quad and does not move because the panel did.
+    /// Without this a dragged panel slides out from inside its own bar, which
+    /// looks like the chrome being broken rather than like nobody having moved
+    /// it.
+    /// </remarks>
+    /// <param name="panel">Where the panel is now.</param>
+    void Frames(Board panel);
 }
 
 /// <summary>
@@ -46,9 +75,16 @@ public interface IGrabChrome : IDisposable
 internal sealed class GrabChrome : IGrabChrome
 {
     private readonly SteamVrOverlay _overlay;
-    private readonly Board _panel;
+
+    /// <summary>
+    /// The panel this chrome frames. Not readonly since the panel can be
+    /// dragged, and chrome measured against where it used to be would put every
+    /// grab target somewhere the Commander is not aiming.
+    /// </summary>
+    private Board _panel;
 
     private Grabbed _showing;
+    private Shown _shown;
     private bool _disposed;
 
     private GrabChrome(SteamVrOverlay overlay, Board panel, Grabbed showing)
@@ -68,7 +104,10 @@ internal sealed class GrabChrome : IGrabChrome
     /// <exception cref="InvalidOperationException">SteamVR refused something.</exception>
     internal static GrabChrome Around(string key, string name, Board panel)
     {
-        (byte[] pixels, int width, int height) = ChromeRender.Take(panel, Grabbed.Nothing);
+        // Empty to begin with. Nobody is pointing at an overlay that has only
+        // just appeared, and the chrome is invisible until they do.
+        (byte[] pixels, int width, int height) =
+            ChromeRender.Take(panel, Grabbed.Nothing, Shown.Nothing);
 
         var overlay = SteamVrOverlay.Showing(
             key, name, Chrome.Around(panel), pixels, width, height);
@@ -87,7 +126,7 @@ internal sealed class GrabChrome : IGrabChrome
     }
 
     /// <inheritdoc/>
-    public void Showing(Grabbed lit)
+    public void Showing(Grabbed lit, Shown shown)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -95,30 +134,54 @@ internal sealed class GrabChrome : IGrabChrome
         // still is the same answer every time it is looked at, and repainting a
         // texture thirty times a second to say so would be the whole cost of
         // this feature for no visible difference.
-        if (lit == _showing)
+        //
+        // Both halves, because a laser moving off a handle changes what is drawn
+        // without changing what is lit. Comparing whole values is why Shown is a
+        // record struct rather than a set.
+        if (lit == _showing && shown == _shown)
         {
             return;
         }
 
         _showing = lit;
+        _shown = shown;
 
-        (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit);
+        (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit, shown);
 
         _overlay.Paint(pixels, width, height);
     }
 
     /// <inheritdoc/>
-    public Grabbed Follow()
+    public Grip Follow()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        Grabbed lit = _overlay.Pointed() is { } at
-            ? Chrome.On(_panel, at.Across, at.Up)
-            : Grabbed.Nothing;
+        // Pointed first, because it is the call that drains the queue — the
+        // trigger is read out of what that drain left behind.
+        (float Across, float Up)? at = _overlay.Pointed();
 
-        Showing(lit);
+        Grabbed lit = at is { } on ? Chrome.On(_panel, on.Across, on.Up) : Grabbed.Nothing;
 
-        return lit;
+        // Nothing near when the laser is elsewhere, which is an empty quad.
+        Shown shown = at is { } close
+            ? Chrome.Showing(_panel, close.Across, close.Up)
+            : Shown.Nothing;
+
+        (bool held, uint hand) = _overlay.Trigger();
+
+        Showing(lit, shown);
+
+        return new Grip(lit, held, hand);
+    }
+
+    /// <inheritdoc/>
+    public void Frames(Board panel)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        _panel = panel;
+
+        _overlay.MoveTo(Chrome.Around(panel).Where);
     }
 
     /// <summary>
