@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace D47.Placement;
@@ -25,36 +26,6 @@ namespace D47.Placement;
 /// </remarks>
 public static class Pointing
 {
-    /// <summary>
-    /// How tall the bar under the panel is, as a share of the panel's height.
-    ///
-    /// <para>
-    /// A share rather than a distance in metres, so the chrome stays the same
-    /// gesture once the overlay can be scaled — a fixed size would be most of a
-    /// small overlay and a sliver of a large one. On the shipped half-metre quad
-    /// this is a little over four centimetres, which is a comfortable thing to
-    /// point at from a seat.
-    /// </para>
-    ///
-    /// <para>
-    /// A number to react to rather than a measured one, in the same spirit as
-    /// the quad's width and the overlay's opening opacity.
-    /// </para>
-    /// </summary>
-    private const float BarShare = 0.15f;
-
-    /// <summary>
-    /// How big a corner handle is, as a share of the panel's shorter side.
-    ///
-    /// <para>
-    /// The shorter side, so a wide, short panel does not get handles taller than
-    /// itself. Each handle straddles its corner rather than sitting inside or
-    /// outside it, which is what makes it reachable whether the Commander aims a
-    /// little high or a little wide.
-    /// </para>
-    /// </summary>
-    private const float CornerShare = 0.2f;
-
     /// <summary>
     /// What the controller is pointing at.
     /// </summary>
@@ -88,8 +59,8 @@ public static class Pointing
         Numbers.MustBeFinite(board.Where.Position, nameof(board));
         Numbers.MustBeFinite(board.Where.Orientation, nameof(board));
 
-        MustBeASize(board.Width, nameof(board));
-        MustBeASize(board.Height, nameof(board));
+        Chrome.MustBeASize(board.Width, nameof(board));
+        Chrome.MustBeASize(board.Height, nameof(board));
 
         Quaternion aim = Turn.Of(controller.Orientation);
         Quaternion facing = Turn.Of(board.Where.Orientation);
@@ -135,6 +106,54 @@ public static class Pointing
     }
 
     /// <summary>
+    /// What any of the Commander's hands is pointing at.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Something grabbable beats the content, and the content beats nothing.
+    /// Both hands report something true when one rests on the panel and the
+    /// other on a handle, and showing the content would be picking the more
+    /// boring of two right answers.
+    /// </para>
+    /// <para>
+    /// Order-independent on purpose. The runtime hands back device slots rather
+    /// than hands, and which slot a controller lands in depends on the order
+    /// they woke up — so an answer that depended on it would be right on some
+    /// runs and not others.
+    /// </para>
+    /// </remarks>
+    /// <param name="controllers">Wherever the hands are.</param>
+    /// <param name="board">The panel, as something with edges.</param>
+    /// <returns>What pulling a trigger would take hold of.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="controllers"/> is null.
+    /// </exception>
+    public static Grabbed At(IReadOnlyList<Pose> controllers, Board board)
+    {
+        ArgumentNullException.ThrowIfNull(controllers);
+
+        Grabbed best = Grabbed.Nothing;
+
+        foreach (Pose held in controllers)
+        {
+            Grabbed found = At(held, board);
+
+            if (found is not Grabbed.Nothing and not Grabbed.Content)
+            {
+                return found;
+            }
+
+            if (found == Grabbed.Content)
+            {
+                best = found;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
     /// What a point in the board's own frame is on, measured from the middle of
     /// the panel.
     /// </summary>
@@ -167,7 +186,7 @@ public static class Pointing
         // Beneath the panel and no further than the bar is tall. Only beneath:
         // the same distance above is off the top, and a bar on both sides would
         // be two things to grab that mean the same.
-        float bar = board.Height * BarShare;
+        float bar = board.Height * Chrome.BarShare;
 
         return up < 0 && up >= -(halfTall + bar) ? Grabbed.Bar : Grabbed.Nothing;
     }
@@ -179,7 +198,7 @@ public static class Pointing
     private static Grabbed? OnACorner(
         float across, float up, float halfWide, float halfTall, Board board)
     {
-        float reach = MathF.Min(board.Width, board.Height) * CornerShare / 2;
+        float reach = Chrome.Reach(board);
 
         if (MathF.Abs(MathF.Abs(across) - halfWide) > reach
             || MathF.Abs(MathF.Abs(up) - halfTall) > reach)
@@ -190,14 +209,5 @@ public static class Pointing
         return up >= 0
             ? across < 0 ? Grabbed.TopLeftCorner : Grabbed.TopRightCorner
             : across < 0 ? Grabbed.BottomLeftCorner : Grabbed.BottomRightCorner;
-    }
-
-    private static void MustBeASize(float extent, string name)
-    {
-        if (!float.IsFinite(extent) || extent <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                name, extent, "A board with no size is not something anybody can point at.");
-        }
     }
 }

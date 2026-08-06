@@ -82,6 +82,60 @@ public class QuadTests
     }
 
     [Fact]
+    public void APoseTaken_AndReadBack_IsTheSamePose()
+    {
+        // Reading a controller is the same transpose the other way round, and it
+        // fails the same way: invisible while the thing is square to the world,
+        // wrong the moment it is turned. A round trip is what says the two halves
+        // agree, and a rotation on all three axes is what stops it agreeing by
+        // symmetry.
+        var held = new Pose(
+            new Vector3(-0.7f, 1.1f, -0.4f),
+            Quaternion.CreateFromYawPitchRoll(-0.9f, 0.35f, 1.2f));
+
+        Pose read = Quad.From(Quad.At(held));
+
+        read.Position.X.ShouldBe(held.Position.X, CloseEnough);
+        read.Position.Y.ShouldBe(held.Position.Y, CloseEnough);
+        read.Position.Z.ShouldBe(held.Position.Z, CloseEnough);
+
+        // Compared by where they send a point rather than component by
+        // component, because q and -q are the same rotation and a test that
+        // insisted otherwise would fail on an equally correct answer.
+        var somewhere = new Vector3(0.2f, -0.5f, 0.9f);
+
+        var asRead = Vector3.Transform(somewhere, read.Orientation);
+        var asHeld = Vector3.Transform(somewhere, held.Orientation);
+
+        asRead.X.ShouldBe(asHeld.X, CloseEnough, "the pose came back turned the wrong way");
+        asRead.Y.ShouldBe(asHeld.Y, CloseEnough, "the pose came back turned the wrong way");
+        asRead.Z.ShouldBe(asHeld.Z, CloseEnough, "the pose came back turned the wrong way");
+    }
+
+    [Fact]
+    public void APoseRead_FromAnEmptySlot_LooksPerfectlyValid_WhichIsTheTrap()
+    {
+        // Every field zero is what an unconnected device's slot holds, and the
+        // runtime hands back a full array whether or not the devices in it
+        // exist. This is what such a slot turns into.
+        //
+        // It is not an error and nothing downstream will call it one:
+        // Quaternion.CreateFromRotationMatrix on an all-zero matrix picks the
+        // largest diagonal, finds sqrt(1), and produces a unit rotation — so
+        // Turn.Of normalises it happily and Pointing answers as if a real
+        // controller were sitting at the origin facing backwards.
+        //
+        // Written down because it decides where the check goes: bPoseIsValid and
+        // bDeviceIsConnected have to be read in the adapter, before this is
+        // called. There is no later layer that will catch it.
+        Pose read = Quad.From(default);
+
+        read.Position.ShouldBe(Vector3.Zero);
+
+        Should.NotThrow(() => Pointing.At(read, new Board(read, 0.5f, 0.3f)));
+    }
+
+    [Fact]
     public void Quad_AtAPlace_PutsItsOriginWhereThePlacementWasPut()
     {
         // The translation on its own, which is the half of it a reader checks

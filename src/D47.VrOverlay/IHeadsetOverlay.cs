@@ -1,5 +1,6 @@
 using System;
 
+using D47.Placement;
 using D47.Render;
 
 namespace D47.VrOverlay;
@@ -42,6 +43,19 @@ public interface IHeadsetOverlay : IDisposable
     /// on screen is worse than one that is not.
     /// </remarks>
     bool IsVisible { get; }
+
+    /// <summary>
+    /// Where the quad is and how big it is, in metres.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Asked of the overlay rather than worked out again by whoever needs it.
+    /// The chrome framing this quad has to agree with it exactly, and the way
+    /// two things stop agreeing is each deriving the answer from the same
+    /// constants separately — see the Architecture section of
+    /// <c>docs/decisions.md</c>.
+    /// </remarks>
+    Board Placed { get; }
 
     /// <summary>
     /// Puts the overlay in front of the Commander.

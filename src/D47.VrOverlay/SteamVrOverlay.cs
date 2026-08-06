@@ -20,27 +20,29 @@ namespace D47.VrOverlay;
 /// </summary>
 internal sealed class SteamVrOverlay : IHeadsetOverlay
 {
-    /// <summary>
-    /// How wide the quad is in the cockpit, in metres.
-    ///
-    /// <para>
-    /// A number to react to rather than a measured one, in the same spirit as
-    /// the game overlay's opening opacity. Half a metre at roughly arm's length
-    /// is legible without filling the view; it is expected to move once
-    /// somebody has worn it, and it becomes a setting when
-    /// [#140](https://github.com/retiring-studios/directive-47/issues/140)
-    /// gives the Commander a way to say so.
-    /// </para>
-    /// </summary>
-    private const float AboutAHandSpan = 0.5f;
-
     private readonly ulong _handle;
+
+    /// <summary>
+    /// Where the laser was last seen on this quad, in metres from its middle.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Remembered because SteamVR reports movement rather than position: a hand
+    /// held still sends nothing at all, and treating no event as no pointer
+    /// would make the highlight flicker off the moment somebody stopped moving.
+    /// </remarks>
+    private (float Across, float Up)? _pointed;
+
     private bool _disposed;
 
-    private SteamVrOverlay(ulong handle)
+    private SteamVrOverlay(ulong handle, Board placed)
     {
         _handle = handle;
+        Placed = placed;
     }
+
+    /// <inheritdoc/>
+    public Board Placed { get; }
 
     /// <inheritdoc/>
     public bool IsVisible => !_disposed && OpenVR.Overlay.IsOverlayVisible(_handle);
@@ -57,27 +59,49 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// </remarks>
     /// <param name="key">The key SteamVR files the overlay under.</param>
     /// <param name="name">What SteamVR shows a human.</param>
+    /// <param name="placed">Where the quad goes and how wide it is, in metres.</param>
     /// <param name="pixels">The render, as RGBA.</param>
     /// <param name="width">How wide the render is.</param>
     /// <param name="height">How tall the render is.</param>
     /// <returns>The overlay, which the caller owns and must dispose.</returns>
     /// <exception cref="InvalidOperationException">SteamVR refused something.</exception>
     internal static SteamVrOverlay Showing(
-        string key, string name, byte[] pixels, int width, int height)
+        string key, string name, Board placed, byte[] pixels, int width, int height)
     {
         ulong handle = 0;
 
-        Insist(OpenVR.Overlay.CreateOverlay(key, name, ref handle), "create the overlay");
+        EVROverlayError made = OpenVR.Overlay.CreateOverlay(key, name, ref handle);
 
-        var overlay = new SteamVrOverlay(handle);
+        // Named, because the runtime's word for it is not the useful half. A key
+        // is one application's identity for one quad, so the only way to be told
+        // it is in use is that something else already has it — and on this
+        // machine that something is almost always a Directive 47 already
+        // running. Cost twenty minutes of reading KeyInUse as a defect.
+        if (made == EVROverlayError.KeyInUse)
+        {
+            throw new InvalidOperationException(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"SteamVR already has an overlay under \"{key}\". A key is one "
+                    + $"application's identity for one quad, so something else is holding "
+                    + $"it — check whether Directive 47 is already running."));
+        }
+
+        Insist(made, "create the overlay");
+
+        var overlay = new SteamVrOverlay(handle, placed);
 
         try
         {
+            // Width only. OpenVR takes one number and works the height out from
+            // the texture's shape, which is why the chrome's texture has to be
+            // the proportions of the quad it goes on rather than any convenient
+            // size.
             Insist(
-                OpenVR.Overlay.SetOverlayWidthInMeters(handle, AboutAHandSpan),
+                OpenVR.Overlay.SetOverlayWidthInMeters(handle, placed.Width),
                 "size the overlay");
 
-            HmdMatrix34_t where = Quad.At(Resting.Place);
+            HmdMatrix34_t where = Quad.At(placed.Where);
 
             Insist(
                 OpenVR.Overlay.SetOverlayTransformAbsolute(
@@ -146,6 +170,100 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
         (byte[] pixels, int width, int height) = PanelRender.Take(presented);
 
         Paint(pixels, width, height);
+    }
+
+    /// <summary>
+    /// Asks SteamVR to point a laser at this overlay and tell us where it lands.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Without this an overlay is a picture. SteamVR draws the laser and the
+    /// cursor for overlays that say they take one, and draws nothing for
+    /// overlays that do not — which is why the chrome appeared in the headset
+    /// with no way to aim at it.
+    /// </para>
+    /// <para>
+    /// <c>MakeOverlaysInteractiveIfVisible</c> is what extends that past the
+    /// dashboard. A dashboard overlay gets a laser because the dashboard is up;
+    /// this one has to ask, because it lives in the Commander's cockpit while
+    /// the game is the scene application.
+    /// </para>
+    /// <para>
+    /// The mouse scale is set to the quad's own metres, so a position reported
+    /// back is measured in the same units everything else here uses. The
+    /// alternative is a texture-pixel coordinate that would have to be converted
+    /// by whoever reads it, which is a second place to get the mapping wrong.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">SteamVR refused something.</exception>
+    internal void TakeAPointer()
+    {
+        Insist(
+            OpenVR.Overlay.SetOverlayInputMethod(_handle, VROverlayInputMethod.Mouse),
+            "give the overlay a pointer");
+
+        Insist(
+            OpenVR.Overlay.SetOverlayFlag(
+                _handle, VROverlayFlags.MakeOverlaysInteractiveIfVisible, true),
+            "make the overlay interactive outside the dashboard");
+
+        var inMetres = new HmdVector2_t { v0 = Placed.Width, v1 = Placed.Height };
+
+        Insist(
+            OpenVR.Overlay.SetOverlayMouseScale(_handle, ref inMetres),
+            "measure the overlay's pointer in metres");
+    }
+
+    /// <summary>
+    /// Where the laser is on this overlay, if it is on it at all.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Drains the queue rather than reading one event, because the answer wanted
+    /// is where the pointer is now and everything before the last move is
+    /// already history.
+    /// </para>
+    /// <para>
+    /// Measured from the middle of the quad, because that is the frame
+    /// <c>Chrome.Parts</c> speaks. SteamVR counts from a corner, and the shift
+    /// happens here so that nothing above the adapter has to know it counts
+    /// from anywhere.
+    /// </para>
+    /// </remarks>
+    /// <returns>
+    /// Where the laser is, in metres from the middle, or nothing when it is not
+    /// on this overlay.
+    /// </returns>
+    internal (float Across, float Up)? Pointed()
+    {
+        var arrived = new VREvent_t();
+        uint size = (uint)Marshal.SizeOf<VREvent_t>();
+
+        while (OpenVR.Overlay.PollNextOverlayEvent(_handle, ref arrived, size))
+        {
+            switch ((EVREventType)arrived.eventType)
+            {
+                case EVREventType.VREvent_MouseMove:
+                    _pointed = (
+                        arrived.data.mouse.x - (Placed.Width / 2),
+                        arrived.data.mouse.y - (Placed.Height / 2));
+                    break;
+
+                // The laser left. Without this the highlight stays wherever it
+                // was last seen, which reads as a stuck cursor rather than as a
+                // hand that moved away.
+                case EVREventType.VREvent_FocusLeave:
+                    _pointed = null;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return _pointed;
     }
 
     /// <inheritdoc/>

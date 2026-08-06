@@ -145,6 +145,8 @@ internal sealed partial class App : Application, IDisposable
     private ChosenHotkey? _hotkey;
     private PushToTalk? _pushToTalk;
     private Turn? _turn;
+    private IGrabChrome? _chrome;
+    private Grabbing? _grabbing;
     private ForegroundWatcher? _foreground;
     private Updates? _updates;
 
@@ -277,9 +279,45 @@ internal sealed partial class App : Application, IDisposable
         _headset = Headset.From(new HeadsetOverlayFactory(), presented, _log.Warning);
         _headset.Show();
 
+        WatchForHands();
         FollowTheForeground();
         ClaimTheHotkey(settings);
         ClaimPushToTalk(settings);
+    }
+
+    /// <summary>
+    /// Puts the grab chrome around the headset overlay and keeps it showing what
+    /// the Commander's hands are on.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// Only where there is a quad to frame. No SteamVR means no headset overlay,
+    /// which means nothing to point at — so this is absent for the same reason
+    /// and does not need its own sentence about it.
+    /// </para>
+    /// <para>
+    /// The panel's quad comes from the overlay rather than being worked out
+    /// again here. The chrome has to line up with what the compositor actually
+    /// drew, and a second derivation is the thing that would silently stop
+    /// matching.
+    /// </para>
+    /// </remarks>
+    private void WatchForHands()
+    {
+        if (_headset?.Placed is not { } panel)
+        {
+            return;
+        }
+
+        _chrome = HeadsetOverlayFactory.Around(panel);
+
+        if (_chrome is null)
+        {
+            return;
+        }
+
+        _grabbing = Grabbing.Watching(_chrome, _log.Warning);
     }
 
     /// <summary>
@@ -680,9 +718,19 @@ internal sealed partial class App : Application, IDisposable
         _foreground?.Dispose();
         _foreground = null;
 
-        // The quad is the compositor's, and it outlives us unless it is given
-        // back — a rectangle left floating in somebody's cockpit with nothing
-        // running to close it, and a slot held in SteamVR's list of applications.
+        // Before the quads, and it waits for its thread. A watcher still running
+        // would be painting a chrome overlay that had just been given back to
+        // the compositor.
+        _grabbing?.Dispose();
+        _grabbing = null;
+
+        // The quads are the compositor's, and they outlive us unless they are
+        // given back — rectangles left floating in somebody's cockpit with
+        // nothing running to close them, and a slot held in SteamVR's list of
+        // applications. Both of them, because the chrome is a second overlay.
+        _chrome?.Dispose();
+        _chrome = null;
+
         _headset?.Dispose();
         _headset = null;
 
