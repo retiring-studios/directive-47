@@ -173,6 +173,12 @@ architectural decision that should have been proposed, and the sentence is a deb
 to raise with him rather than a way to skip asking. Settling one deletes the
 sentence.
 
+Deleting it needs `Decided-By: maintainer` on the commit, because a bullet whose
+mark has been removed reads as new and unmarked to the check. That is intended
+rather than a false positive to be engineered away: the moment a debt is settled
+is exactly the moment the evidence is worth capturing, and it is the only moment
+anyone will still know.
+
 **If something requires manual testing, it gets tested manually before merging,
 and the `verified` label is that attestation.** `main` requires one check,
 `Build, test and publish`. Nothing reads either label and nothing blocks on
