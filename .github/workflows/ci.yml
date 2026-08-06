@@ -49,7 +49,13 @@ jobs:
             version: ${{ steps.version.outputs.version }}
 
         steps:
+            # Full history, because the decision-marks check below compares a
+            # pull request against its merge base and the default depth of one
+            # has no merge base to find. The repository is small enough that
+            # this costs a second.
             - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
 
             # A run: block is only compiled when its step executes, so a typo in
             # one is found by running it. The release job's blocks only run on a
@@ -73,6 +79,32 @@ jobs:
             # compares strings.
             - name: Check the repository's invariants
               run: ./scripts/check-repo-invariants.ps1
+
+            # CLAUDE.md says every bullet in docs/decisions.md is in one of
+            # three states, and unmarked means the maintainer decided it. That
+            # makes correct attribution the silent case, so a bullet added
+            # carelessly claims his authority by saying nothing — which is the
+            # failure the marks exist to fix, reintroduced as the path of least
+            # resistance. This is what makes the silent case cost something.
+            #
+            # Only on a pull request, and only against its base: the rule is
+            # about what a branch adds. Bullets already in the file are in the
+            # merge base, so none of them can ever be flagged.
+            - name: Check the decision marks
+              if: github.event_name == 'pull_request'
+              run: ./scripts/check-decision-marks.ps1 -BaseRef ${{ github.event.pull_request.base.sha }}
+
+            # The check above is the only one here that can pass by doing
+            # nothing: break its bullet parsing and it finds no added bullets
+            # and reports OK, which is the confidence-it-never-earned failure
+            # docs/decisions.md names. So it is proven against synthetic
+            # repositories on every run, including the cases it must fail.
+            #
+            # This is also what covers the host difference. The dev PC has
+            # Windows PowerShell only and the runner uses pwsh, so locally the
+            # check is exercised under one and here under the other.
+            - name: Prove the decision-marks check can still fail
+              run: ./scripts/test-check-decision-marks.ps1
 
             # Reads global.json, so the pinned SDK band is stated in exactly one
             # place and CI cannot drift from the dev machine.
