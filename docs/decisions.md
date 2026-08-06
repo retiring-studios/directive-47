@@ -476,7 +476,8 @@ The tiers drive the project layout, not just test selection.
   adapter lands: SonarAnalyzer.CSharp (S138 method length, S1541 cyclomatic
   complexity, S107 parameter count), or a hand-written architecture test. The
   first is a dependency and therefore stops for the maintainer; the second is
-  not.
+  not. Not his call: carried forward from `docs/wave-1-handoff.md` when that file
+  was retired, and never put to him before or after.
 
 ## Dependencies
 
