@@ -7,6 +7,18 @@
     -->
     <ItemGroup>
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+        <!--
+            Capture and playback, through WASAPI. MIT, managed, and it brings
+            exactly one dependency — NAudio.Core, also MIT — which is why
+            https://github.com/retiring-studios/directive-47/issues/7 chose it
+            over the all-in-one NAudio package. That one adds MIDI, ASIO,
+            WinForms and media-format support, none of which anything here
+            calls.
+
+            No native binary, so nothing about the single-file publish has to
+            change for it, unlike openvr_api.dll.
+        -->
+        <PackageVersion Include="NAudio.Wasapi" Version="2.3.0" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
         <!--
             Windows DPAPI, for the keys the Commander hands over. Microsoft's

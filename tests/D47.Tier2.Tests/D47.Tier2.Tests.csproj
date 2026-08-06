@@ -2,8 +2,13 @@
 
     <!--
         Tier 2 · Hardware. Everything in here needs a device no hosted runner
-        has — today a running SteamVR and a headset — so it is in hardware.slnf
-        and in no other filter.
+        has — today a running SteamVR and a headset, or a microphone — so it is
+        in hardware.slnf and in no other filter.
+
+        Two different scarce things, and they do not share a queue. VrOverlay/
+        derives from HeadsetTest and takes its collection because there is one
+        runtime to join; Audio/ needs no runtime and takes no collection, so
+        recording half a second does not wait behind an overlay test.
 
         One project for the tier rather than one per production project. A
         folder per production project inside it is what keeps "where does this
@@ -49,6 +54,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\D47.Audio\D47.Audio.csproj" />
         <ProjectReference Include="..\..\src\D47.VrOverlay\D47.VrOverlay.csproj" />
         <ProjectReference Include="..\D47.TestSupport\D47.TestSupport.csproj" />
     </ItemGroup>
