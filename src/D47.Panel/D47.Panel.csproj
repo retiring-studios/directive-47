@@ -83,6 +83,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\D47.Audio\D47.Audio.csproj" />
         <ProjectReference Include="..\D47.Composition\D47.Composition.csproj" />
         <ProjectReference Include="..\D47.Data\D47.Data.csproj" />
         <ProjectReference Include="..\D47.GameOverlay\D47.GameOverlay.csproj" />
