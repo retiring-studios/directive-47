@@ -317,7 +317,7 @@ internal sealed partial class App : Application, IDisposable
             return;
         }
 
-        _grabbing = Grabbing.Watching(new Controllers(), _chrome, panel, _log.Warning);
+        _grabbing = Grabbing.Watching(_chrome, _log.Warning);
     }
 
     /// <summary>

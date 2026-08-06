@@ -26,6 +26,18 @@ public interface IGrabChrome : IDisposable
     /// </remarks>
     /// <param name="lit">What a trigger would take hold of right now.</param>
     void Showing(Grabbed lit);
+
+    /// <summary>
+    /// Looks at where the laser is and lights whatever it is on.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// SteamVR draws the laser and works out where it meets the quad; this asks
+    /// what is there and shows it. Called as often as the answer should be able
+    /// to change.
+    /// </remarks>
+    /// <returns>What is being pointed at, for whoever wants to know.</returns>
+    Grabbed Follow();
 }
 
 /// <summary>
@@ -67,6 +79,10 @@ internal sealed class GrabChrome : IGrabChrome
         // be a runtime call per tick to say what has not changed.
         overlay.Show();
 
+        // And this is what makes it something a Commander can aim at rather than
+        // a picture floating in the cockpit.
+        overlay.TakeAPointer();
+
         return new GrabChrome(overlay, panel, Grabbed.Nothing);
     }
 
@@ -89,6 +105,20 @@ internal sealed class GrabChrome : IGrabChrome
         (byte[] pixels, int width, int height) = ChromeRender.Take(_panel, lit);
 
         _overlay.Paint(pixels, width, height);
+    }
+
+    /// <inheritdoc/>
+    public Grabbed Follow()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        Grabbed lit = _overlay.Pointed() is { } at
+            ? Chrome.On(_panel, at.Across, at.Up)
+            : Grabbed.Nothing;
+
+        Showing(lit);
+
+        return lit;
     }
 
     /// <summary>

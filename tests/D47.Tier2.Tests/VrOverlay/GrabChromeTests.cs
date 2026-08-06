@@ -94,6 +94,57 @@ public class GrabChromeTests : HeadsetTest
     }
 
     [Fact]
+    public void Chrome_TakesAPointer_SoThatSteamVrDrawsALaserAtIt()
+    {
+        // The fix for the defect manual testing found. Without an input method
+        // an overlay is a picture: the chrome appeared in the headset exactly as
+        // designed and there was no way to aim at it, because SteamVR draws a
+        // laser for overlays that ask for one and nothing for overlays that do
+        // not.
+        //
+        // Asked of the compositor rather than of our own object, which is the
+        // whole point of this tier — a field we set ourselves would pass against
+        // a build where the call never reached SteamVR.
+        using IHeadsetOverlay panel = Panelled();
+
+        using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
+            ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
+
+        ulong handle = 0;
+
+        OpenVR.Overlay.FindOverlay(HeadsetOverlayFactory.ChromeKey, ref handle)
+            .ShouldBe(EVROverlayError.None);
+
+        VROverlayInputMethod how = VROverlayInputMethod.None;
+
+        OpenVR.Overlay.GetOverlayInputMethod(handle, ref how)
+            .ShouldBe(EVROverlayError.None);
+
+        how.ShouldBe(
+            VROverlayInputMethod.Mouse,
+            "the chrome should take a pointer, or there is nothing to aim with");
+    }
+
+    [Fact]
+    public void Chrome_WithNoLaserOnIt_IsPointingAtNothing()
+    {
+        // Nobody is holding a controller at this overlay during a test run, so
+        // the honest answer is nothing — and it has to be nothing rather than a
+        // stale position or a throw. Following with no pointer anywhere near is
+        // the state the watching thread is in for most of a session.
+        using IHeadsetOverlay panel = Panelled();
+
+        using IGrabChrome chrome = HeadsetOverlayFactory.Around(panel.Placed)
+            ?? throw new InvalidOperationException(HeadsetTest.NeedsSteamVr);
+
+        chrome.Follow().ShouldBe(Grabbed.Nothing);
+
+        // And again, because a first call that primes something and a second
+        // that reads it back differently is the shape of a bug here.
+        chrome.Follow().ShouldBe(Grabbed.Nothing);
+    }
+
+    [Fact]
     public void Chrome_WhenGivenBack_LeavesNothingBehind()
     {
         // A quad nobody released stays floating in the cockpit after the

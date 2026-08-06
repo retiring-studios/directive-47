@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Threading;
 
 using D47.Panel;
@@ -14,89 +13,80 @@ using Xunit;
 namespace D47.Tier1.Tests.Panel;
 
 /// <summary>
-/// Watching the Commander's hands and telling the chrome what they are on.
+/// Keeping the chrome following the laser.
 ///
 /// <para>
-/// Tier 1: a thread and a clock, no runtime. What a pose means is
-/// <c>Pointing</c> and is Tier 0; where a pose comes from is the adapter and is
-/// Tier 2. This is the loop in between, and it is the part with the timing bug
-/// in it if there is one.
+/// Tier 1: a thread and a clock, no runtime. Where the laser is and what it is
+/// on are SteamVR's and <c>Chrome.On</c>'s respectively; this is the loop in
+/// between, and it is the part with the timing bug in it if there is one.
 /// </para>
 /// </summary>
 public class GrabbingTests
 {
-    private static readonly Board Panel =
-        new(new Pose(new Vector3(0, 0, -1.5f), Quaternion.Identity), 0.5f, 0.3f);
-
     private static readonly TimeSpan LongEnough = TimeSpan.FromSeconds(5);
 
     [Fact]
-    public void Grabbing_WhenAHandIsOnTheBar_TellsTheChromeSo()
+    public void Grabbing_KeepsAskingTheChromeWhatIsUnderThePointer()
     {
-        var hands = new HandsThatAre(OnThe(Grabbed.Bar));
-        using var chrome = new ChromeThatRemembers();
+        using var chrome = new ChromeThatIs(Grabbed.Bar);
 
-        using (Grabbing.Watching(hands, chrome, Panel, Nowhere))
+        using (Grabbing.Watching(chrome, Nowhere))
         {
-            Eventually.True(() => chrome.Lit == Grabbed.Bar, LongEnough)
-                .ShouldBeTrue($"the chrome was told {chrome.Lit}");
+            Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
+                $"it should keep following, and it asked {chrome.Followed} times");
         }
     }
 
     [Fact]
-    public void Grabbing_WhenTheHandMovesOff_TellsTheChromeThatToo()
+    public void Grabbing_WhenNothingIsPointedAt_LooksLessOften()
     {
-        var hands = new HandsThatAre(OnThe(Grabbed.Bar));
-        using var chrome = new ChromeThatRemembers();
+        // Pointing at nothing is the state a Commander spends hours in, and
+        // #235 asks for it to cost nothing. It must keep looking — a laser
+        // arriving is what it is waiting for — but it must not spin.
+        using var chrome = new ChromeThatIs(Grabbed.Nothing);
 
-        using (Grabbing.Watching(hands, chrome, Panel, Nowhere))
+        using (Grabbing.Watching(chrome, Nowhere))
         {
-            Eventually.True(() => chrome.Lit == Grabbed.Bar, LongEnough).ShouldBeTrue();
-
-            hands.Are([]);
-
-            Eventually.True(() => chrome.Lit == Grabbed.Nothing, LongEnough).ShouldBeTrue(
-                "letting go should stop lighting the bar");
+            Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
+                "it should keep looking for a laser that arrives");
         }
+
+        chrome.Followed.ShouldBeLessThan(
+            60, $"idling should not spin, and it looked {chrome.Followed} times");
     }
 
     [Fact]
-    public void Grabbing_WithNoHandsAtAll_StillAsksButLessOften()
+    public void Grabbing_WhenSomethingIsPointedAt_LooksMoreOften()
     {
-        // The idle case, which is most of a session. It must keep asking — a
-        // controller waking up is exactly what it is waiting for — but it must
-        // not spin, because both controllers on the desk is the state the
-        // application spends hours in.
-        var hands = new HandsThatAre([]);
-        using var chrome = new ChromeThatRemembers();
+        // The other half of the throttle, and the one that says the two
+        // intervals are not the same number written twice.
+        using var busy = new ChromeThatIs(Grabbed.Bar);
+        using var idle = new ChromeThatIs(Grabbed.Nothing);
 
-        using (Grabbing.Watching(hands, chrome, Panel, Nowhere))
+        using (Grabbing.Watching(busy, Nowhere))
+        using (Grabbing.Watching(idle, Nowhere))
         {
-            Eventually.True(() => hands.Asked >= 2, LongEnough).ShouldBeTrue(
-                "it should keep looking for a controller that wakes up");
+            Thread.Sleep(1000);
         }
 
-        // Two looks in five seconds is the floor; the point is that it is not
-        // hundreds. At the resting interval it should be nowhere near what a
-        // tracked hand would produce in the same time.
-        hands.Asked.ShouldBeLessThan(
-            60, $"idling should not spin, and it asked {hands.Asked} times");
+        busy.Followed.ShouldBeGreaterThan(
+            idle.Followed,
+            "a laser on the chrome should be looked at more often than an empty cockpit");
     }
 
     [Fact]
-    public void Grabbing_WhenAskingThrows_KeepsWatchingAndSaysSo()
+    public void Grabbing_WhenFollowingThrows_KeepsWatchingAndSaysSo()
     {
         // The runtime going away underneath is a fact about the machine rather
         // than a defect, and it must not take the thread with it — a watcher
         // that died on the first hiccup would leave the chrome frozen on
         // whatever it happened to be showing.
         List<string> recorded = [];
-        var hands = new HandsThatThrowOnce();
-        using var chrome = new ChromeThatRemembers();
+        using var chrome = new ChromeThatThrowsOnce();
 
-        using (Grabbing.Watching(hands, chrome, Panel, recorded.Add))
+        using (Grabbing.Watching(chrome, recorded.Add))
         {
-            Eventually.True(() => chrome.Lit == Grabbed.Content, LongEnough).ShouldBeTrue(
+            Eventually.True(() => chrome.Followed >= 2, LongEnough).ShouldBeTrue(
                 "it should have carried on to the next look");
         }
 
@@ -104,22 +94,21 @@ public class GrabbingTests
     }
 
     [Fact]
-    public void Grabbing_WhenItStops_LeavesTheChromeAlone()
+    public void Grabbing_WhenItStops_StopsLooking()
     {
-        var hands = new HandsThatAre(OnThe(Grabbed.Bar));
-        using var chrome = new ChromeThatRemembers();
+        using var chrome = new ChromeThatIs(Grabbed.Bar);
 
-        var watching = Grabbing.Watching(hands, chrome, Panel, Nowhere);
+        var watching = Grabbing.Watching(chrome, Nowhere);
 
-        Eventually.True(() => chrome.Lit == Grabbed.Bar, LongEnough).ShouldBeTrue();
+        Eventually.True(() => chrome.Followed >= 1, LongEnough).ShouldBeTrue();
 
         watching.Dispose();
 
-        int asked = hands.Asked;
+        int looked = chrome.Followed;
 
         Thread.Sleep(300);
 
-        hands.Asked.ShouldBe(asked, "disposing should have stopped the looking");
+        chrome.Followed.ShouldBe(looked, "disposing should have stopped the looking");
     }
 
     /// <summary>
@@ -127,59 +116,46 @@ public class GrabbingTests
     /// </summary>
     private static Action<string> Nowhere => _ => { };
 
-    /// <summary>
-    /// A hand placed so that it is pointing at a given part of the panel.
-    /// </summary>
-    private static IReadOnlyList<Pose> OnThe(Grabbed part)
+    private sealed class ChromeThatIs(Grabbed under) : IGrabChrome
     {
-        // Worked out from the panel rather than hard-coded, so the fixture does
-        // not quietly stop pointing at what it says it does if the chrome's
-        // proportions move.
-        float up = part == Grabbed.Bar
-            ? (-Panel.Height / 2) - (Panel.Height * 0.05f)
-            : 0;
+        private int _followed;
 
-        return [new Pose(new Vector3(0, up, -0.5f), Quaternion.Identity)];
-    }
+        internal int Followed => Volatile.Read(ref _followed);
 
-    private sealed class HandsThatAre(IReadOnlyList<Pose> held) : IControllers
-    {
-        private volatile IReadOnlyList<Pose> _held = held;
-        private int _asked;
-
-        internal int Asked => Volatile.Read(ref _asked);
-
-        internal void Are(IReadOnlyList<Pose> held) => _held = held;
-
-        public IReadOnlyList<Pose> Tracked()
+        public void Showing(Grabbed lit)
         {
-            Interlocked.Increment(ref _asked);
-            return _held;
+        }
+
+        public Grabbed Follow()
+        {
+            Interlocked.Increment(ref _followed);
+            return under;
+        }
+
+        public void Dispose()
+        {
         }
     }
 
-    private sealed class HandsThatThrowOnce : IControllers
+    private sealed class ChromeThatThrowsOnce : IGrabChrome
     {
-        private int _asked;
+        private int _followed;
 
-        public IReadOnlyList<Pose> Tracked()
+        internal int Followed => Volatile.Read(ref _followed);
+
+        public void Showing(Grabbed lit)
         {
-            if (Interlocked.Increment(ref _asked) == 1)
+        }
+
+        public Grabbed Follow()
+        {
+            if (Interlocked.Increment(ref _followed) == 1)
             {
                 throw new InvalidOperationException("the runtime went away");
             }
 
-            return [new Pose(new Vector3(0, 0, -0.5f), Quaternion.Identity)];
+            return Grabbed.Content;
         }
-    }
-
-    private sealed class ChromeThatRemembers : IGrabChrome
-    {
-        private int _lit = (int)Grabbed.Nothing;
-
-        internal Grabbed Lit => (Grabbed)Volatile.Read(ref _lit);
-
-        public void Showing(Grabbed lit) => Volatile.Write(ref _lit, (int)lit);
 
         public void Dispose()
         {

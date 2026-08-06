@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 
@@ -54,21 +53,16 @@ internal sealed class Grabbing : IDisposable
     /// </summary>
     private static readonly TimeSpan WhileTheyAreNot = TimeSpan.FromMilliseconds(500);
 
-    private readonly IControllers _controllers;
     private readonly IGrabChrome _chrome;
-    private readonly Board _panel;
     private readonly Action<string> _record;
     private readonly CancellationTokenSource _stopping = new();
     private readonly Thread _watching;
 
     private bool _disposed;
 
-    private Grabbing(
-        IControllers controllers, IGrabChrome chrome, Board panel, Action<string> record)
+    private Grabbing(IGrabChrome chrome, Action<string> record)
     {
-        _controllers = controllers;
         _chrome = chrome;
-        _panel = panel;
         _record = record;
 
         _watching = new Thread(Watch)
@@ -81,20 +75,16 @@ internal sealed class Grabbing : IDisposable
     /// <summary>
     /// Starts watching.
     /// </summary>
-    /// <param name="controllers">Where the hands are.</param>
     /// <param name="chrome">What shows the Commander their answer.</param>
-    /// <param name="panel">The quad being pointed at.</param>
     /// <param name="record">Where to note anything it had to carry on past.</param>
     /// <returns>The watch, which the caller owns and must dispose.</returns>
     /// <exception cref="ArgumentNullException">Any argument is null.</exception>
-    internal static Grabbing Watching(
-        IControllers controllers, IGrabChrome chrome, Board panel, Action<string> record)
+    internal static Grabbing Watching(IGrabChrome chrome, Action<string> record)
     {
-        ArgumentNullException.ThrowIfNull(controllers);
         ArgumentNullException.ThrowIfNull(chrome);
         ArgumentNullException.ThrowIfNull(record);
 
-        var grabbing = new Grabbing(controllers, chrome, panel, record);
+        var grabbing = new Grabbing(chrome, record);
 
         grabbing._watching.Start();
 
@@ -140,11 +130,17 @@ internal sealed class Grabbing : IDisposable
 
             try
             {
-                IReadOnlyList<Pose> held = _controllers.Tracked();
+                // SteamVR draws the laser and works out where it meets the quad;
+                // this asks what is there. Reading controller poses ourselves
+                // would be a second answer to a question the runtime is already
+                // answering, and it would need input focus we do not have while
+                // the game is the scene application.
+                Grabbed lit = _chrome.Follow();
 
-                _chrome.Showing(Pointing.At(held, _panel));
-
-                next = held.Count > 0 ? WhileTheyAreThere : WhileTheyAreNot;
+                // Faster while a hand is on it, because that is when the answer
+                // can change from one look to the next. Pointing at nothing is
+                // the state a Commander spends hours in.
+                next = lit == Grabbed.Nothing ? WhileTheyAreNot : WhileTheyAreThere;
             }
             catch (Exception failed)
             {

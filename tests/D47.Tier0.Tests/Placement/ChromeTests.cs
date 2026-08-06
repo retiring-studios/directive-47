@@ -180,6 +180,84 @@ public class ChromeTests
         bar.Bottom.ShouldBe(-0.1875f, 0.0001f);
     }
 
+    [Fact]
+    public void OnTheChrome_WhereTheBarIs_IsTheBar()
+    {
+        // Chrome-local metres, measured from the middle of the chrome quad. The
+        // bar runs from -0.1875 to -0.1425 in that frame, so the middle of it is
+        // around -0.165.
+        Chrome.On(Panel, 0, -0.165f).ShouldBe(Grabbed.Bar);
+    }
+
+    [Theory]
+    [InlineData(-0.25f, 0.1575f, Grabbed.TopLeftCorner)]
+    [InlineData(0.25f, 0.1575f, Grabbed.TopRightCorner)]
+    [InlineData(-0.25f, -0.1425f, Grabbed.BottomLeftCorner)]
+    [InlineData(0.25f, -0.1425f, Grabbed.BottomRightCorner)]
+    public void OnTheChrome_WhereAHandleIs_IsThatHandle(
+        float across, float up, Grabbed expected)
+    {
+        Chrome.On(Panel, across, up).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void OnTheChrome_WhereThePanelShowsThrough_IsTheContent()
+    {
+        // The middle of the quad is transparent and the render shows through it,
+        // so a laser landing there is a Commander looking at what the overlay
+        // says rather than at nothing.
+        Chrome.On(Panel, 0, 0).ShouldBe(Grabbed.Content);
+    }
+
+    [Fact]
+    public void OnTheChrome_JustInsideTheEdgeButOnNoPiece_IsStillTheContent()
+    {
+        // Between the two top handles, above the panel. There is quad there and
+        // nothing drawn on it, and it grabs nothing — the same answer the middle
+        // gives, because neither is a thing to take hold of.
+        Chrome.On(Panel, 0, 0.17f).ShouldBe(Grabbed.Content);
+    }
+
+    [Fact]
+    public void OnTheChrome_AgreesWithWhatIsDrawnThere()
+    {
+        // The two questions have to give one answer: whatever Parts says is at a
+        // spot is what On says is there. They are the same list read two ways,
+        // and this is what says they stay that way.
+        //
+        // It caught the first real defect in this pair. A handle straddles its
+        // corner, so the bottom two overlap the bar — and with the bar first in
+        // the list, the middle of both bottom handles answered Bar. Two of the
+        // four corners were unreachable and nothing else would have noticed.
+        foreach (Patch patch in Chrome.Parts(Panel))
+        {
+            float middleAcross = (patch.Left + patch.Right) / 2;
+            float middleUp = (patch.Bottom + patch.Top) / 2;
+
+            Chrome.On(Panel, middleAcross, middleUp).ShouldBe(
+                patch.What, $"the middle of the {patch.What} should be the {patch.What}");
+        }
+    }
+
+    [Fact]
+    public void OnTheChrome_WhereAHandleOverlapsTheBar_IsTheHandle()
+    {
+        // The specific case behind the fact above, stated on its own so that a
+        // reordering of Parts cannot quietly pass by making the loop vacuous.
+        Patch handle = Chrome.Parts(Panel)
+            .Single(patch => patch.What == Grabbed.BottomRightCorner);
+
+        Patch bar = Chrome.Parts(Panel).Single(patch => patch.What == Grabbed.Bar);
+
+        // A point inside both.
+        float across = handle.Left + 0.001f;
+        float up = bar.Top - 0.001f;
+
+        up.ShouldBeGreaterThan(handle.Bottom, "the fixture should be inside the handle too");
+
+        Chrome.On(Panel, across, up).ShouldBe(Grabbed.BottomRightCorner);
+    }
+
     [Theory]
     [InlineData(0f)]
     [InlineData(-0.5f)]

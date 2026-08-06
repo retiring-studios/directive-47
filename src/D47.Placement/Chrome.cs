@@ -137,7 +137,11 @@ public static class Chrome
     /// </para>
     /// </remarks>
     /// <param name="panel">The panel this chrome goes around.</param>
-    /// <returns>The bar and the four handles, in no particular order.</returns>
+    /// <returns>
+    /// The four handles and then the bar, in the order a point should be tested
+    /// against them — most specific first, because the lower handles overlap the
+    /// bar and taking the bar there would leave two of them unreachable.
+    /// </returns>
     /// <exception cref="ArgumentException">
     /// Some part of the panel's pose is not a finite number, or its orientation
     /// is not a rotation.
@@ -162,14 +166,63 @@ public static class Chrome
         float left = -panel.Width / 2;
         float right = panel.Width / 2;
 
+        // Handles first, and the order is part of the contract rather than
+        // incidental: a handle straddles its corner, so the lower pair overlap
+        // the bar. Whoever tests a point against these takes the first that
+        // contains it, and taking the bar there would make two of the four
+        // handles unreachable.
         return
         [
-            new Patch(Grabbed.Bar, left, right, bottom - bar, bottom),
             Handle(Grabbed.TopLeftCorner, left, top, reach),
             Handle(Grabbed.TopRightCorner, right, top, reach),
             Handle(Grabbed.BottomLeftCorner, left, bottom, reach),
             Handle(Grabbed.BottomRightCorner, right, bottom, reach),
+            new Patch(Grabbed.Bar, left, right, bottom - bar, bottom),
         ];
+    }
+
+    /// <summary>
+    /// What is at a point on the chrome, measured from the middle of the chrome
+    /// quad in metres.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The other way of asking what <see cref="Pointing"/> asks, and the one
+    /// that suits a runtime which has already worked out where a laser met the
+    /// quad. Where the ray met it is SteamVR's to answer; what is there is
+    /// still ours.
+    /// </para>
+    /// <para>
+    /// Anywhere that is not a piece of chrome is the content — the middle of the
+    /// quad is transparent and the panel shows through it, so a point there is a
+    /// Commander aiming at what the overlay is saying rather than at nothing.
+    /// </para>
+    /// </remarks>
+    /// <param name="panel">The panel the chrome goes around.</param>
+    /// <param name="across">How far right of the chrome's middle, in metres.</param>
+    /// <param name="up">How far above the chrome's middle, in metres.</param>
+    /// <returns>What pulling the trigger there would take hold of.</returns>
+    /// <exception cref="ArgumentException">
+    /// Some part of the panel's pose is not a finite number.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The panel has no width or no height.
+    /// </exception>
+    public static Grabbed On(Board panel, float across, float up)
+    {
+        foreach (Patch patch in Parts(panel))
+        {
+            if (across >= patch.Left
+                && across <= patch.Right
+                && up >= patch.Bottom
+                && up <= patch.Top)
+            {
+                return patch.What;
+            }
+        }
+
+        return Grabbed.Content;
     }
 
     /// <summary>
