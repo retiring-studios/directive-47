@@ -14,6 +14,7 @@
       "PowerShell(git show*)",
       "PowerShell(git branch*)",
       "PowerShell(git config --get*)",
+      "PowerShell(git push*)",
       "PowerShell(gh run list*)",
       "PowerShell(gh run view*)",
       "PowerShell(gh pr view*)",
@@ -60,6 +61,19 @@
       "Write(**/.github/workflows/*.yml)",
       "Edit(**/.github/workflows/*.yaml)",
       "Write(**/.github/workflows/*.yaml)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File .claude/hooks/guard-git.ps1"
+          }
+        ]
+      }
     ]
   }
 }
