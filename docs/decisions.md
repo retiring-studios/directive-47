@@ -270,9 +270,16 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   handle on one side, and both OVR Toolkit and XSOverlay grip the body — the bar
   and corners are a Meta idiom, not a Valve one, and Steam Frame runs SteamVR.
   The Horizon OS gesture is the one more Commanders already have in their hands,
-  and that beat matching the runtime we happen to sit on. `Pointing.At` answers
+  and that beat matching the runtime we happen to sit on. `Chrome.On` answers
   the content as a result distinct from the bar and the corners, so adding a
   body-drag later needs no rearranging if that turns out to be wrong.
+
+  `Pointing.At` was deleted once SteamVR turned out to do the laser-quad
+  intersection itself. It had done the ray hit test in our own arithmetic and
+  was reviewed and merged before the runtime's own answer was wired up; after
+  that it had no production caller, and `Chrome.On` answers what is at a point
+  instead. Deleted rather than kept for the drag stories: if the ray test is
+  wanted again, it is known work and would be written better the second time.
 
 - **Push-to-talk holds a registered hotkey. There is no low-level keyboard
   hook.** `RegisterHotKey` already watches for the key coming up — it has to, or

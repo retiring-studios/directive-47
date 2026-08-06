@@ -34,9 +34,10 @@ public readonly record struct Patch(
 /// <c>docs/decisions.md</c>.
 /// </para>
 /// <para>
-/// The proportions live here and <see cref="Pointing"/> reads them, so where a
-/// grab target starts is answered once. Two constants — one for the arithmetic
-/// and one for the drawing — is exactly the drift the same decision rules out.
+/// The proportions live here and <see cref="Parts"/> is the only thing that
+/// reads them, so where a grab target starts is answered once. Two constants —
+/// one for the arithmetic and one for the drawing — is exactly the drift the
+/// same decision rules out.
 /// </para>
 /// </remarks>
 public static class Chrome
@@ -188,10 +189,15 @@ public static class Chrome
     ///
     /// <remarks>
     /// <para>
-    /// The other way of asking what <see cref="Pointing"/> asks, and the one
-    /// that suits a runtime which has already worked out where a laser met the
-    /// quad. Where the ray met it is SteamVR's to answer; what is there is
-    /// still ours.
+    /// Shaped for a runtime that has already worked out where a laser met the
+    /// quad, which SteamVR has. Where the ray met it is its to answer; what is
+    /// there is still ours.
+    ///
+    /// <para>
+    /// There was a <c>Pointing.At</c> that took a controller pose and did the
+    /// ray-quad intersection itself. It was deleted once this existed — see the
+    /// Architecture section of <c>docs/decisions.md</c>.
+    /// </para>
     /// </para>
     /// <para>
     /// Anywhere that is not a piece of chrome is the content — the middle of the
