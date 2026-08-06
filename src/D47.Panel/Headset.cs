@@ -1,5 +1,6 @@
 using System;
 
+using D47.Placement;
 using D47.Render;
 using D47.VrOverlay;
 
@@ -40,6 +41,16 @@ internal sealed class Headset : IDisposable
         + "unaffected.";
 
     private readonly IHeadsetOverlay? _overlay;
+
+    /// <summary>
+    /// Where the quad is, for whatever needs to frame it or point at it.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Absent on a machine with no runtime, which is the same absence the
+    /// overlay itself is — there is no quad, so there is nowhere to point.
+    /// </remarks>
+    internal Board? Placed => _overlay?.Placed;
 
     /// <summary>
     /// What the quad is currently carrying, so that a new presented can be

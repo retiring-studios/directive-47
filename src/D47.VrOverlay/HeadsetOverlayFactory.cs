@@ -1,3 +1,6 @@
+using System;
+
+using D47.Placement;
 using D47.Render;
 
 using Valve.VR;
@@ -24,9 +27,68 @@ public sealed class HeadsetOverlayFactory : IHeadsetOverlayFactory
     public const string Key = "studios.retiring.directive47.panel";
 
     /// <summary>
+    /// What SteamVR files the chrome under.
+    ///
+    /// <para>
+    /// A second key for a second quad, because the compositor identifies an
+    /// overlay by it and two sharing one would be two overlays fighting. Public
+    /// for the same reason the panel's is: it is how a test asks the runtime
+    /// whether the chrome it can see is ours.
+    /// </para>
+    /// </summary>
+    public const string ChromeKey = "studios.retiring.directive47.chrome";
+
+    /// <summary>
     /// What SteamVR shows a human, in its own settings and dashboards.
     /// </summary>
     private const string Name = "Directive 47";
+
+    /// <summary>
+    /// How wide the quad is in the cockpit, in metres.
+    ///
+    /// <para>
+    /// A number to react to rather than a measured one, in the same spirit as
+    /// the game overlay's opening opacity. Half a metre at roughly arm's length
+    /// is legible without filling the view; it is expected to move once
+    /// somebody has worn it, and it becomes a setting when
+    /// [#140](https://github.com/retiring-studios/directive-47/issues/140)
+    /// gives the Commander a way to say so.
+    /// </para>
+    ///
+    /// <para>
+    /// Here rather than on <c>SteamVrOverlay</c>, which now carries two quads of
+    /// different sizes and has no business preferring one of them.
+    /// </para>
+    /// </summary>
+    private const float AboutAHandSpan = 0.5f;
+
+    /// <summary>
+    /// Where the panel's quad goes and how big it is, given what it will show.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The height comes from the render's own proportions rather than from a
+    /// second constant. OpenVR is told a width and works the height out from the
+    /// texture, so a height chosen here could disagree with what the compositor
+    /// actually draws — and the chrome, which is placed from this, would frame a
+    /// rectangle that is not there.
+    /// </para>
+    /// <para>
+    /// Must be called on a thread WPF will talk to, because measuring means
+    /// building a visual tree.
+    /// </para>
+    /// </remarks>
+    /// <param name="presented">What the overlay will show.</param>
+    /// <returns>The panel's quad.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="presented"/> is null.</exception>
+    public static Board Quad(Presentation presented)
+    {
+        (int width, int height) = PanelRender.Measure(presented);
+
+        return new Board(
+            Resting.Place, AboutAHandSpan, AboutAHandSpan * height / width);
+    }
 
     /// <summary>
     /// Creates the overlay, or reports that this machine cannot have one.
@@ -63,8 +125,26 @@ public sealed class HeadsetOverlayFactory : IHeadsetOverlayFactory
 
         (byte[] pixels, int width, int height) = PanelRender.Take(presented);
 
-        return SteamVrOverlay.Showing(Key, Name, pixels, width, height);
+        return SteamVrOverlay.Showing(Key, Name, Quad(presented), pixels, width, height);
     }
+
+    /// <summary>
+    /// Creates the chrome around a panel, or reports that this machine cannot
+    /// have one.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// Takes the panel's quad rather than working it out, so the chrome frames
+    /// the rectangle that is actually there. Needs no STA thread: the chrome is
+    /// flat rectangles and never builds a visual tree, which is what lets the
+    /// thread watching the controllers own it.
+    /// </remarks>
+    /// <param name="panel">The panel's quad, from <see cref="Quad"/>.</param>
+    /// <returns>
+    /// The chrome, or <see langword="null"/> when SteamVR is not there.
+    /// </returns>
+    public static IGrabChrome? Around(Board panel) =>
+        Joined() ? GrabChrome.Around(ChromeKey, $"{Name} chrome", panel) : null;
 
     /// <summary>
     /// Whether this process is an overlay application talking to a running

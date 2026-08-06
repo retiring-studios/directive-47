@@ -20,27 +20,17 @@ namespace D47.VrOverlay;
 /// </summary>
 internal sealed class SteamVrOverlay : IHeadsetOverlay
 {
-    /// <summary>
-    /// How wide the quad is in the cockpit, in metres.
-    ///
-    /// <para>
-    /// A number to react to rather than a measured one, in the same spirit as
-    /// the game overlay's opening opacity. Half a metre at roughly arm's length
-    /// is legible without filling the view; it is expected to move once
-    /// somebody has worn it, and it becomes a setting when
-    /// [#140](https://github.com/retiring-studios/directive-47/issues/140)
-    /// gives the Commander a way to say so.
-    /// </para>
-    /// </summary>
-    private const float AboutAHandSpan = 0.5f;
-
     private readonly ulong _handle;
     private bool _disposed;
 
-    private SteamVrOverlay(ulong handle)
+    private SteamVrOverlay(ulong handle, Board placed)
     {
         _handle = handle;
+        Placed = placed;
     }
+
+    /// <inheritdoc/>
+    public Board Placed { get; }
 
     /// <inheritdoc/>
     public bool IsVisible => !_disposed && OpenVR.Overlay.IsOverlayVisible(_handle);
@@ -57,27 +47,32 @@ internal sealed class SteamVrOverlay : IHeadsetOverlay
     /// </remarks>
     /// <param name="key">The key SteamVR files the overlay under.</param>
     /// <param name="name">What SteamVR shows a human.</param>
+    /// <param name="placed">Where the quad goes and how wide it is, in metres.</param>
     /// <param name="pixels">The render, as RGBA.</param>
     /// <param name="width">How wide the render is.</param>
     /// <param name="height">How tall the render is.</param>
     /// <returns>The overlay, which the caller owns and must dispose.</returns>
     /// <exception cref="InvalidOperationException">SteamVR refused something.</exception>
     internal static SteamVrOverlay Showing(
-        string key, string name, byte[] pixels, int width, int height)
+        string key, string name, Board placed, byte[] pixels, int width, int height)
     {
         ulong handle = 0;
 
         Insist(OpenVR.Overlay.CreateOverlay(key, name, ref handle), "create the overlay");
 
-        var overlay = new SteamVrOverlay(handle);
+        var overlay = new SteamVrOverlay(handle, placed);
 
         try
         {
+            // Width only. OpenVR takes one number and works the height out from
+            // the texture's shape, which is why the chrome's texture has to be
+            // the proportions of the quad it goes on rather than any convenient
+            // size.
             Insist(
-                OpenVR.Overlay.SetOverlayWidthInMeters(handle, AboutAHandSpan),
+                OpenVR.Overlay.SetOverlayWidthInMeters(handle, placed.Width),
                 "size the overlay");
 
-            HmdMatrix34_t where = Quad.At(Resting.Place);
+            HmdMatrix34_t where = Quad.At(placed.Where);
 
             Insist(
                 OpenVR.Overlay.SetOverlayTransformAbsolute(

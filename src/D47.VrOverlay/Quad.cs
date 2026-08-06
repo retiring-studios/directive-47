@@ -49,4 +49,36 @@ public static class Quad
             m8 = transform.M13, m9 = transform.M23, m10 = transform.M33, m11 = transform.M43,
         };
     }
+
+    /// <summary>
+    /// Where something tracked is, read back out of the runtime's own layout.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// <para>
+    /// The other direction, and the one a controller arrives in. <see cref="At"/>
+    /// says where to put a quad; this says where a hand already is, so that
+    /// <c>D47.Placement</c> can be asked what it is pointing at without ever
+    /// meeting an <c>HmdMatrix34_t</c>.
+    /// </para>
+    /// <para>
+    /// The same transpose, read the other way. Getting it backwards is invisible
+    /// while a controller is held square to the world and wrong the moment it is
+    /// turned — which is the trap the round trip through <see cref="At"/> is
+    /// tested against, and the same one that hid a frozen identity matrix here
+    /// for as long as it did.
+    /// </para>
+    /// </remarks>
+    /// <param name="tracked">The runtime's transform for a tracked device.</param>
+    /// <returns>Where it is, and which way it faces.</returns>
+    public static Pose From(HmdMatrix34_t tracked)
+    {
+        var transform = new Matrix4x4(
+            tracked.m0, tracked.m4, tracked.m8, 0,
+            tracked.m1, tracked.m5, tracked.m9, 0,
+            tracked.m2, tracked.m6, tracked.m10, 0,
+            tracked.m3, tracked.m7, tracked.m11, 1);
+
+        return new Pose(transform.Translation, Quaternion.CreateFromRotationMatrix(transform));
+    }
 }

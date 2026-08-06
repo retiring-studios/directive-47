@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Numerics;
 
 using D47.Capabilities;
 using D47.Panel;
+using D47.Placement;
 using D47.Render;
 using D47.TestSupport;
 using D47.VrOverlay;
@@ -254,6 +256,13 @@ public class HeadsetTests
     private sealed class HeadsetOverlayThatRemembers : IHeadsetOverlay
     {
         public bool IsVisible { get; private set; }
+
+        /// <summary>
+        /// Somewhere plausible. Nothing in this class asks where the quad is —
+        /// the chrome does, and the chrome is not what these facts are about.
+        /// </summary>
+        public Board Placed { get; } =
+            new(new Pose(new Vector3(0, 0, -1.5f), Quaternion.Identity), 0.5f, 0.3f);
 
         internal bool WasGivenBack { get; private set; }
 

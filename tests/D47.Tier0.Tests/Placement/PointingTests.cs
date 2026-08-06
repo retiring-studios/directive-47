@@ -248,6 +248,50 @@ public class PointingTests
         Should.Throw<ArgumentOutOfRangeException>(() => Pointing.At(From(0, 0), nothing));
     }
 
+    [Fact]
+    public void WithNoHandsAtAll_NothingIsPointedAt()
+    {
+        // Both controllers asleep on the desk is most of a session, and it has
+        // to be the cheapest answer there is rather than a case anybody has to
+        // remember to handle.
+        Pointing.At([], Facing).ShouldBe(Grabbed.Nothing);
+    }
+
+    [Fact]
+    public void WithOneHandOnItAndOneAway_TheHandOnItWins()
+    {
+        // Whichever order they arrive in. The runtime hands back device slots
+        // rather than hands, and which slot a controller lands in is not ours to
+        // choose — so looking at the first and stopping would work or not
+        // depending on which controller woke up first.
+        Pointing.At([Elsewhere, From(0, 0)], Facing).ShouldBe(Grabbed.Content);
+        Pointing.At([From(0, 0), Elsewhere], Facing).ShouldBe(Grabbed.Content);
+    }
+
+    [Fact]
+    public void WithBothHandsAway_NothingIsPointedAt()
+    {
+        Pointing.At([Elsewhere, Elsewhere], Facing).ShouldBe(Grabbed.Nothing);
+    }
+
+    [Fact]
+    public void WithOneHandOnThePanelAndOneOnAHandle_TheHandleWins()
+    {
+        // Both are true; one of them is a thing the trigger would do. Showing
+        // the content while a hand rests on a corner would be picking the more
+        // boring of two right answers.
+        Pointing.At([From(0, 0), From(0.25f, 0.15f)], Facing)
+            .ShouldBe(Grabbed.TopRightCorner);
+
+        Pointing.At([From(0.25f, 0.15f), From(0, 0)], Facing)
+            .ShouldBe(Grabbed.TopRightCorner);
+    }
+
+    /// <summary>
+    /// A controller pointing off into the cockpit, at nothing.
+    /// </summary>
+    private static Pose Elsewhere => From(2, 0);
+
     /// <summary>
     /// A controller a metre in front of the board, offset across and up, aimed
     /// straight at it.
