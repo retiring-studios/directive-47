@@ -245,6 +245,52 @@ This file is descriptive. Nothing here enforces itself — see [Enforcement](#en
   application down is worse than no log. Callers take it as an `Action<string>`
   rather than as a type, so nothing is coupled to it having been a logger.
 
+- **VR-only chrome goes on its own overlay, never into the shared render.** One
+  render presented several ways is what makes parity hold by construction rather
+  than by discipline, and `PanelRender` says so where it turns the panel into
+  pixels. A grab affordance is VR-specific by definition — the panel and the game
+  overlay have no pointer — so painting one into that render would be the first
+  thing to make three surfaces able to disagree. It goes on a second OpenVR
+  overlay instead: transparent through the middle, owned by the adapter, sitting
+  outside the content rather than on top of it.
+
+  That is how Horizon OS does it, and taking the drawing meant taking the gesture
+  with it. A bar beneath the panel moves it and a handle at each corner scales
+  it, where this was first written as the body moving and the edges scaling.
+  Pointing at the panel itself now grabs nothing, which is the point: it can be
+  read and aimed at without being shoved out of place by somebody who only wanted
+  to look at it.
+
+  Chrome is measured in metres and as a share of the panel, never in texture
+  pixels. Pixels would put where a grab target starts in two places and two unit
+  systems, free to disagree the moment the overlay can be scaled.
+
+  Taken knowing it diverges from the platform. SteamVR Home moves a panel by
+  grabbing its body and scales it two-handed, the desktop overlay grew a resize
+  handle on one side, and both OVR Toolkit and XSOverlay grip the body — the bar
+  and corners are a Meta idiom, not a Valve one, and Steam Frame runs SteamVR.
+  The Horizon OS gesture is the one more Commanders already have in their hands,
+  and that beat matching the runtime we happen to sit on. `Pointing.At` answers
+  the content as a result distinct from the bar and the corners, so adding a
+  body-drag later needs no rearranging if that turns out to be wrong.
+
+- **Push-to-talk holds a registered hotkey. There is no low-level keyboard
+  hook.** `RegisterHotKey` already watches for the key coming up — it has to, or
+  a second press could not be told from a repeat — so holding a key needed a
+  callback rather than a new API. `WH_KEYBOARD_LL` was the obvious way to get
+  one, and it is also the API keyloggers use, inside an executable shipped
+  unsigned. Nothing about a push-to-talk key is worth being that.
+
+  The cost is that release is noticed on a twenty millisecond look rather than
+  the instant it happens, which is a fifth of the time a person takes to lift a
+  finger. Revisit trigger: a Commander noticing the delay, or a feature wanting a
+  key `RegisterHotKey` will not take.
+
+  It also means push-to-talk needs at least one modifier and cannot be a bare
+  key, which is the same line the overlay's hotkey already draws: a bare letter
+  claimed system-wide is swallowed everywhere on the machine, including in the
+  game.
+
 ## Test tiers
 
 The tiers drive the project layout, not just test selection.
