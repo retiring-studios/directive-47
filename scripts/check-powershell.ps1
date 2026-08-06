@@ -1,7 +1,8 @@
 #!/usr/bin/env pwsh
 #
-# Parses every PowerShell `run: |` block in .github/workflows and fails if any
-# of them has a syntax error.
+# Parses every piece of PowerShell in this repository — the `run: |` blocks in
+# .github/workflows, and every .ps1 file — and fails if any of them has a
+# syntax error.
 #
 # A block is only compiled when its step runs, so a typo sits there until
 # something executes it. For the release job that means a release day: its
@@ -13,9 +14,17 @@
 # colon straight after a variable name is PowerShell's drive-qualifier syntax,
 # and it cost a full CI run to find.
 #
+# The .ps1 half was added for one file that nothing else can reach.
+# .claude/hooks/guard-git.ps1 runs on the dev PC and only there — CI never
+# invokes it, so CI never finds out it does not parse. A hook that throws on
+# every tool call is worse than no hook, because the way that gets fixed at
+# eleven at night is by turning it off. The scripts CI does run are covered
+# incidentally: a syntax error in one of those already fails the step that
+# runs it, just later and with a worse message.
+#
 # Safe to run by hand, from anywhere:
 #
-#     ./scripts/check-workflow-powershell.ps1
+#     ./scripts/check-powershell.ps1
 #
 # Every runner in the workflow is windows-latest, where the default shell is
 # pwsh, so every block here is PowerShell. A step declaring `shell: bash` would
@@ -27,8 +36,10 @@
 
 $ErrorActionPreference = 'Stop'
 
-$workflows = Join-Path (Split-Path -Parent $PSScriptRoot) '.github/workflows'
+$root = Split-Path -Parent $PSScriptRoot
+$workflows = Join-Path $root '.github/workflows'
 $blocks = 0
+$scripts = 0
 $bad = 0
 
 foreach ($file in Get-ChildItem $workflows -File -Include *.yml, *.yaml -Recurse) {
@@ -71,10 +82,26 @@ foreach ($file in Get-ChildItem $workflows -File -Include *.yml, *.yaml -Recurse
     }
 }
 
+# Every .ps1 in the repository, parsed whole. Nothing here is extracted or
+# substituted first — a file is already the thing PowerShell reads.
+foreach ($file in Get-ChildItem $root -File -Filter *.ps1 -Recurse) {
+    $errors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile(
+        $file.FullName, [ref]$null, [ref]$errors)
+
+    $scripts++
+
+    foreach ($e in $errors) {
+        $bad++
+        $relative = $file.FullName.Substring($root.Length).TrimStart('/', '\')
+        Write-Host "${relative} line $($e.Extent.StartLineNumber): $($e.Message)"
+    }
+}
+
 if ($bad -gt 0) {
-    Write-Host "$bad parse error(s) in $blocks run: block(s)."
+    Write-Host "$bad parse error(s) across $blocks run: block(s) and $scripts script(s)."
     exit 1
 }
 
-Write-Host "$blocks run: block(s) parsed, no syntax errors."
+Write-Host "$blocks run: block(s) and $scripts script(s) parsed, no syntax errors."
 exit 0
