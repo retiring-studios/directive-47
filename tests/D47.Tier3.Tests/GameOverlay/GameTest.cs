@@ -40,7 +40,15 @@ public abstract class GameTest
     /// with the game on it. There is one desktop and one running game, and
     /// xUnit runs test classes in parallel unless told otherwise.
     /// </summary>
-    private const string Collection = "The desktop, with Elite running";
+    ///
+    /// <remarks>
+    /// Internal rather than private because <c>VrOverlay/</c> shares the same
+    /// desktop and names it rather than relying on the attribute being
+    /// inherited. Whether xUnit inherits <c>[Collection]</c> is a detail of the
+    /// runner, and the cost of being wrong about it is two Tier 3 classes
+    /// driving one game at once.
+    /// </remarks>
+    internal const string Collection = "The desktop, with Elite running";
 
     /// <summary>
     /// Why a Tier 3 test failed, in the words somebody reading the output needs
