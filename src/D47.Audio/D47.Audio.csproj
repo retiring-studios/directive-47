@@ -15,16 +15,29 @@
         on who can reference this, and the reason the loop's state machine is a
         separate Tier 0 project rather than something living in here.
 
-        Empty until [#7](https://github.com/retiring-studios/directive-47/issues/7)
-        and [#8](https://github.com/retiring-studios/directive-47/issues/8), and
-        it takes no package until one of them needs it. It is here now because
-        D47.slnx, ci.slnf and hardware.slnf are on the run-alone list in
+        It was empty until [#7](https://github.com/retiring-studios/directive-47/issues/7)
+        needed to record a hold, which is what brought NAudio.Wasapi in.
+        Transcription is still [#8](https://github.com/retiring-studios/directive-47/issues/8)'s
+        and takes no package yet. The project was scaffolded ahead of both
+        because D47.slnx, ci.slnf and hardware.slnf are on the run-alone list in
         CLAUDE.md, so adding the wave's projects in one story is what lets C run
         three-up.
+
+        It references D47.VoiceLoop for IMicrophone and Captured, and the
+        dependency points only that way. The loop's state machine is Tier 0 and
+        net10.0; knowing about WASAPI would cost it both.
     -->
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NAudio.Wasapi" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\D47.VoiceLoop\D47.VoiceLoop.csproj" />
+    </ItemGroup>
 
 </Project>
